@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "instavault"
+version = "0.1.0"
+description = "Quick notes system with AI-based knowledge organization based on Django and Telegram bot"
+authors = ["Maxim"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+django = ">=6.0.2,<7.0.0"
+djangorestframework = ">=3.16.1,<4.0.0"
+psycopg2-binary = ">=2.9.11,<3.0.0"
+celery = ">=5.6.2,<6.0.0"
+redis = ">=7.2.1,<8.0.0"
+django-environ = ">=0.13.0,<0.14.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

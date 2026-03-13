@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+
+# Environment variables file
+.env
+*.env
+
+# Visual Studio Code
+.vscode/
+.idea/
+
+# PyCharm
+.idea/
+*.iml
+
+# Content
+static/
+media/
