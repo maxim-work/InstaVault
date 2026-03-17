@@ -29,8 +29,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      - DATABASE_URL=postgres://instavaultus:password@db:5432/instavault
+    env_file:
+      - docker.env
 
 volumes:
   postgres_data:
