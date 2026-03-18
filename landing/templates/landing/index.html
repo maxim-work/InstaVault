@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Второй мозг · Главная</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* ========== БАЗОВЫЕ ПЕРЕМЕННЫЕ ========== */
+        :root {
+            --bg-primary: #0A0A0C;
+            --bg-secondary: #0C0C0F;
+            --bg-tertiary: rgba(255, 255, 255, 0.02);
+            --accent: #E07A5F;
+            --accent-rgb: 224, 122, 95;
+            --text-primary: #E1E1E6;
+            --text-secondary: #B0B0C0;
+            --border-color: rgba(255, 255, 255, 0.03);
+            --success: #10b981;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 24px;
+            --shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #030304;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: hidden;
+        }
+
+        /* ========== ГЛАВНЫЙ КОНТЕЙНЕР ========== */
+        .app {
+            width: 1200px;
+            max-width: 100%;
+            background: var(--bg-primary);
+            border-radius: 32px;
+            margin: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        /* Фоновый эффект (лёгкий градиент) */
+        .app::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(224,122,95,0.03), transparent 70%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ========== ШАПКА ========== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(12,12,15,0.8);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 15px;
+            text-decoration: none;
+            transition: var(--transition);
+            border: 1px solid transparent;
+            cursor: pointer;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-login {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .btn-login:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-register {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.3);
+        }
+
+        .btn-register:hover {
+            background: #c96b51;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(var(--accent-rgb), 0.5);
+        }
+
+        /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
+        .main {
+            padding: 60px 40px;
+            position: relative;
+            z-index: 5;
+        }
+
+        h1 {
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.2;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 0.8s forwards 0.2s;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto 60px;
+            text-align: center;
+            line-height: 1.6;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 0.8s forwards 0.4s;
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========== СЕТКА ИЗ 4 КАРТОЧЕК ========== */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 30px 25px;
+            transition: var(--transition);
+            text-align: left;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s, transform 0.6s, border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 0;
+            background: var(--accent);
+            transition: height 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(var(--accent-rgb), 0.3);
+            box-shadow: 0 20px 30px -15px rgba(0,0,0,0.7);
+            transform: translateY(-8px);
+        }
+
+        .feature-card:hover::after {
+            height: 100%;
+        }
+
+        .feature-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .feature-icon {
+            font-size: 42px;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #fff;
+        }
+
+        .feature-description {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ========== БЛОК С ЦИТАТОЙ ========== */
+        .quote-block {
+            max-width: 800px;
+            margin: 0 auto 60px;
+            padding: 40px 50px;
+            background: linear-gradient(145deg, rgba(224,122,95,0.05), rgba(224,122,95,0.02));
+            border-radius: var(--radius-lg);
+            position: relative;
+            border: 1px solid rgba(var(--accent-rgb), 0.2);
+            box-shadow: 0 15px 35px -20px black;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: scale(0.95);
+            animation: fadeScale 0.8s forwards 0.6s;
+        }
+
+        @keyframes fadeScale {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .quote-icon {
+            font-size: 60px;
+            color: var(--accent);
+            opacity: 0.2;
+            position: absolute;
+            top: 10px;
+            left: 20px;
+        }
+
+        .quote-text {
+            font-size: 22px;
+            font-style: italic;
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+            padding-left: 30px;
+        }
+
+        .quote-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 20px;
+        }
+
+        .author-info {
+            text-align: right;
+        }
+
+        .author-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .author-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* ========== БЛОК ПРИЗЫВА ========== */
+        .cta-section {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .btn-large {
+            padding: 16px 48px;
+            font-size: 18px;
+        }
+
+        /* ========== ФУТЕР ========== */
+        .footer {
+            padding: 24px 32px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            background: rgba(12,12,15,0.8);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ========== АДАПТИВНОСТЬ ========== */
+        @media (max-width: 900px) {
+            h1 { font-size: 44px; }
+            .features-grid { gap: 20px; }
+            .quote-block { padding: 30px; }
+            .quote-text { font-size: 20px; }
+        }
+
+        @media (max-width: 700px) {
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            .main { padding: 40px 20px; }
+            h1 { font-size: 36px; }
+            .subtitle { font-size: 18px; }
+            .quote-text { font-size: 18px; }
+        }
+
+        @media (max-width: 480px) {
+            .auth-buttons { flex-wrap: wrap; justify-content: center; }
+            .btn-large { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- ШАПКА С КНОПКАМИ -->
+        <div class="header">
+            <div class="logo">Второй мозг</div>
+            <div class="auth-buttons">
+                <a href="users/login" class="btn btn-login">Войти</a>
+                <a href="users/register" class="btn btn-register">Зарегистрироваться</a>
+            </div>
+        </div>
+
+        <!-- ОСНОВНОЙ КОНТЕНТ -->
+        <div class="main">
+            <h1>Ваш личный цифровой ассистент</h1>
+            <div class="subtitle">
+                Ежедневник, календарь, цели и привычки — всё в одном месте. 
+                Начните управлять своей жизнью уже сегодня.
+            </div>
+
+            <!-- СЕТКА С 4 ФИЧАМИ -->
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-pen-fancy"></i></div>
+                    <div class="feature-title">Ежедневник</div>
+                    <div class="feature-description">
+                        Заметки с поддержкой Markdown, шаблоны, задачи с временными слотами. 
+                        Удобная группировка по утру, дню, вечеру.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="feature-title">Календарь</div>
+                    <div class="feature-description">
+                        Недельный и месячный обзор задач. Быстрый переход между днями, 
+                        просмотр занятости, создание событий.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-bullseye"></i></div>
+                    <div class="feature-title">Глобальные цели</div>
+                    <div class="feature-description">
+                        Разбивайте большие цели на подзадачи, следите за прогрессом в процентах. 
+                        Достигайте амбициозных результатов.
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-heartbeat"></i></div>
+                    <div class="feature-title">Привычки</div>
+                    <div class="feature-description">
+                        Отслеживайте ежедневные ритуалы, получайте статистику и серии. 
+                        Визуализация прогресса мотивирует не сдаваться.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ЦИТАТА С АВАТАРОМ -->
+            <div class="quote-block">
+                <i class="fas fa-quote-right quote-icon"></i>
+                <div class="quote-text">
+                    “Раньше я всё держал в голове и постоянно что-то забывал. 
+                    «Второй мозг» помог навести порядок в делах и мыслях. 
+                    Теперь я чётко вижу свои цели и прогресс.”
+                </div>
+                <div class="quote-author">
+                    <div class="author-avatar">N</div>
+                    <div class="author-info">
+                        <div class="author-name">Name</div>
+                        <div class="author-title">пользователь с 42-дневным стриком</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- КНОПКИ ПРИЗЫВА -->
+            <div class="cta-section">
+                <a href="users/register" class="btn btn-register btn-large">Попробовать бесплатно</a>
+                <a href="users/login" class="btn btn-login btn-large">У меня есть аккаунт</a>
+            </div>
+        </div>
+
+        <!-- ФУТЕР -->
+        <div class="footer">
+            © 2026 Второй мозг. Все права защищены.
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT ДЛЯ АНИМАЦИЙ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Анимация для карточек фич
+            const cards = document.querySelectorAll('.feature-card');
+            
+            // Опции наблюдателя
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        // Можно перестать наблюдать после появления
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.2,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            cards.forEach(card => observer.observe(card));
+
+            // Дополнительный эффект: параллакс для фона (лёгкий)
+            window.addEventListener('mousemove', (e) => {
+                const x = e.clientX / window.innerWidth - 0.5;
+                const y = e.clientY / window.innerHeight - 0.5;
+                const bg = document.querySelector('.app::before');
+                // стилизовать сложно, поэтому оставим как идею
+            });
+
+            // Можно добавить плавный скролл к кнопкам (для демо)
+            document.querySelectorAll('a[href="#"]').forEach(link => {
+                link.addEventListener('click', (e) => e.preventDefault());
+            });
+        });
+    </script>
+</body>
+</html>
