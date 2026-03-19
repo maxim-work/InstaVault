@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль · Второй мозг</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* === ПОЛНЫЙ СТИЛЬ С ГОРИЗОНТАЛЬНЫМ И ВЕРТИКАЛЬНЫМ РЕЖИМАМИ === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #030304;
+            color: #E1E1E6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Фон с глубиной */
+        .bg-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-1 {
+            position: absolute;
+            width: 70vmax;
+            height: 70vmax;
+            top: -20vmax;
+            left: -10vmax;
+            background: radial-gradient(circle at 30% 30%, rgba(224, 122, 95, 0.15) 0%, transparent 60%);
+            filter: blur(80px);
+            animation: float 20s ease-in-out infinite alternate;
+        }
+
+        .glow-2 {
+            position: absolute;
+            width: 80vmax;
+            height: 80vmax;
+            bottom: -30vmax;
+            right: -15vmax;
+            background: radial-gradient(circle at 70% 70%, rgba(100, 160, 220, 0.12) 0%, transparent 60%);
+            filter: blur(100px);
+            animation: float 25s ease-in-out infinite alternate-reverse;
+        }
+
+        .glow-3 {
+            position: absolute;
+            width: 50vmax;
+            height: 50vmax;
+            top: 40%;
+            left: 20%;
+            background: radial-gradient(circle, rgba(224, 122, 95, 0.08) 0%, transparent 70%);
+            filter: blur(60px);
+            animation: float 18s ease-in-out infinite alternate;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5%, 5%) scale(1.1); }
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .decor-1 {
+            width: 300px;
+            height: 300px;
+            top: -50px;
+            right: -50px;
+            background: rgba(224, 122, 95, 0.05);
+            border-radius: 50%;
+            filter: blur(50px);
+            position: fixed;
+            pointer-events: none;
+        }
+
+        .decor-2 {
+            width: 200px;
+            height: 200px;
+            bottom: 20px;
+            left: -30px;
+            background: rgba(130, 180, 240, 0.05);
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            filter: blur(40px);
+            animation: morph 15s infinite alternate;
+            position: fixed;
+            pointer-events: none;
+        }
+
+        @keyframes morph {
+            0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: rotate(0deg); }
+            100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(10deg); }
+        }
+
+        /* Основной контейнер */
+        .app {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .profile-card {
+            background: rgba(12, 12, 15, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(224, 122, 95, 0.1) inset;
+            padding: 32px;
+        }
+
+        /* Навигация */
+        .profile-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #B0B0C0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .back-btn:hover {
+            color: #E07A5F;
+        }
+
+        .logout-btn {
+            background: rgba(224, 122, 95, 0.1);
+            border: 1px solid rgba(224, 122, 95, 0.25);
+            border-radius: 30px;
+            padding: 8px 20px;
+            color: #E07A5F;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(224,122,95,0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Шапка профиля */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .avatar-container {
+            position: relative;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 30px;
+            background: #E07A5F;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 44px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            box-shadow: 0 8px 20px rgba(224,122,95,0.3);
+        }
+
+        .profile-avatar:hover {
+            filter: brightness(1.1);
+            border-color: #fff;
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #0C0C0F;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #E07A5F;
+            color: #E07A5F;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .profile-info h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .profile-info .username {
+            font-size: 16px;
+            color: #B0B0C0;
+            margin-top: 4px;
+        }
+
+        /* ГОРИЗОНТАЛЬНЫЙ РЕЖИМ (фиксированный, без адаптации) */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        /* Секции */
+        .section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            height: fit-content;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #E07A5F;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Поля данных */
+        .field-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .field-row:last-child {
+            border-bottom: none;
+        }
+
+        .field-label {
+            color: #B0B0C0;
+            font-size: 14px;
+            width: 140px;
+        }
+
+        .field-value {
+            flex: 1;
+            color: #fff;
+            font-weight: 500;
+            min-width: 150px;
+        }
+
+        .field-action {
+            color: #E07A5F;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            background: rgba(224,122,95,0.05);
+            white-space: nowrap;
+        }
+
+        .field-action:hover {
+            background: rgba(224,122,95,0.15);
+        }
+
+        /* Telegram блок */
+        .telegram-block {
+            margin-top: 12px;
+        }
+
+        .telegram-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 8px 0;
+        }
+
+        .telegram-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .telegram-badge {
+            background: rgba(224,122,95,0.1);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 14px;
+            color: #E07A5F;
+            font-weight: 500;
+        }
+
+        .telegram-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .telegram-btn {
+            background: rgba(224,122,95,0.1);
+            border: 1px solid rgba(224,122,95,0.3);
+            border-radius: 30px;
+            padding: 8px 20px;
+            color: #E07A5F;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .telegram-btn:hover {
+            background: rgba(224,122,95,0.2);
+            transform: translateY(-2px);
+        }
+
+        .telegram-btn.danger {
+            border-color: #ff4d4d;
+            color: #ff4d4d;
+        }
+
+        .telegram-btn.danger:hover {
+            background: rgba(255,77,77,0.1);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            margin-left: 8px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #3A3A45;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #E07A5F;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Радио-кнопки */
+        .radio-group {
+            display: flex;
+            gap: 24px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #B0B0C0;
+            transition: color 0.2s;
+        }
+
+        .radio-option:hover {
+            color: #E07A5F;
+        }
+
+        .radio-option input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #B0B0C0;
+            border-radius: 50%;
+            margin: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .radio-option input[type="radio"]:checked {
+            border-color: #E07A5F;
+            background-color: #E07A5F;
+            box-shadow: 0 0 0 2px rgba(224,122,95,0.3);
+        }
+
+        .radio-option input[type="radio"]:checked::after {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+        }
+
+        .radio-option span {
+            font-size: 14px;
+        }
+
+        /* Кнопки действий */
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 32px;
+        }
+
+        .action-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 24px;
+            border-radius: 40px;
+            background: rgba(224,122,95,0.1);
+            border: 1px solid rgba(224,122,95,0.3);
+            color: #E07A5F;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            background: rgba(224,122,95,0.2);
+            transform: translateY(-2px);
+        }
+
+        .action-btn.danger {
+            border-color: #ff4d4d;
+            color: #ff4d4d;
+        }
+
+        .action-btn.danger:hover {
+            background: rgba(255,77,77,0.1);
+        }
+
+        /* Ссылка вместо кнопки (для смены пароля) */
+        .password-link {
+            color: #E07A5F;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+
+        .password-link:hover {
+            color: #c96b51;
+            text-decoration: underline;
+        }
+
+        /* Модальные окна */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 450px;
+            max-width: 90%;
+            background: #0C0C0F;
+            border-radius: 28px;
+            padding: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #E07A5F;
+        }
+
+        /* Поля ввода с кнопкой рядом */
+        .input-with-button {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: stretch;
+        }
+
+        .input-with-button .modal-input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #E07A5F;
+        }
+
+        .modal-error {
+            color: #ff4d4d;
+            font-size: 12px;
+            margin-bottom: 12px;
+            min-height: 18px;
+        }
+
+        .modal-success {
+            color: #10b981;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .modal-btn.primary {
+            background: #E07A5F;
+            color: white;
+        }
+
+        .modal-btn.primary:hover {
+            background: #c96b51;
+        }
+
+        .modal-btn.primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal-btn.secondary {
+            background: rgba(255, 255, 255, 0.03);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .modal-btn.secondary:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .inline-btn {
+            background: rgba(224,122,95,0.1);
+            border: 1px solid rgba(224,122,95,0.3);
+            border-radius: 14px;
+            padding: 0 18px;
+            color: #E07A5F;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px; /* фиксированная ширина, чтобы при таймере не прыгала */
+        }
+
+        .inline-btn:hover {
+            background: rgba(224,122,95,0.2);
+        }
+
+        .inline-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .code-display {
+            background: #1A1A20;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 4px;
+            color: #E07A5F;
+            margin: 16px 0;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #B0B0C0;
+            margin-bottom: 8px;
+        }
+
+        /* Стильная ссылка на Telegram */
+        .telegram-link {
+            display: inline-block;
+            background: #1E2A3A;
+            border-radius: 20px;
+            padding: 10px 20px;
+            color: #E07A5F;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid #E07A5F;
+            transition: all 0.2s;
+        }
+
+        .telegram-link:hover {
+            background: #2A3A4A;
+            transform: translateY(-2px);
+        }
+
+        /* ========== ВЕРТИКАЛЬНЫЙ РЕЖИМ (адаптивный) ========== */
+        @media (max-width: 800px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-btn {
+                min-width: 100%;
+            }
+            
+            .field-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .field-label {
+                width: 100%;
+            }
+            
+            .field-value {
+                width: 100%;
+            }
+            
+            .field-action {
+                align-self: flex-end;
+            }
+            
+            .telegram-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .telegram-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            /* Дополнительная адаптация для мобильных */
+            .profile-card {
+                padding: 20px;
+            }
+            
+            .profile-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            
+            .profile-info {
+                text-align: center;
+            }
+            
+            .section-title {
+                font-size: 16px;
+            }
+        }
+
+        /* Для очень маленьких экранов */
+        @media (max-width: 480px) {
+            .profile-card {
+                padding: 16px;
+            }
+            
+            .profile-avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 36px;
+            }
+            
+            .profile-info h1 {
+                font-size: 22px;
+            }
+            
+            .section {
+                padding: 16px;
+            }
+            
+            .radio-group {
+                gap: 16px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .modal-title {
+                font-size: 20px;
+            }
+
+            .inline-btn {
+                min-width: 100px;
+                font-size: 13px;
+                padding: 0 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Фоновые декорации -->
+    <div class="bg-glow">
+        <div class="glow-1"></div>
+        <div class="glow-2"></div>
+        <div class="glow-3"></div>
+    </div>
+    <div class="grid-overlay"></div>
+    <div class="decor-1"></div>
+    <div class="decor-2"></div>
+
+    <div class="app">
+        <div class="profile-card">
+            <!-- Навигация -->
+            <div class="profile-nav">
+                <div class="back-btn" onclick="window.location.href='/daily'">
+                    <i class="fas fa-arrow-left"></i> Вернуться в ежедневник
+                </div>
+                <div class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </div>
+            </div>
+
+            <!-- Шапка с аватаром -->
+            <div class="profile-header">
+                <div class="avatar-container">
+                    <div class="profile-avatar" id="avatarDisplay" onclick="document.getElementById('avatarUpload').click()">А</div>
+                    <div class="avatar-overlay" onclick="document.getElementById('avatarUpload').click()">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
+                </div>
+                <div class="profile-info">
+                    <h1 id="displayFullName">Алексей Петров</h1>
+                    <div class="username" id="displayUsername">@ivan_p</div>
+                </div>
+            </div>
+
+            <!-- Горизонтальная сетка -->
+            <div class="profile-grid">
+                <!-- Левая колонка: Основные данные -->
+                <div class="section">
+                    <div class="section-title"><i class="fas fa-id-card"></i> Основное</div>
+                    <div class="field-row">
+                        <span class="field-label">Имя</span>
+                        <span class="field-value" id="displayName">Алексей Петров</span>
+                        <span class="field-action" onclick="openEditModal('name')"><i class="fas fa-pen"></i> Изменить</span>
+                    </div>
+                    <div class="field-row">
+                        <span class="field-label">Имя пользователя</span>
+                        <span class="field-value" id="displayUsernameField">ivan_p</span>
+                        <span class="field-action" onclick="openEditModal('username')"><i class="fas fa-pen"></i> Изменить</span>
+                    </div>
+                    <div class="field-row">
+                        <span class="field-label">Email</span>
+                        <span class="field-value" id="displayEmail">i***@example.com</span>
+                        <span class="field-action" onclick="openEditModal('email')"><i class="fas fa-pen"></i> Изменить</span>
+                    </div>
+                    <!-- Ссылка на смену пароля (без модалки) -->
+                    <div class="field-row" style="border-bottom: none;">
+                        <span class="field-label">Пароль</span>
+                        <span class="field-value">••••••••</span>
+                        <a href="change_password" class="password-link"><i class="fas fa-lock"></i> Сменить</a>
+                    </div>
+                </div>
+
+                <!-- Правая колонка: Telegram -->
+                <div class="section">
+                    <div class="section-title"><i class="fab fa-telegram"></i> Telegram</div>
+                    <div class="telegram-block">
+                        <div class="telegram-row">
+                            <div class="telegram-status">
+                                <span class="telegram-badge" id="telegramStatus">Подключён</span>
+                            </div>
+                            <div class="telegram-actions">
+                                <button class="telegram-btn" id="connectTelegramBtn" onclick="openTelegramModal()">Подключить</button>
+                                <button class="telegram-btn danger" id="disconnectTelegramBtn" onclick="disconnectTelegram()">Отключить</button>
+                            </div>
+                        </div>
+                        <div class="telegram-row" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 12px; padding-top: 12px;">
+                            <span class="field-label">Уведомления</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="telegramNotifyToggle" checked onchange="toggleTelegramNotify()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Секция интерфейса -->
+            <div class="section" style="margin-top: 24px;">
+                <div class="section-title"><i class="fas fa-sliders-h"></i> Интерфейс</div>
+                <div class="field-row">
+                    <span class="field-label">Рутинные задачи</span>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="routineDisplay" id="routineShow" checked>
+                            <span>Показывать в списке</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="routineDisplay" id="routineNotify">
+                            <span>Только уведомления</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- Часовой пояс -->
+                <div class="field-row" style="border-bottom: none;">
+                    <span class="field-label">Часовой пояс</span>
+                    <span class="field-value" id="displayTimezone">Europe/Moscow</span>
+                    <span class="field-action" onclick="openTimezoneModal()"><i class="fas fa-pen"></i> Изменить</span>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="action-buttons">
+                <button class="action-btn" onclick="exportData()">
+                    <i class="fas fa-download"></i> Экспорт данных
+                </button>
+                <button class="action-btn danger" onclick="openDeleteModal()">
+                    <i class="fas fa-trash-alt"></i> Удалить аккаунт
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+
+    <!-- Редактирование имени -->
+    <div id="modalName" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Изменить имя</div>
+            <input type="text" class="modal-input" id="editName" placeholder="Введите новое имя" value="" autofocus>
+            <div class="modal-error" id="nameError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="saveName()">Сохранить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalName')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена имени пользователя (с проверкой) -->
+    <div id="modalUsername" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Изменить имя пользователя</div>
+            <input type="text" class="modal-input" id="editUsername" placeholder="Введите новое имя" value="" autofocus oninput="checkUsernameAvailability()">
+            <div class="modal-error" id="usernameError"></div>
+            <div class="modal-success" id="usernameSuccess"></div>
+            <div class="hint">От 5 символов, начинается с латинской буквы, содержит хотя бы одну букву.</div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="saveUsernameBtn" onclick="saveUsername()" disabled>Сохранить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalUsername')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена email: первое окно -->
+    <div id="modalEmailStep1" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Подтверждение доступа</div>
+            <p class="hint">Для смены email подтвердите, что вы владеете текущим аккаунтом. Код будет отправлен в Telegram.</p>
+            <div class="input-with-button">
+                <input type="text" class="modal-input" id="oldEmailCode" placeholder="6-значный код" maxlength="6" oninput="validateOldCode()" autofocus>
+                <button class="inline-btn" id="sendOldCodeBtn" onclick="sendOldEmailCode()">Отправить код</button>
+            </div>
+            <div class="modal-error" id="oldCodeError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="verifyOldCodeBtn" onclick="verifyOldEmailCode()" disabled>Подтвердить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalEmailStep1')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена email: второе окно (новый email) -->
+    <div id="modalEmailStep2" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Новый email</div>
+            <div class="input-with-button">
+                <input type="email" class="modal-input" id="newEmail" placeholder="Введите новый email" oninput="validateNewEmail()" autofocus>
+                <button class="inline-btn" id="sendNewCodeBtn" onclick="sendNewEmailCode()" disabled>Получить код</button>
+            </div>
+            <div class="modal-error" id="newEmailError"></div>
+            <div class="modal-success" id="newEmailSuccess"></div>
+            <input type="text" class="modal-input" id="newEmailCode" placeholder="6-значный код" maxlength="6" oninput="validateNewCode()" style="margin-top: 12px;">
+            <div class="modal-error" id="newCodeError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="verifyNewCodeBtn" onclick="verifyNewEmailCode()" disabled>Подтвердить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalEmailStep2')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для выбора часового пояса (упрощённое) -->
+    <div id="modalTimezone" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Выберите часовой пояс</div>
+            <select class="modal-input" id="timezoneSelect">
+                <option value="Europe/Moscow">Москва (MSK)</option>
+                <option value="Europe/Kiev">Киев (EET)</option>
+                <option value="Europe/London">Лондон (GMT)</option>
+                <option value="America/New_York">Нью-Йорк (EST)</option>
+                <option value="Asia/Vladivostok">Владивосток (VLAT)</option>
+            </select>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="saveTimezone()">Сохранить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalTimezone')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение Telegram -->
+    <div id="modalTelegram" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Подключение Telegram</div>
+            <p class="hint">Для подключения Telegram-аккаунта выполните одно из действий:</p>
+            <div style="background: #1A1A20; border-radius: 16px; padding: 20px; margin-bottom: 16px;">
+                <div style="margin-bottom: 16px;">
+                    <div style="color: #E07A5F; font-weight: 600; margin-bottom: 8px;">Способ 1: Перейдите по ссылке</div>
+                    <a href="#" class="telegram-link" id="telegramBotLink" target="_blank">t.me/second_brain_bot?start=ABC123</a>
+                </div>
+                <div>
+                    <div style="color: #E07A5F; font-weight: 600; margin-bottom: 8px;">Способ 2: Отправьте код боту</div>
+                    <div class="code-display" id="telegramCode">ABC123</div>
+                </div>
+            </div>
+            <p class="hint">После подключения статус обновится автоматически.</p>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="checkTelegramConnection()">Я подключил</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalTelegram')">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Удаление аккаунта -->
+    <div id="modalDelete" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title" style="color: #ff4d4d;">Удаление аккаунта</div>
+            <p class="hint">Это действие необратимо. Все данные будут удалены.</p>
+            <input type="text" class="modal-input" id="deleteConfirm" placeholder="Введите DELETE" autofocus>
+            <div class="modal-error" id="deleteError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn danger" onclick="deleteAccount()">Удалить навсегда</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalDelete')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Демо-данные пользователя
+        let user = {
+            name: 'Алексей Петров',
+            username: 'ivan_p',
+            email: 'ivan@example.com',
+            telegramConnected: true,
+            telegramNotify: true,
+            routineShow: true,
+            timezone: 'Europe/Moscow'
+        };
+
+        // Элементы отображения
+        const display = {
+            fullName: document.getElementById('displayFullName'),
+            name: document.getElementById('displayName'),
+            username: document.getElementById('displayUsername'),
+            usernameField: document.getElementById('displayUsernameField'),
+            email: document.getElementById('displayEmail'),
+            telegramStatus: document.getElementById('telegramStatus'),
+            telegramNotifyToggle: document.getElementById('telegramNotifyToggle'),
+            connectBtn: document.getElementById('connectTelegramBtn'),
+            disconnectBtn: document.getElementById('disconnectTelegramBtn'),
+            routineShow: document.getElementById('routineShow'),
+            routineNotify: document.getElementById('routineNotify'),
+            timezone: document.getElementById('displayTimezone')
+        };
+
+        // Состояние для проверки username
+        let isUsernameAvailable = false;
+        // Состояние для проверки нового email
+        let isNewEmailAvailable = false;
+
+        // Временные данные для email
+        let emailChangeData = {
+            oldCode: '',
+            newEmail: '',
+            newCode: ''
+        };
+
+        // Таймеры
+        let oldCodeTimer = null;
+        let newCodeTimer = null;
+        let oldCodeTimeLeft = 0;
+        let newCodeTimeLeft = 0;
+
+        // Обновление интерфейса
+        function updateUI() {
+            display.fullName.innerText = user.name;
+            display.name.innerText = user.name;
+            display.username.innerText = `@${user.username}`;
+            display.usernameField.innerText = user.username;
+            // Скрываем часть email
+            const emailParts = user.email.split('@');
+            const hidden = emailParts[0].charAt(0) + '***' + (emailParts[0].length > 1 ? emailParts[0].slice(-1) : '');
+            display.email.innerText = hidden + '@' + emailParts[1];
+
+            if (user.telegramConnected) {
+                display.telegramStatus.innerText = 'Подключён';
+                display.telegramNotifyToggle.disabled = false;
+                display.telegramNotifyToggle.checked = user.telegramNotify;
+                display.connectBtn.style.display = 'none';
+                display.disconnectBtn.style.display = 'inline-block';
+            } else {
+                display.telegramStatus.innerText = 'Не подключён';
+                display.telegramNotifyToggle.disabled = true;
+                display.telegramNotifyToggle.checked = false;
+                display.connectBtn.style.display = 'inline-block';
+                display.disconnectBtn.style.display = 'none';
+            }
+
+            display.routineShow.checked = user.routineShow;
+            display.routineNotify.checked = !user.routineShow;
+            display.timezone.innerText = user.timezone;
+        }
+
+        // Модальные окна
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            const modal = document.getElementById(id);
+            const input = modal.querySelector('input:not([disabled])');
+            if (input) setTimeout(() => input.focus(), 100);
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            // Сброс таймеров при закрытии
+            if (id === 'modalEmailStep1') {
+                if (oldCodeTimer) clearInterval(oldCodeTimer);
+                document.getElementById('sendOldCodeBtn').disabled = false;
+                document.getElementById('sendOldCodeBtn').textContent = 'Отправить код';
+            }
+            if (id === 'modalEmailStep2') {
+                if (newCodeTimer) clearInterval(newCodeTimer);
+                document.getElementById('sendNewCodeBtn').disabled = false;
+                document.getElementById('sendNewCodeBtn').textContent = 'Получить код';
+            }
+        }
+
+        // Аватар
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                alert('✅ Аватар загружен (демо)');
+            }
+        }
+
+        // Открытие модалок редактирования
+        window.openEditModal = function(field) {
+            if (field === 'name') {
+                document.getElementById('editName').value = '';
+                document.getElementById('nameError').innerText = '';
+                openModal('modalName');
+            } else if (field === 'username') {
+                document.getElementById('editUsername').value = '';
+                document.getElementById('usernameError').innerText = '';
+                document.getElementById('usernameSuccess').innerText = '';
+                isUsernameAvailable = false;
+                document.getElementById('saveUsernameBtn').disabled = true;
+                openModal('modalUsername');
+            } else if (field === 'email') {
+                // Проверяем, подключён ли Telegram
+                if (!user.telegramConnected) {
+                    alert('❌ Для смены email необходимо сначала подключить Telegram.');
+                    return;
+                }
+                document.getElementById('oldEmailCode').value = '';
+                document.getElementById('oldCodeError').innerText = '';
+                document.getElementById('verifyOldCodeBtn').disabled = true;
+                document.getElementById('sendOldCodeBtn').disabled = false;
+                document.getElementById('sendOldCodeBtn').textContent = 'Отправить код';
+                if (oldCodeTimer) clearInterval(oldCodeTimer);
+                openModal('modalEmailStep1');
+            }
+        };
+
+        // Сохранение имени
+        window.saveName = function() {
+            const newName = document.getElementById('editName').value.trim();
+            if (!newName) {
+                document.getElementById('nameError').innerText = 'Имя не может быть пустым';
+                return;
+            }
+            user.name = newName;
+            updateUI();
+            closeModal('modalName');
+            alert('✅ Имя изменено');
+        };
+
+        // Проверка username
+        window.checkUsernameAvailability = function() {
+            const username = document.getElementById('editUsername').value.trim();
+            const errorEl = document.getElementById('usernameError');
+            const successEl = document.getElementById('usernameSuccess');
+            const saveBtn = document.getElementById('saveUsernameBtn');
+
+            if (!username) {
+                errorEl.innerText = '';
+                successEl.innerText = '';
+                isUsernameAvailable = false;
+                saveBtn.disabled = true;
+                return;
+            }
+
+            // Проверка длины
+            if (username.length < 5) {
+                errorEl.innerText = 'Минимум 5 символов';
+                successEl.innerText = '';
+                isUsernameAvailable = false;
+                saveBtn.disabled = true;
+                return;
+            }
+
+            // Проверка первого символа (латинская буква)
+            if (!/^[a-zA-Z]/.test(username)) {
+                errorEl.innerText = 'Должно начинаться с латинской буквы';
+                successEl.innerText = '';
+                isUsernameAvailable = false;
+                saveBtn.disabled = true;
+                return;
+            }
+
+            // Проверка наличия хотя бы одной буквы
+            if (!/[a-zA-Z]/.test(username)) {
+                errorEl.innerText = 'Должна быть хотя бы одна буква';
+                successEl.innerText = '';
+                isUsernameAvailable = false;
+                saveBtn.disabled = true;
+                return;
+            }
+
+            // Проверка допустимых символов (латиница, цифры, подчёркивание)
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                errorEl.innerText = 'Только латиница, цифры и подчёркивание';
+                successEl.innerText = '';
+                isUsernameAvailable = false;
+                saveBtn.disabled = true;
+                return;
+            }
+
+            // Имитация проверки уникальности
+            if (username === 'admin' || username === 'test') {
+                errorEl.innerText = 'Это имя уже занято';
+                successEl.innerText = '';
+                isUsernameAvailable = false;
+                saveBtn.disabled = true;
+            } else {
+                errorEl.innerText = '';
+                successEl.innerText = '✅ Имя свободно';
+                isUsernameAvailable = true;
+                saveBtn.disabled = false;
+            }
+        };
+
+        window.saveUsername = function() {
+            if (!isUsernameAvailable) return;
+            const newUsername = document.getElementById('editUsername').value.trim();
+            user.username = newUsername;
+            updateUI();
+            closeModal('modalUsername');
+            alert('✅ Имя пользователя изменено');
+        };
+
+        // --- Смена email ---
+        // Таймер для первого окна
+        function startOldCodeTimer(duration) {
+            oldCodeTimeLeft = duration;
+            const btn = document.getElementById('sendOldCodeBtn');
+            btn.disabled = true;
+            oldCodeTimer = setInterval(() => {
+                oldCodeTimeLeft--;
+                if (oldCodeTimeLeft <= 0) {
+                    clearInterval(oldCodeTimer);
+                    oldCodeTimer = null;
+                    btn.disabled = false;
+                    btn.textContent = 'Отправить код';
+                } else {
+                    const minutes = Math.floor(oldCodeTimeLeft / 60);
+                    const seconds = oldCodeTimeLeft % 60;
+                    btn.textContent = `Повтор (${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')})`;
+                }
+            }, 1000);
+        }
+
+        window.sendOldEmailCode = function() {
+            // Имитация отправки кода в Telegram
+            alert('✅ Код отправлен в Telegram (демо). Используйте 123456');
+            // Запускаем таймер на 3 минуты
+            startOldCodeTimer(180);
+            // Не заполняем поле кода автоматически
+            document.getElementById('oldCodeError').innerText = '';
+            // Активируем кнопку подтверждения только после валидного ввода кода (через validateOldCode)
+        };
+
+        window.validateOldCode = function() {
+            const code = document.getElementById('oldEmailCode').value.trim();
+            const errorEl = document.getElementById('oldCodeError');
+            const btn = document.getElementById('verifyOldCodeBtn');
+            if (code.length === 6 && /^\d+$/.test(code)) {
+                errorEl.innerText = '';
+                btn.disabled = false;
+            } else {
+                errorEl.innerText = 'Введите 6 цифр';
+                btn.disabled = true;
+            }
+        };
+
+        window.verifyOldEmailCode = function() {
+            const code = document.getElementById('oldEmailCode').value.trim();
+            if (code) {
+                emailChangeData.oldCode = code;
+                closeModal('modalEmailStep1');
+                // Сброс таймера
+                if (oldCodeTimer) clearInterval(oldCodeTimer);
+                document.getElementById('sendOldCodeBtn').disabled = false;
+                document.getElementById('sendOldCodeBtn').textContent = 'Отправить код';
+                // Открываем второе окно
+                document.getElementById('newEmail').value = '';
+                document.getElementById('newEmailError').innerText = '';
+                document.getElementById('newEmailSuccess').innerText = '';
+                document.getElementById('newEmailCode').value = '';
+                document.getElementById('newCodeError').innerText = '';
+                document.getElementById('sendNewCodeBtn').disabled = true;
+                document.getElementById('verifyNewCodeBtn').disabled = true;
+                isNewEmailAvailable = false;
+                openModal('modalEmailStep2');
+            } else {
+                document.getElementById('oldCodeError').innerText = 'Неверный код';
+            }
+        };
+
+        // Таймер для второго окна
+        function startNewCodeTimer(duration) {
+            newCodeTimeLeft = duration;
+            const btn = document.getElementById('sendNewCodeBtn');
+            btn.disabled = true;
+            newCodeTimer = setInterval(() => {
+                newCodeTimeLeft--;
+                if (newCodeTimeLeft <= 0) {
+                    clearInterval(newCodeTimer);
+                    newCodeTimer = null;
+                    btn.disabled = false;
+                    btn.textContent = 'Получить код';
+                } else {
+                    const minutes = Math.floor(newCodeTimeLeft / 60);
+                    const seconds = newCodeTimeLeft % 60;
+                    btn.textContent = `Повтор (${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')})`;
+                }
+            }, 1000);
+        }
+
+        // Проверка нового email (валидация + уникальность)
+        window.validateNewEmail = function() {
+            const email = document.getElementById('newEmail').value.trim();
+            const errorEl = document.getElementById('newEmailError');
+            const successEl = document.getElementById('newEmailSuccess');
+            const sendBtn = document.getElementById('sendNewCodeBtn');
+
+            if (!email) {
+                errorEl.innerText = '';
+                successEl.innerText = '';
+                isNewEmailAvailable = false;
+                sendBtn.disabled = true;
+                return;
+            }
+
+            // Проверка формата email
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errorEl.innerText = 'Введите корректный email';
+                successEl.innerText = '';
+                isNewEmailAvailable = false;
+                sendBtn.disabled = true;
+                return;
+            }
+
+            // Имитация проверки уникальности (занятые email: admin@example.com, test@example.com)
+            if (email === 'admin@example.com' || email === 'test@example.com') {
+                errorEl.innerText = 'Этот email уже занят';
+                successEl.innerText = '';
+                isNewEmailAvailable = false;
+                sendBtn.disabled = true;
+            } else {
+                errorEl.innerText = '';
+                successEl.innerText = '✅ Email свободен';
+                isNewEmailAvailable = true;
+                sendBtn.disabled = false;
+            }
+        };
+
+        window.sendNewEmailCode = function() {
+            if (!isNewEmailAvailable) return;
+            const email = document.getElementById('newEmail').value.trim();
+            emailChangeData.newEmail = email;
+            alert(`✅ Код отправлен на ${email} (демо). Используйте 654321`);
+            // Запускаем таймер
+            startNewCodeTimer(180);
+            // Не заполняем поле кода автоматически
+        };
+
+        window.validateNewCode = function() {
+            const code = document.getElementById('newEmailCode').value.trim();
+            const errorEl = document.getElementById('newCodeError');
+            const btn = document.getElementById('verifyNewCodeBtn');
+            if (code.length === 6 && /^\d+$/.test(code)) {
+                errorEl.innerText = '';
+                btn.disabled = false;
+            } else {
+                errorEl.innerText = 'Введите 6 цифр';
+                btn.disabled = true;
+            }
+        };
+
+        window.verifyNewEmailCode = function() {
+            const code = document.getElementById('newEmailCode').value.trim();
+            if (code) {
+                user.email = emailChangeData.newEmail;
+                updateUI();
+                closeModal('modalEmailStep2');
+                alert('✅ Email изменён');
+            } else {
+                document.getElementById('newCodeError').innerText = 'Неверный код';
+            }
+        };
+
+        // --- Часовой пояс ---
+        window.openTimezoneModal = function() {
+            document.getElementById('timezoneSelect').value = user.timezone;
+            openModal('modalTimezone');
+        };
+
+        window.saveTimezone = function() {
+            user.timezone = document.getElementById('timezoneSelect').value;
+            updateUI();
+            closeModal('modalTimezone');
+            alert('✅ Часовой пояс изменён');
+        };
+
+        // --- Telegram подключение ---
+        window.openTelegramModal = function() {
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            document.getElementById('telegramCode').innerText = code;
+            document.getElementById('telegramBotLink').href = `https://t.me/second_brain_bot?start=${code}`;
+            openModal('modalTelegram');
+        };
+
+        window.checkTelegramConnection = function() {
+            if (!user.telegramConnected) {
+                user.telegramConnected = true;
+                updateUI();
+                alert('✅ Telegram подключён');
+            }
+            closeModal('modalTelegram');
+        };
+
+        window.disconnectTelegram = function() {
+            if (confirm('Вы действительно хотите отключить Telegram от аккаунта?')) {
+                user.telegramConnected = false;
+                user.telegramNotify = false;
+                updateUI();
+                alert('❌ Telegram отключён');
+            }
+        };
+
+        window.toggleTelegramNotify = function() {
+            if (user.telegramConnected) {
+                user.telegramNotify = display.telegramNotifyToggle.checked;
+            }
+        };
+
+        // --- Экспорт и удаление ---
+        window.exportData = function() {
+            alert('✅ Архив с данными готов к скачиванию (демо)');
+        };
+
+        window.openDeleteModal = function() {
+            document.getElementById('deleteConfirm').value = '';
+            document.getElementById('deleteError').innerText = '';
+            openModal('modalDelete');
+        };
+
+        window.deleteAccount = function() {
+            const confirm = document.getElementById('deleteConfirm').value;
+            if (confirm === 'DELETE') {
+                alert('✅ Аккаунт удалён');
+                window.location.href = '/';
+            } else {
+                document.getElementById('deleteError').innerText = 'Введите DELETE для подтверждения';
+            }
+        };
+
+        window.logout = function() {
+            alert('Вы вышли из аккаунта (демо)');
+            window.location.href = '/';
+        };
+
+        // Инициализация
+        updateUI();
+
+        // Обработка радио кнопок рутинных задач
+        display.routineShow.addEventListener('change', function() {
+            if (this.checked) user.routineShow = true;
+        });
+        display.routineNotify.addEventListener('change', function() {
+            if (this.checked) user.routineShow = false;
+        });
+
+        // ===== ДОБАВЛЯЕМ ЛОГИКУ ENTER ДЛЯ МОДАЛЬНЫХ ОКОН =====
+
+        // Модальное окно "Изменить имя"
+        const editNameInput = document.getElementById('editName');
+        editNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveName();
+            }
+        });
+
+        // Модальное окно "Изменить имя пользователя"
+        const editUsernameInput = document.getElementById('editUsername');
+        editUsernameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (isUsernameAvailable) {
+                    saveUsername();
+                }
+                // если не доступно, кнопка всё равно disabled, так что ничего не делаем
+            }
+        });
+
+        // Модальное окно "Подтверждение доступа" (первый шаг смены email)
+        const oldEmailCodeInput = document.getElementById('oldEmailCode');
+        const verifyOldCodeBtn = document.getElementById('verifyOldCodeBtn');
+        oldEmailCodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!verifyOldCodeBtn.disabled) {
+                    verifyOldCodeBtn.click();
+                }
+            }
+        });
+
+        // Модальное окно "Новый email" (второй шаг смены email)
+        const newEmailInput = document.getElementById('newEmail');
+        const sendNewCodeBtn = document.getElementById('sendNewCodeBtn');
+        newEmailInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!sendNewCodeBtn.disabled) {
+                    sendNewCodeBtn.click();
+                }
+            }
+        });
+
+        const newEmailCodeInput = document.getElementById('newEmailCode');
+        const verifyNewCodeBtn = document.getElementById('verifyNewCodeBtn');
+        newEmailCodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!verifyNewCodeBtn.disabled) {
+                    verifyNewCodeBtn.click();
+                }
+            }
+        });
+
+        // Модальное окно удаления аккаунта
+        const deleteConfirmInput = document.getElementById('deleteConfirm');
+        deleteConfirmInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (deleteConfirmInput.value === 'DELETE') {
+                    deleteAccount();
+                } else {
+                    document.getElementById('deleteError').innerText = 'Введите DELETE для подтверждения';
+                }
+            }
+        });
+
+        // Модальное окно часового пояса (select не обрабатываем Enter, оставляем стандартное поведение)
+    </script>
+</body>
+</html>

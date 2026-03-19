@@ -1,0 +1,274 @@
+{% extends "users/base.html" %}
+
+{% block content %}
+<div class="register-card">
+    <h1 class="register-title">
+        <i class="fas fa-brain"></i> 
+        Второй мозг
+    </h1>
+    <div class="register-subtitle">Войдите в свой аккаунт</div>
+
+    <!-- Форма входа с htmx -->
+    <form hx-post="/login" hx-target="body" hx-swap="beforeend" hx-trigger="submit" id="login-form">
+        <!-- Идентификатор: email или имя пользователя -->
+        <div class="input-group">
+            <label class="input-label">Email или имя пользователя</label>
+            <input type="text" class="input-field" id="identifier" name="identifier" placeholder="your@email.com или username" required autofocus>
+            <div class="input-error" id="identifier-error"></div>
+        </div>
+
+        <!-- Пароль с глазом -->
+        <div class="input-group">
+            <label class="input-label">Пароль</label>
+            <div style="position: relative;">
+                <input type="password" class="input-field" id="password" name="password" placeholder="введите пароль" required style="padding-right: 40px;">
+                <span class="password-toggle" onclick="togglePassword('password', this)">
+                    <i class="fas fa-eye"></i>
+                </span>
+            </div>
+            <div class="input-error" id="password-error"></div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submit-btn" disabled>Войти</button>
+    </form>
+
+    <!-- Ссылки под формой -->
+    <div class="footer-links">
+        <a href="{% url 'users:register' %}"
+            hx-get="{% url 'users:register' %}"
+            hx-target="#main-content"
+            hx-push-url="true">
+            Нет аккаунта?
+        </a>
+        <a href="{% url 'users:change_password' %}"
+            hx-get="{% url 'users:change_password' %}"
+            hx-target="#main-content"
+            hx-push-url="true">
+            Забыл пароль?
+        </a>
+    </div>
+</div>
+
+<style>
+    /* Стили для сообщений об ошибках и иконки глаза */
+    .input-error {
+        color: #ff4d4d;
+        font-size: 12px;
+        margin-top: 4px;
+        min-height: 18px;
+    }
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #B0B0C0;
+        font-size: 18px;
+        transition: color 0.2s;
+        z-index: 2;
+    }
+    .password-toggle:hover {
+        color: #E07A5F;
+    }
+    /* Делаем кнопку аккуратнее */
+    .btn-primary {
+        width: 100%;
+        padding: 14px 20px;
+        border-radius: 40px;
+        background: #E07A5F;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+        margin-top: 8px;
+        letter-spacing: 0.3px;
+    }
+    .btn-primary:hover:not(:disabled) {
+        background: #c96b51;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(224, 122, 95, 0.4);
+    }
+    .btn-primary:active:not(:disabled) {
+        transform: translateY(1px);
+        box-shadow: 0 2px 8px rgba(224, 122, 95, 0.4);
+    }
+    .btn-primary:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    (function() {
+        // Элементы формы
+        const identifierInput = document.getElementById('identifier');
+        const passwordInput = document.getElementById('password');
+        const identifierError = document.getElementById('identifier-error');
+        const passwordError = document.getElementById('password-error');
+        const submitBtn = document.getElementById('submit-btn');
+        const form = document.getElementById('login-form');
+
+        // Демо-данные существующих пользователей
+        const existingUsers = [
+            { identifier: 'ivan@example.com', password: 'Password1!' }, // email
+            { identifier: 'ivan_p', password: 'Password1!' }           // username
+        ];
+
+        // Функция определения типа идентификатора (email или username)
+        function getIdentifierType(value) {
+            return value.includes('@') ? 'email' : 'username';
+        }
+
+        // Валидация email
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // Валидация пароля:
+        // - только латиница, цифры и спецсимволы
+        // - минимум 8 символов
+        // - хотя бы одна заглавная латинская буква
+        // - хотя бы одна строчная латинская буква
+        // - хотя бы одна цифра
+        // - хотя бы один спецсимвол
+        function validatePassword(password) {
+            if (password.length < 8) return false;
+            if (!/^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) return false;
+            if (!/[A-Z]/.test(password)) return false; // заглавная
+            if (!/[a-z]/.test(password)) return false; // строчная
+            if (!/[0-9]/.test(password)) return false;
+            if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return false;
+            return true;
+        }
+
+        // Проверка существования пользователя (демо)
+        function userExists(identifier) {
+            return existingUsers.some(u => u.identifier === identifier);
+        }
+
+        // Функция обновления состояния кнопки и ошибок
+        function validateForm() {
+            const identifier = identifierInput.value.trim();
+            const password = passwordInput.value;
+            let identifierValid = false;
+            let passwordValid = false;
+
+            // Проверка идентификатора
+            if (identifier === '') {
+                identifierError.innerText = '';
+            } else {
+                const type = getIdentifierType(identifier);
+                if (type === 'email') {
+                    if (!isValidEmail(identifier)) {
+                        identifierError.innerText = 'Введите корректный email';
+                    } else if (!userExists(identifier)) {
+                        identifierError.innerText = 'Пользователь с таким email не найден';
+                    } else {
+                        identifierError.innerText = '';
+                        identifierValid = true;
+                    }
+                } else { // username
+                    if (!/^[a-zA-Z0-9_]+$/.test(identifier)) {
+                        identifierError.innerText = 'Имя пользователя содержит недопустимые символы';
+                    } else if (!userExists(identifier)) {
+                        identifierError.innerText = 'Пользователь с таким именем не найден';
+                    } else {
+                        identifierError.innerText = '';
+                        identifierValid = true;
+                    }
+                }
+            }
+
+            // Проверка пароля
+            if (password === '') {
+                passwordError.innerText = '';
+                passwordValid = false;
+            } else {
+                if (validatePassword(password)) {
+                    passwordError.innerText = '';
+                    passwordValid = true;
+                } else {
+                    // Детальные ошибки
+                    if (password.length < 8) {
+                        passwordError.innerText = 'Минимум 8 символов';
+                    } else if (!/^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) {
+                        passwordError.innerText = 'Только латинские буквы, цифры и спецсимволы';
+                    } else if (!/[A-Z]/.test(password)) {
+                        passwordError.innerText = 'Должна быть хотя бы одна заглавная латинская буква';
+                    } else if (!/[a-z]/.test(password)) {
+                        passwordError.innerText = 'Должна быть хотя бы одна строчная латинская буква';
+                    } else if (!/[0-9]/.test(password)) {
+                        passwordError.innerText = 'Должна быть хотя бы одна цифра';
+                    } else if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+                        passwordError.innerText = 'Должен быть хотя бы один спецсимвол';
+                    } else {
+                        passwordError.innerText = '';
+                    }
+                    passwordValid = false;
+                }
+            }
+
+            // Активация кнопки, если оба поля валидны и не пусты
+            submitBtn.disabled = !(identifierValid && passwordValid && identifier !== '' && password !== '');
+        }
+
+        // События ввода
+        identifierInput.addEventListener('input', validateForm);
+        passwordInput.addEventListener('input', validateForm);
+
+        // Обработка Enter
+        function handleEnter(e, nextField) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (nextField) {
+                    nextField.focus();
+                } else {
+                    if (!submitBtn.disabled) {
+                        // Имитация успешного входа (для демо)
+                        alert('✅ Вход выполнен (демо)');
+                        // Реальная отправка через htmx произойдёт автоматически
+                    }
+                }
+            }
+        }
+
+        identifierInput.addEventListener('keydown', (e) => handleEnter(e, passwordInput));
+        passwordInput.addEventListener('keydown', (e) => handleEnter(e, null));
+
+        // Предотвращаем отправку, если кнопка неактивна
+        form.addEventListener('submit', (e) => {
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                if (identifierInput.value.trim() === '') {
+                    identifierError.innerText = 'Введите email или имя пользователя';
+                }
+                if (passwordInput.value === '') {
+                    passwordError.innerText = 'Введите пароль';
+                }
+            }
+        });
+
+        // Функция показа/скрытия пароля
+        window.togglePassword = function(inputId, iconElement) {
+            const input = document.getElementById(inputId);
+            const icon = iconElement.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        };
+
+        // Фокус на поле identifier при загрузке
+        identifierInput.focus();
+    })();
+</script>
+{% endblock %}

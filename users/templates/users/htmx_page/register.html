@@ -1,0 +1,586 @@
+<div id="main-content">
+    <div class="register-card">
+        <h1 class="register-title">
+            <i class="fas fa-brain"></i> 
+            Второй мозг
+        </h1>
+        <div class="register-subtitle">Создайте аккаунт, чтобы управлять задачами, целями и привычками</div>
+
+        <!-- Форма регистрации с htmx -->
+        <form hx-post="/register" hx-target="body" hx-swap="beforeend" hx-trigger="submit" id="register-form">
+            <!-- Имя пользователя -->
+            <div class="input-group">
+                <label class="input-label">Имя пользователя</label>
+                <input type="text" class="input-field" id="username" name="username" placeholder="например, name" required autofocus>
+                <div class="input-error" id="username-error"></div>
+            </div>
+
+            <!-- Email с кнопкой отправки кода -->
+            <div class="input-group">
+                <label class="input-label">Электронная почта</label>
+                <div class="input-with-button" id="email-group">
+                    <input type="email" class="input-field" id="email" name="email" placeholder="your@email.com" required>
+                    <button type="button" class="btn-small" id="send-code-btn"
+                            hx-post="/send-verification-code" 
+                            hx-target="#code-section" 
+                            hx-swap="outerHTML"
+                            hx-include="previous input">Отправить</button>
+                </div>
+                <div class="input-error" id="email-error"></div>
+                <div class="input-hint" id="email-hint">
+                    <i class="fas fa-info-circle"></i> Нажмите «Отправить», чтобы получить код
+                </div>
+            </div>
+
+            <!-- Код подтверждения с кнопкой проверки -->
+            <div class="input-group" id="code-section">
+                <label class="input-label">Код подтверждения</label>
+                <div class="input-with-button" id="code-input-group">
+                    <input type="text" class="input-field" id="code" name="code" placeholder="6-значный код" pattern="[0-9]{6}" maxlength="6">
+                    <!-- Кнопка теперь с уникальным классом и уникальным id, изолированными от других страниц -->
+                    <button type="button" class="verify-code-unique" id="register-verify-btn" disabled>Подтвердить</button>
+                </div>
+                <div id="code-status" class="input-hint">
+                    <i class="fas fa-key"></i> Введите код из письма
+                </div>
+            </div>
+
+            <!-- Пароль с глазом -->
+            <div class="input-group">
+                <label class="input-label">Пароль</label>
+                <div style="position: relative;">
+                    <input type="password" class="input-field" id="password" name="password" placeholder="минимум 8 символов" minlength="8" required style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('password', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <div class="input-error" id="password-error"></div>
+            </div>
+
+            <!-- Подтверждение пароля с глазом -->
+            <div class="input-group">
+                <label class="input-label">Подтверждение пароля</label>
+                <div style="position: relative;">
+                    <input type="password" class="input-field" id="password_confirm" name="password_confirm" placeholder="минимум 8 символов" minlength="8" required style="padding-right: 40px;">
+                    <span class="password-toggle" onclick="togglePassword('password_confirm', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <div class="input-error" id="password-confirm-error"></div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="submit-btn" disabled>Зарегистрироваться</button>
+        </form>
+
+        <!-- Ссылки на другие страницы -->
+        <div class="footer-links">
+            <a href="{% url 'users:login' %}"
+                hx-get="{% url 'users:login' %}"
+                hx-target="#main-content"
+                hx-push-url="true">
+                Вход
+            </a>
+            <a href="{% url 'users:change_password' %}"
+                hx-get="{% url 'users:change_password' %}"
+                hx-target="#main-content"
+                hx-push-url="true">
+                Забыли пароль?
+            </a>
+        </div>
+    </div>
+
+    <style>
+        /* === ОСНОВНЫЕ СТИЛИ (оставляем как есть) === */
+        .input-error {
+            color: #ff4d4d;
+            font-size: 12px;
+            margin-top: 4px;
+            min-height: 18px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #B0B0C0;
+            font-size: 18px;
+            transition: color 0.2s;
+            z-index: 2;
+        }
+
+        .password-toggle:hover {
+            color: #E07A5F;
+        }
+
+        /* Основная кнопка (Зарегистрироваться) */
+        .btn-primary {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 40px;
+            background: #E07A5F;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+            margin-top: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #c96b51;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(224, 122, 95, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 8px rgba(224, 122, 95, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Маленькие кнопки (только для "Отправить" – остаются общими) */
+        .btn-small {
+            background: rgba(224, 122, 95, 0.1);
+            border: 1px solid rgba(224, 122, 95, 0.25);
+            border-radius: 40px;
+            padding: 0 18px;
+            color: #E07A5F;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 48px;
+            line-height: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .btn-small:hover:not(:disabled) {
+            background: rgba(224, 122, 95, 0.2);
+            border-color: #E07A5F;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+        }
+
+        .btn-small:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(224, 122, 95, 0.3);
+        }
+
+        .btn-small:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Подсказки под полями */
+        .input-hint {
+            font-size: 12px;
+            color: #6B6B7A;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .input-hint i {
+            color: #E07A5F;
+            font-size: 10px;
+        }
+
+        /* Группа поля с кнопкой */
+        .input-with-button {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-with-button .input-field {
+            flex: 1;
+        }
+
+        /* === УНИКАЛЬНЫЙ КЛАСС ДЛЯ КНОПКИ "ПОДТВЕРДИТЬ" === */
+        /* Полностью изолирован от общих стилей, имеет фиксированные размеры */
+        .verify-code-unique {
+            background: rgba(224, 122, 95, 0.1) !important;
+            border: 1px solid rgba(224, 122, 95, 0.25) !important;
+            border-radius: 40px !important;
+            padding: 0 18px !important;
+            color: #E07A5F !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            white-space: nowrap !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 48px !important;
+            line-height: 1 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+            box-sizing: border-box !important; /* чтобы граница не увеличивала высоту */
+        }
+
+        .verify-code-unique:hover:not(:disabled) {
+            background: rgba(224, 122, 95, 0.2) !important;
+            border-color: #E07A5F !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3) !important;
+        }
+
+        .verify-code-unique:active:not(:disabled) {
+            transform: translateY(1px) !important;
+            box-shadow: 0 2px 4px rgba(224, 122, 95, 0.3) !important;
+        }
+
+        .verify-code-unique:disabled {
+            opacity: 0.4 !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+        }
+
+        /* Стиль для успешно подтверждённой кнопки (зелёный) */
+        .verify-code-unique.success {
+            background: rgba(40, 167, 69, 0.1) !important;
+            border-color: #28a745 !important;
+            color: #28a745 !important;
+        }
+
+        .verify-code-unique.success:hover {
+            background: rgba(40, 167, 69, 0.2) !important;
+            border-color: #28a745 !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
+        }
+
+        /* Адаптация для мобильных (переопределяем высоту) */
+        @media (max-width: 500px) {
+            .btn-small {
+                min-width: 120px;
+                height: 44px;
+                font-size: 13px;
+            }
+            .verify-code-unique {
+                height: 44px !important;
+                padding: 0 12px !important;
+                font-size: 13px !important;
+            }
+            .input-field {
+                padding: 12px 16px;
+            }
+        }
+    </style>
+
+    <script>
+        (function() {
+            // Элементы формы
+            const usernameInput = document.getElementById('username');
+            const emailInput = document.getElementById('email');
+            const codeInput = document.getElementById('code');
+            const passwordInput = document.getElementById('password');
+            const passwordConfirmInput = document.getElementById('password_confirm');
+            const sendCodeBtn = document.getElementById('send-code-btn');
+            // Используем новый уникальный id для кнопки "Подтвердить"
+            const verifyCodeBtn = document.getElementById('register-verify-btn');
+
+            const usernameError = document.getElementById('username-error');
+            const emailError = document.getElementById('email-error');
+            const passwordError = document.getElementById('password-error');
+            const passwordConfirmError = document.getElementById('password-confirm-error');
+            const submitBtn = document.getElementById('submit-btn');
+            const form = document.getElementById('register-form');
+            const emailHint = document.getElementById('email-hint');
+            const codeStatus = document.getElementById('code-status');
+            const emailGroup = document.getElementById('email-group');
+            const codeInputGroup = document.getElementById('code-input-group');
+
+            // Состояния
+            let codeSent = false;
+            let codeVerified = false;
+            let timerInterval = null;
+
+            // Демо-данные
+            const existingUsers = [
+                { username: 'ivan_p', email: 'ivan@example.com' },
+                { username: 'petr', email: 'petr@example.com' },
+                { username: 'anna', email: 'anna@example.com' }
+            ];
+
+            function isValidEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+
+            function isValidUsername(username) {
+                return /^[a-zA-Z0-9_]+$/.test(username);
+            }
+
+            function isUsernameTaken(username) {
+                return existingUsers.some(u => u.username === username);
+            }
+
+            function isEmailTaken(email) {
+                return existingUsers.some(u => u.email === email);
+            }
+
+            function validatePassword(password) {
+                if (password.length < 8) return false;
+                if (!/^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) return false;
+                if (!/[A-Z]/.test(password)) return false;
+                if (!/[a-z]/.test(password)) return false;
+                if (!/[0-9]/.test(password)) return false;
+                if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return false;
+                return true;
+            }
+
+            function isValidCodeFormat(code) {
+                return /^[0-9]{6}$/.test(code);
+            }
+
+            function updateCodeStatus() {
+                const code = codeInput.value.trim();
+                if (!code) {
+                    codeStatus.innerHTML = '<i class="fas fa-key"></i> Введите код из письма';
+                    return;
+                }
+                if (!isValidCodeFormat(code)) {
+                    codeStatus.innerHTML = '<i class="fas fa-times-circle" style="color: #ff4d4d;"></i> Код должен быть 6 цифр';
+                    return;
+                }
+                if (codeVerified) {
+                    codeStatus.innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> Код подтверждён';
+                } else if (codeSent) {
+                    codeStatus.innerHTML = '<i class="fas fa-info-circle"></i> Нажмите «Подтвердить» для проверки кода';
+                } else {
+                    codeStatus.innerHTML = '<i class="fas fa-key"></i> Сначала отправьте код';
+                }
+            }
+
+            function validateForm() {
+                const username = usernameInput.value.trim();
+                const email = emailInput.value.trim();
+                const code = codeInput.value.trim();
+                const password = passwordInput.value;
+                const passwordConfirm = passwordConfirmInput.value;
+
+                let usernameValid = false, emailValid = false, codeValid = false, passwordValid = false, passwordConfirmValid = false;
+
+                // username
+                if (username === '') {
+                    usernameError.innerText = '';
+                } else {
+                    if (!isValidUsername(username)) {
+                        usernameError.innerText = 'Только латинские буквы, цифры и подчёркивание';
+                    } else if (isUsernameTaken(username)) {
+                        usernameError.innerText = 'Это имя пользователя уже занято';
+                    } else {
+                        usernameError.innerText = '';
+                        usernameValid = true;
+                    }
+                }
+
+                // email
+                if (email === '') {
+                    emailError.innerText = '';
+                } else {
+                    if (!isValidEmail(email)) {
+                        emailError.innerText = 'Введите корректный email';
+                    } else if (isEmailTaken(email)) {
+                        emailError.innerText = 'Этот email уже зарегистрирован';
+                    } else {
+                        emailError.innerText = '';
+                        emailValid = true;
+                    }
+                }
+
+                // code format
+                codeValid = code !== '' && isValidCodeFormat(code);
+
+                // password
+                if (password === '') {
+                    passwordError.innerText = '';
+                } else {
+                    if (validatePassword(password)) {
+                        passwordError.innerText = '';
+                        passwordValid = true;
+                    } else {
+                        if (password.length < 8) passwordError.innerText = 'Минимум 8 символов';
+                        else if (!/^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) passwordError.innerText = 'Только латинские буквы, цифры и спецсимволы';
+                        else if (!/[A-Z]/.test(password)) passwordError.innerText = 'Должна быть хотя бы одна заглавная латинская буква';
+                        else if (!/[a-z]/.test(password)) passwordError.innerText = 'Должна быть хотя бы одна строчная латинская буква';
+                        else if (!/[0-9]/.test(password)) passwordError.innerText = 'Должна быть хотя бы одна цифра';
+                        else if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) passwordError.innerText = 'Должен быть хотя бы один спецсимвол';
+                        else passwordError.innerText = '';
+                        passwordValid = false;
+                    }
+                }
+
+                // password confirm
+                if (passwordConfirm === '') {
+                    passwordConfirmError.innerText = '';
+                } else {
+                    if (passwordConfirm !== password) {
+                        passwordConfirmError.innerText = 'Пароли не совпадают';
+                        passwordConfirmValid = false;
+                    } else if (!validatePassword(passwordConfirm)) {
+                        passwordConfirmError.innerText = 'Пароль не соответствует требованиям';
+                        passwordConfirmValid = false;
+                    } else {
+                        passwordConfirmError.innerText = '';
+                        passwordConfirmValid = true;
+                    }
+                }
+
+                const allFilled = username && email && code && password && passwordConfirm;
+                submitBtn.disabled = !(usernameValid && emailValid && codeValid && passwordValid && passwordConfirmValid && allFilled && codeVerified);
+
+                updateCodeStatus();
+            }
+
+            // Enter
+            function handleEnter(e, nextField) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (nextField) nextField.focus();
+                    else if (!submitBtn.disabled) alert('✅ Форма валидна (демо)');
+                }
+            }
+
+            usernameInput.addEventListener('keydown', (e) => handleEnter(e, emailInput));
+            emailInput.addEventListener('keydown', (e) => handleEnter(e, codeInput));
+            codeInput.addEventListener('keydown', (e) => handleEnter(e, passwordInput));
+            passwordInput.addEventListener('keydown', (e) => handleEnter(e, passwordConfirmInput));
+            passwordConfirmInput.addEventListener('keydown', (e) => handleEnter(e, null));
+
+            // Input events
+            [usernameInput, emailInput, codeInput, passwordInput, passwordConfirmInput].forEach(input =>
+                input.addEventListener('input', validateForm)
+            );
+            [usernameInput, emailInput, codeInput].forEach(input =>
+                input.addEventListener('blur', validateForm)
+            );
+
+            // Prevent submit if disabled
+            form.addEventListener('submit', (e) => {
+                if (submitBtn.disabled) {
+                    e.preventDefault();
+                    if (!usernameInput.value.trim()) usernameError.innerText = 'Введите имя пользователя';
+                    if (!emailInput.value.trim()) emailError.innerText = 'Введите email';
+                    if (!codeInput.value.trim()) codeStatus.innerHTML = '<i class="fas fa-times-circle" style="color: #ff4d4d;"></i> Введите код подтверждения';
+                    if (!passwordInput.value) passwordError.innerText = 'Введите пароль';
+                    if (!passwordConfirmInput.value) passwordConfirmError.innerText = 'Подтвердите пароль';
+                    if (!codeVerified) codeStatus.innerHTML = '<i class="fas fa-times-circle" style="color: #ff4d4d;"></i> Подтвердите код';
+                }
+            });
+
+            // Toggle password
+            window.togglePassword = function(inputId, iconElement) {
+                const input = document.getElementById(inputId);
+                const icon = iconElement.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            };
+
+            // Timer reset
+            function resetAfterTimer() {
+                if (!codeVerified) {
+                    codeSent = false;
+                    verifyCodeBtn.disabled = true;
+                    emailInput.readOnly = false;
+                    sendCodeBtn.disabled = false;
+                    sendCodeBtn.textContent = 'Отправить';
+                    emailHint.innerHTML = '<i class="fas fa-info-circle"></i> Нажмите «Отправить», чтобы получить код';
+                    updateCodeStatus();
+                }
+            }
+
+            function startTimer(button, durationSeconds) {
+                let remaining = durationSeconds;
+                button.disabled = true;
+                timerInterval = setInterval(() => {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    button.textContent = `Повтор через ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        resetAfterTimer();
+                    }
+                    remaining--;
+                }, 1000);
+            }
+
+            // Send code
+            sendCodeBtn.addEventListener('click', function() {
+                if (sendCodeBtn.disabled) return;
+                if (!isValidEmail(emailInput.value.trim())) {
+                    emailError.innerText = 'Введите корректный email';
+                    return;
+                }
+                codeSent = true;
+                emailInput.readOnly = true;
+                verifyCodeBtn.disabled = false;
+                emailHint.innerHTML = '<i class="fas fa-envelope"></i> Код отправлен на вашу почту';
+                startTimer(sendCodeBtn, 180);
+                updateCodeStatus();
+            });
+
+            // Verify code
+            verifyCodeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!codeSent || codeVerified) return;
+                const code = codeInput.value.trim();
+                if (!isValidCodeFormat(code)) {
+                    codeStatus.innerHTML = '<i class="fas fa-times-circle" style="color: #ff4d4d;"></i> Код должен быть 6 цифр';
+                    return;
+                }
+                setTimeout(() => {
+                    if (code === '123456') {
+                        codeVerified = true;
+                        // Remove send button
+                        const sendBtn = document.getElementById('send-code-btn');
+                        if (sendBtn) sendBtn.remove();
+                        emailInput.readOnly = true;
+                        emailInput.disabled = true;
+                        emailHint.innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> Email подтверждён';
+                        codeInput.readOnly = true;
+                        codeInput.disabled = true;
+                        verifyCodeBtn.textContent = 'Подтверждено';
+                        verifyCodeBtn.disabled = true;
+                        verifyCodeBtn.classList.add('success');
+                        codeStatus.innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> Код подтверждён';
+                        if (timerInterval) {
+                            clearInterval(timerInterval);
+                            timerInterval = null;
+                        }
+                        validateForm();
+                    } else {
+                        codeVerified = false;
+                        codeStatus.innerHTML = '<i class="fas fa-times-circle" style="color: #ff4d4d;"></i> Неверный код';
+                    }
+                }, 500);
+            });
+
+            // Initial focus
+            usernameInput.focus();
+            validateForm();
+        })();
+    </script>
+</div>
