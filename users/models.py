@@ -22,7 +22,7 @@ def default_settings():
 
 class UserSettings(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='settings')
-    settings = models.JSONField(default=default_settings)
+    settings = models.JSONField(default=default_settings, blank=True)
 
     class Meta:
         verbose_name = 'Настройки'
