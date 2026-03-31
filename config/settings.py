@@ -1,6 +1,8 @@
 from pathlib import Path
 import environ
 import os
+import base64
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,6 +19,20 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
+
+FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY')
+
+if not FIELD_ENCRYPTION_KEY:
+    raise ValueError("FIELD_ENCRYPTION_KEY must be set")
+else:
+    try:
+        base64.b64decode(FIELD_ENCRYPTION_KEY)
+        if len(base64.b64decode(FIELD_ENCRYPTION_KEY)) != 32:
+            raise ImproperlyConfigured(
+                "FIELD_ENCRYPTION_KEY must be 32 bytes after base64 decode"
+            )
+    except Exception:
+        raise ImproperlyConfigured("Invalid FIELD_ENCRYPTION_KEY format")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')

@@ -1,10 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from encrypted_model_fields.fields import EncryptedCharField
 
 
 class CustomUser(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    telegram_id = models.BigIntegerField(unique=True, blank=True, null=True)
+    telegram_id = EncryptedCharField(
+        max_length=255,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name="Telegram ID")
 
     class Meta:
         verbose_name = 'Пользователь'
