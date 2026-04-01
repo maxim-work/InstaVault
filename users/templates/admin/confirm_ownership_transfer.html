@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="module">
+    <h2>Подтверждение передачи прав владельца</h2>
+    
+    <p>Вы собираетесь передать права владельца:</p>
+    
+    <ul>
+        <li><strong>Текущий владелец:</strong> {{ current_owner }}</li>
+        <li><strong>Новый владелец:</strong> {{ new_owner }}</li>
+    </ul>
+    
+    <div class="warning" style="padding: 10px; margin: 10px 0; border-left: 4px solid #ffc107;">
+        <strong>⚠️ Внимание!</strong><br>
+        После подтверждения:
+        <ul>
+            <li>Текущий владелец потеряет права владельца</li>
+            <li>Новый владелец получит полные права владельца</li>
+            <li>Операцию нельзя будет отменить без передачи прав обратно</li>
+        </ul>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <button type="submit" class="button" style="background: #28a745; color: white; padding: 10px 20px; border: none; cursor: pointer;">
+            ✅ Подтвердить передачу
+        </button>
+        <button type="submit" name="action" value="cancel" class="button" style="background: #dc3545; color: white; padding: 10px 20px; border: none; cursor: pointer; margin-left: 10px;">
+            ❌ Отмена
+        </button>
+    </form>
+</div>
+{% endblock %}
