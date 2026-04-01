@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from django.shortcuts import redirect, render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
+from django.forms import Form, CharField, Textarea
 
 
 class UserSettingsInline(admin.StackedInline):
@@ -35,7 +36,7 @@ class UserSettingsInline(admin.StackedInline):
 class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'email')
 
-    actions = ['transfer_owner']
+    actions = ['transfer_owner', 'send_telegram_message']
 
     def transfer_owner(self, request, queryset):
         if not request.user.is_owner:
@@ -82,6 +83,28 @@ class CustomUserAdmin(UserAdmin):
         return redirect(reverse('users:confirm_ownership_transfer'))
     
     transfer_owner.short_description = "Передать права владельца"
+
+
+    def send_telegram_message(self, request, queryset):
+        users_with_telegram = queryset.exclude(telegram_id__isnull=True).exclude(telegram_id='')
+        
+        if not users_with_telegram.exists():
+            self.message_user(
+                request,
+                "Нет пользователей с привязанным Telegram среди выбранных",
+                level='ERROR'
+            )
+            return
+        
+        request.session['telegram_message_users'] = {
+            'user_ids': list(users_with_telegram.values_list('id', flat=True)),
+            'usernames': list(users_with_telegram.values_list('username', flat=True)),
+            'count': users_with_telegram.count()
+        }
+        
+        return redirect(reverse('users:send_telegram_message'))
+    
+    send_telegram_message.short_description = "Отправить Telegram-сообщение"
     
     
     def get_list_display(self, request):
@@ -300,3 +323,80 @@ def confirm_ownership_transfer(request):
         'title': 'Подтверждение передачи прав владельца',
     }
     return render(request, 'admin/confirm_ownership_transfer.html', context)
+
+
+class TelegramMessageForm(Form):
+    message = CharField(
+        widget=Textarea(attrs={
+            'rows': 5,
+            'cols': 50,
+            'placeholder': 'Введите сообщение для отправки...'
+        }),
+        label='Сообщение',
+        required=True
+    )
+
+
+@staff_member_required
+def send_telegram_message_view(request):
+    session_data = request.session.get('telegram_message_users')
+    
+    if not session_data:
+        messages.error(request, "Нет выбранных пользователей для отправки")
+        return redirect('admin:users_customuser_changelist')
+    
+    user_ids = session_data['user_ids']
+    usernames = session_data['usernames']
+    count = session_data['count']
+    
+    users = CustomUser.objects.filter(id__in=user_ids)
+    
+    if request.method == 'POST':
+        form = TelegramMessageForm(request.POST)
+        
+        if form.is_valid():
+            message = form.cleaned_data['message']
+            
+            success_count = 0
+            failed_users = []
+            
+            for user in users:
+                try:
+                    # Здесь будет реальная отправка через бота
+                    # Заглушка
+                    print(f"[TELEGRAM] Отправка сообщения пользователю {user.username}")
+                    print(f"[TELEGRAM] Сообщение: {message}")
+                    
+                    success_count += 1
+                    
+                except Exception as e:
+                    failed_users.append(f"{user.username} (ошибка: {str(e)})")
+            
+            del request.session['telegram_message_users']
+            
+            if success_count > 0:
+                messages.success(
+                    request,
+                    f"Сообщение отправлено {success_count} из {count} пользователям"
+                )
+            
+            if failed_users:
+                messages.warning(
+                    request,
+                    f"Не удалось отправить: {', '.join(failed_users)}"
+                )
+            
+            return redirect('admin:users_customuser_changelist')
+    
+    else:
+        form = TelegramMessageForm()
+    
+    context = {
+        'form': form,
+        'users': users,
+        'usernames': usernames,
+        'count': count,
+        'title': 'Отправка Telegram-сообщения',
+    }
+    
+    return render(request, 'admin/send_telegram_message.html', context)
