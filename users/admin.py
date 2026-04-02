@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.shortcuts import redirect, render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from django.forms import Form, CharField, Textarea
+from django.forms import Form, CharField, Textarea, TextInput
 
 
 class UserSettingsInline(admin.StackedInline):
@@ -36,7 +36,7 @@ class UserSettingsInline(admin.StackedInline):
 class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'email')
 
-    actions = ['transfer_owner', 'send_telegram_message']
+    actions = ['transfer_owner', 'send_telegram_message', 'send_email_message']
 
     def transfer_owner(self, request, queryset):
         if not request.user.is_owner:
@@ -105,6 +105,27 @@ class CustomUserAdmin(UserAdmin):
         return redirect(reverse('users:send_telegram_message'))
     
     send_telegram_message.short_description = "Отправить Telegram-сообщение"
+
+    def send_email_message(self, request, queryset):
+        users_with_email = queryset.exclude(email__isnull=True).exclude(email='')
+
+        if not users_with_email.exists():
+            self.message_user(
+                request,
+                "Нет пользователей с привязанными email среди выбранных",
+                level='ERROR'
+            )
+            return
+        
+        request.session['email_message_users'] = {
+            'user_ids': list(users_with_email.values_list('id', flat=True)),
+            'usernames': list(users_with_email.values_list('username', flat=True)),
+            'count': users_with_email.count()
+        }
+
+        return redirect(reverse('users:send_email_message'))
+    
+    send_email_message.short_description = "Отправить Email-письмо"
     
     
     def get_list_display(self, request):
@@ -400,3 +421,87 @@ def send_telegram_message_view(request):
     }
     
     return render(request, 'admin/send_telegram_message.html', context)
+
+
+class EmailMessageForm(Form):
+    subject = CharField(
+        max_length=200,
+        widget=TextInput(attrs={'size': 50}),
+        label='Тема',
+        required=True
+    )
+    message = CharField(
+        widget=Textarea(attrs={
+            'rows': 5,
+            'cols': 50,
+            'placeholder': 'Введите сообщение для отправки...'
+        }),
+        label='Сообщение',
+        required=True
+    )
+
+@staff_member_required
+def send_email_message_view(request):
+    session_data = request.session.get('email_message_users')
+    
+    if not session_data:
+        messages.error(request, "Нет выбранных пользователей для отправки")
+        return redirect('admin:users_customuser_changelist')
+    
+    user_ids = session_data['user_ids']
+    usernames = session_data['usernames']
+    count = session_data['count']
+    
+    users = CustomUser.objects.filter(id__in=user_ids)
+    
+    if request.method == 'POST':
+        form = EmailMessageForm(request.POST)
+        
+        if form.is_valid():
+            message = form.cleaned_data['message']
+            subject = form.cleaned_data['subject']
+            
+            success_count = 0
+            failed_users = []
+            
+            for user in users:
+                try:
+                    # Здесь будет реальная отправка email писем
+                    # Заглушка
+                    print(f"[EMAIL] Отправка сообщения пользователю {user.username}")
+                    print(f"[EMAIL] Тема сообщения: {subject}")
+                    print(f"[EMAIL] Сообщение: {message}")
+                    
+                    success_count += 1
+                    
+                except Exception as e:
+                    failed_users.append(f"{user.username} (ошибка: {str(e)})")
+            
+            del request.session['email_message_users']
+            
+            if success_count > 0:
+                messages.success(
+                    request,
+                    f"Сообщение отправлено {success_count} из {count} пользователям"
+                )
+            
+            if failed_users:
+                messages.warning(
+                    request,
+                    f"Не удалось отправить: {', '.join(failed_users)}"
+                )
+            
+            return redirect('admin:users_customuser_changelist')
+    
+    else:
+        form = EmailMessageForm()
+    
+    context = {
+        'form': form,
+        'users': users,
+        'usernames': usernames,
+        'count': count,
+        'title': 'Отправка Email-писем',
+    }
+    
+    return render(request, 'admin/send_email_message.html', context)
