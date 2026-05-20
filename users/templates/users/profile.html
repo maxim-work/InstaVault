@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Профиль · Второй мозг</title>
+    <title>InstaVault</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* === ПОЛНЫЙ СТИЛЬ С ГОРИЗОНТАЛЬНЫМ И ВЕРТИКАЛЬНЫМ РЕЖИМАМИ === */
@@ -878,7 +878,10 @@
                     <div class="field-row" style="border-bottom: none;">
                         <span class="field-label">Пароль</span>
                         <span class="field-value">••••••••</span>
-                        <a href="change_password" class="password-link"><i class="fas fa-lock"></i> Сменить</a>
+                        <a  href="{% url 'users:change_password' %}"
+                            hx-get="{% url 'users:change_password' %}"
+                            hx-target="#main-content"
+                            hx-push-url="true" class="password-link"><i class="fas fa-lock"></i> Сменить</a>
                     </div>
                 </div>
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Второй мозг · Главная</title>
+    <title>InstaVault · Планировщик дня</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* ========== БАЗОВЫЕ ПЕРЕМЕННЫЕ ========== */
@@ -56,7 +56,6 @@
             position: relative;
         }
 
-        /* Фоновый эффект (лёгкий градиент) */
         .app::before {
             content: '';
             position: absolute;
@@ -398,53 +397,56 @@
     <div class="app">
         <!-- ШАПКА С КНОПКАМИ -->
         <div class="header">
-            <div class="logo">Второй мозг</div>
+            <div class="logo">InstaVault</div>
             <div class="auth-buttons">
-                <a href="users/login" class="btn btn-login">Войти</a>
-                <a href="users/register" class="btn btn-register">Зарегистрироваться</a>
+                <a href="{% url 'users:login' %}" class="btn btn-login">Войти</a>
+                <a href="{% url 'users:register' %}" class="btn btn-register">Зарегистрироваться</a>
             </div>
         </div>
 
         <!-- ОСНОВНОЙ КОНТЕНТ -->
         <div class="main">
-            <h1>Ваш личный цифровой ассистент</h1>
+            <h1>Ваш день под контролем</h1>
             <div class="subtitle">
-                Ежедневник, календарь, цели и привычки — всё в одном месте. 
-                Начните управлять своей жизнью уже сегодня.
+                Расписание, задачи, привычки и Telegram-бот — всё работает вместе,
+                чтобы вы ничего не забыли и двигались к своим целям.
             </div>
 
             <!-- СЕТКА С 4 ФИЧАМИ -->
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-pen-fancy"></i></div>
-                    <div class="feature-title">Ежедневник</div>
+                    <div class="feature-icon"><i class="fas fa-clock"></i></div>
+                    <div class="feature-title">Расписание дня</div>
                     <div class="feature-description">
-                        Заметки с поддержкой Markdown, шаблоны, задачи с временными слотами. 
-                        Удобная группировка по утру, дню, вечеру.
+                        Создайте шаблон дня один раз. Бот присылает уведомления
+                        в нужное время: «9:30 — слепая печать», «17:00 — LeetCode».
+                        Разные шаблоны для будней и выходных.
                     </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-calendar-alt"></i></div>
-                    <div class="feature-title">Календарь</div>
+                    <div class="feature-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="feature-title">Задачи</div>
                     <div class="feature-description">
-                        Недельный и месячный обзор задач. Быстрый переход между днями, 
-                        просмотр занятости, создание событий.
+                        Создавайте задачи через сайт или бота. Повторяющиеся, с дедлайном,
+                        с возможностью переноса. Выполненные уходят в архив и видны в календаре.
                     </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-bullseye"></i></div>
-                    <div class="feature-title">Глобальные цели</div>
+                    <div class="feature-icon"><i class="fas fa-fire"></i></div>
+                    <div class="feature-title">Привычки со стриками</div>
                     <div class="feature-description">
-                        Разбивайте большие цели на подзадачи, следите за прогрессом в процентах. 
-                        Достигайте амбициозных результатов.
+                        Заведите привычку, укажите время напоминания. Бот спросит:
+                        «2 литра воды — отметить?». Текущий стрик, лучший результат
+                        и статистика за месяц всегда перед глазами.
                     </div>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon"><i class="fas fa-heartbeat"></i></div>
-                    <div class="feature-title">Привычки</div>
+                    <div class="feature-icon"><i class="fab fa-telegram"></i></div>
+                    <div class="feature-title">Telegram-бот</div>
                     <div class="feature-description">
-                        Отслеживайте ежедневные ритуалы, получайте статистику и серии. 
-                        Визуализация прогресса мотивирует не сдаваться.
+                        Быстрый ввод задач и отметка привычек прямо в Telegram.
+                        Уведомления по расписанию. Вся статистика доступна
+                        одной командой. Сайт и бот работают вместе.
                     </div>
                 </div>
             </div>
@@ -453,44 +455,41 @@
             <div class="quote-block">
                 <i class="fas fa-quote-right quote-icon"></i>
                 <div class="quote-text">
-                    “Раньше я всё держал в голове и постоянно что-то забывал. 
-                    «Второй мозг» помог навести порядок в делах и мыслях. 
-                    Теперь я чётко вижу свои цели и прогресс.”
+                    «Раньше я забывал про привычки уже через неделю.
+                    С InstaVault бот напоминает мне про воду, чтение и зарядку.
+                    Стрик в 42 дня — впервые в жизни.»
                 </div>
                 <div class="quote-author">
                     <div class="author-avatar">N</div>
                     <div class="author-info">
                         <div class="author-name">Name</div>
-                        <div class="author-title">пользователь с 42-дневным стриком</div>
+                        <div class="author-title">42-дневный стрик привычек</div>
                     </div>
                 </div>
             </div>
 
             <!-- КНОПКИ ПРИЗЫВА -->
             <div class="cta-section">
-                <a href="users/register" class="btn btn-register btn-large">Попробовать бесплатно</a>
-                <a href="users/login" class="btn btn-login btn-large">У меня есть аккаунт</a>
+                <a href="{% url 'users:register' %}" class="btn btn-register btn-large">Начать бесплатно</a>
+                <a href="{% url 'users:login' %}" class="btn btn-login btn-large">У меня есть аккаунт</a>
             </div>
         </div>
 
         <!-- ФУТЕР -->
         <div class="footer">
-            © 2026 Второй мозг. Все права защищены.
+            © 2026 InstaVault. Все права защищены.
         </div>
     </div>
 
     <!-- JAVASCRIPT ДЛЯ АНИМАЦИЙ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Анимация для карточек фич
             const cards = document.querySelectorAll('.feature-card');
             
-            // Опции наблюдателя
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('visible');
-                        // Можно перестать наблюдать после появления
                         observer.unobserve(entry.target);
                     }
                 });
@@ -501,15 +500,6 @@
 
             cards.forEach(card => observer.observe(card));
 
-            // Дополнительный эффект: параллакс для фона (лёгкий)
-            window.addEventListener('mousemove', (e) => {
-                const x = e.clientX / window.innerWidth - 0.5;
-                const y = e.clientY / window.innerHeight - 0.5;
-                const bg = document.querySelector('.app::before');
-                // стилизовать сложно, поэтому оставим как идею
-            });
-
-            // Можно добавить плавный скролл к кнопкам (для демо)
             document.querySelectorAll('a[href="#"]').forEach(link => {
                 link.addEventListener('click', (e) => e.preventDefault());
             });
