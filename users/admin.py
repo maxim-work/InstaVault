@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from users.models import CustomUser, UserSettings
+from users.models import CustomUser, UserSettings, Appeal
 from django.contrib.auth.models import Group
 from django.contrib.admin import DateFieldListFilter
 from django.urls import reverse
@@ -681,3 +681,99 @@ def ban_operation_view(request):
         'flag': flag,
     }
     return render(request, 'admin/ban_operation.html', context)
+
+
+@admin.register(Appeal)
+class AppealAdmin(admin.ModelAdmin):
+    list_display = ('username', 'contact', 'status', 'created_at', 'message_preview')
+    list_filter = ('status', 'created_at')
+    search_fields = ('username', 'contact', 'message')
+    readonly_fields = ('username', 'contact', 'message', 'created_at', 'status', 'action_buttons')
+    fieldsets = (
+        (None, {
+            'fields': ('username', 'contact', 'status', 'created_at')
+        }),
+        ('Сообщение', {
+            'fields': ('message',)
+        }),
+        ('Действия', {
+            'fields': ('action_buttons',)
+        }),
+    )
+    actions = ['approve_appeal', 'reject_appeal']
+    
+    def message_preview(self, obj):
+        return obj.message[:100] + '...' if len(obj.message) > 100 else obj.message
+    message_preview.short_description = 'Сообщение'
+    
+    def action_buttons(self, obj):
+        if obj.status != 'new':
+            return '-'
+        
+        unban_url = reverse('admin:users_appeal_unban', args=[obj.pk])
+        reject_url = reverse('admin:users_appeal_reject', args=[obj.pk])
+        
+        return format_html(
+            '<a class="button" href="{}" style="background: #28a745; color: white;">Разбанить</a>&nbsp;'
+            '<a class="button" href="{}" style="background: #dc3545; color: white;">Отклонить</a>',
+            unban_url, reject_url
+        )
+    action_buttons.short_description = 'Действия'
+    
+    def approve_appeal(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, 'Выберите одну апелляцию', level='ERROR')
+            return
+        
+        appeal = queryset.first()
+        user = CustomUser.objects.filter(username=appeal.username).first()
+        
+        if not user:
+            self.message_user(request, 'Пользователь не найден', level='ERROR')
+            return
+        
+        request.session['ban_operation'] = {
+            'flag': 'unban',
+            'user_ids': [user.id],
+            'usernames': [user.username],
+            'count': 1
+        }
+        return redirect(reverse('users:ban_operation'))
+    approve_appeal.short_description = 'Разбанить'
+    
+    def reject_appeal(self, request, queryset):
+        updated = queryset.update(status='rejected')
+        self.message_user(request, f'Отклонено апелляций: {updated}')
+    reject_appeal.short_description = 'Отклонить'
+    
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:appeal_id>/unban/', self.admin_site.admin_view(self.unban_view), name='users_appeal_unban'),
+            path('<int:appeal_id>/reject/', self.admin_site.admin_view(self.reject_view), name='users_appeal_reject'),
+        ]
+        return custom_urls + urls
+    
+    def unban_view(self, request, appeal_id):
+        appeal = Appeal.objects.get(id=appeal_id)
+        user = CustomUser.objects.filter(username=appeal.username).first()
+        
+        if user:
+            request.session['ban_operation'] = {
+                'flag': 'unban',
+                'user_ids': [user.id],
+                'usernames': [user.username],
+                'count': 1
+            }
+            appeal.status = 'approved'
+            appeal.save()
+            return redirect(reverse('users:ban_operation'))
+        
+        self.message_user(request, 'Пользователь не найден', level='ERROR')
+        return redirect('admin:users_appeal_changelist')
+    
+    def reject_view(self, request, appeal_id):
+        Appeal.objects.filter(id=appeal_id).update(status='rejected')
+        self.message_user(request, 'Апелляция отклонена')
+        return redirect('admin:users_appeal_changelist')

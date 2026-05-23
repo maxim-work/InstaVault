@@ -194,3 +194,23 @@ class UserSettings(models.Model):
             settings.settings[key] = value
             settings.save(update_fields=['settings'])
             self.settings = settings.settings
+
+
+class Appeal(models.Model):
+    username = models.CharField(max_length=150)
+    contact = models.CharField(max_length=255, blank=True)
+    message = models.TextField(max_length=2000)
+    status = models.CharField(max_length=20, default='new', choices=[
+        ('new', 'Новое'),
+        ('approved', 'Одобрено'),
+        ('rejected', 'Отклонено'),
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Апелляция'
+        verbose_name_plural = 'Апелляции'
+    
+    def __str__(self):
+        return f'{self.username} — {self.get_status_display()}'

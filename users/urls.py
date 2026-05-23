@@ -35,4 +35,7 @@ urlpatterns = [
     path('admin/send-telegram-message/', staff_member_required(send_telegram_message_view), name='send_telegram_message'),
     path('admin/send-email-message/', staff_member_required(send_email_message_view), name='send_email_message'),
     path('admin/ban-operation/', staff_member_required(ban_operation_view), name='ban_operation'),
+    path('ban/appeal/', views.appeal, name='appeal'),
+    path('ban/check-appeal-username/', views.check_appeal_username, name='check_appeal_username'),
+    path('ban/submit-appeal/', views.submit_appeal, name='submit_appeal'),
 ]

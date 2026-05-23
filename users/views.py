@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.views.decorators.http import require_POST
 from users.forms import LoginForm, RegisterForm
-from users.models import CustomUser
+from users.models import CustomUser, Appeal
 
 
 def register_view(request):
@@ -321,3 +321,29 @@ def delete_account(request):
 def logout_view(request):
     logout(request)
     return redirect('users:login')
+
+def appeal(request):
+    return render(request, 'users/ban_appeal.html')
+
+def check_appeal_username(request):
+    username = request.POST.get('username', '')
+    exists = CustomUser.objects.filter(username=username).exists()
+    return JsonResponse({'exists': exists})
+
+def submit_appeal(request):
+    username = request.POST.get('username', '')
+    contact = request.POST.get('contact', '')
+    message = request.POST.get('message', '')
+
+    if all([username, message]):
+        Appeal.objects.create(
+            username=username,
+            contact=contact,
+            message=message)
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False, 'error': 'Данные введены не корректно!'})
+
+
+
+
