@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 
     'landing',
     'users.apps.UsersConfig',
+    'audit',
 ]
 
 MIDDLEWARE = [
