@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'users.middleware.BanCheckMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -115,6 +116,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'users.backends.AllowInactiveBackend',
+]
+
 
 LANGUAGE_CODE = 'en-us'
 
@@ -133,12 +138,15 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'users:profile'
+LOGOUT_REDIRECT_URL = 'users:login'
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 172800
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = False

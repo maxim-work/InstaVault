@@ -8,7 +8,8 @@ from django.utils.html import format_html
 from django.shortcuts import redirect, render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from django.forms import Form, CharField, Textarea, TextInput
+from django.forms import Form, CharField, Textarea, TextInput, BooleanField, IntegerField, CheckboxInput, NumberInput
+from django import forms
 
 
 class UserSettingsInline(admin.StackedInline):
@@ -36,7 +37,7 @@ class UserSettingsInline(admin.StackedInline):
 class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'email')
 
-    actions = ['transfer_owner', 'send_telegram_message', 'send_email_message']
+    actions = ['transfer_owner', 'send_telegram_message', 'send_email_message', 'ban_users', 'unban_users']
 
     def transfer_owner(self, request, queryset):
         if not request.user.is_owner:
@@ -126,6 +127,50 @@ class CustomUserAdmin(UserAdmin):
         return redirect(reverse('users:send_email_message'))
     
     send_email_message.short_description = "Отправить Email-письмо"
+
+    def _ban_unban_handler(self, request, queryset, flag, filter_kwargs, error_message):
+        """Handle ban/unban action: filter users, validate, store in session."""
+        users = queryset.filter(**filter_kwargs)
+        
+        filter_level = {}
+
+        if request.user.is_owner:
+            filter_level = {'is_owner': True}
+        elif request.user.is_superuser:
+            filter_level = {'is_owner': True, 'is_superuser': True}
+        elif request.user.is_staff:
+            filter_level = {'is_owner': True, 'is_superuser': True, 'is_staff': True}
+
+        users = users.exclude(**filter_level)
+
+        if not users.exists():
+            self.message_user(request, error_message, level='ERROR')
+            return
+
+        request.session['ban_operation'] = {
+            'flag': flag,
+            'user_ids': list(users.values_list('id', flat=True)),
+            'usernames': list(users.values_list('username', flat=True)),
+            'count': users.count()
+        }
+        return redirect(reverse('users:ban_operation'))
+
+    def ban_users(self, request, queryset):
+        return self._ban_unban_handler(request, queryset, 
+            flag='ban',
+            filter_kwargs={'is_active': True},
+            error_message='Нет активных пользователей для бана среди выбранных'
+            )
+    ban_users.short_description = 'Забанить пользователя(ей)'
+
+    def unban_users(self, request, queryset):
+        return self._ban_unban_handler(
+            request, queryset,
+            flag='unban',
+            filter_kwargs={'is_active': False},
+            error_message="Нет неактивных пользователей для разбана среди выбранных"
+            )
+    unban_users.short_description = 'Разбанить пользвателя(ей)'
     
     
     def get_list_display(self, request):
@@ -505,3 +550,134 @@ def send_email_message_view(request):
     }
     
     return render(request, 'admin/send_email_message.html', context)
+
+
+class BanOperationForm(Form):
+    reason = CharField(
+        widget=Textarea(attrs={
+            'rows': 5,
+            'cols': 50,
+            'placeholder': 'Введите причину...'
+        }),
+        label='Причина',
+        required=True
+    )
+    
+    permanent = BooleanField(
+        widget=CheckboxInput(attrs={
+            'class': 'ban-checkbox'
+        }),
+        label='Перманентный бан',
+        required=False,
+        initial=False
+    )
+    
+    hours = IntegerField(
+        widget=NumberInput(attrs={
+            'placeholder': 'Часы',
+            'min': 0,
+            'max': 24,
+            'class': 'ban-duration'
+        }),
+        label='Часы',
+        required=False,
+        initial=0
+    )
+    
+    days = IntegerField(
+        widget=NumberInput(attrs={
+            'placeholder': 'Дни',
+            'min': 0,
+            'max': 365,
+            'class': 'ban-duration'
+        }),
+        label='Дни',
+        required=False,
+        initial=0
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.flag = kwargs.pop('flag', 'ban')
+        super().__init__(*args, **kwargs)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        permanent = cleaned_data.get('permanent')
+        hours = cleaned_data.get('hours', 0)
+        days = cleaned_data.get('days', 0)
+        
+        if self.flag == 'ban':
+            if not permanent and hours == 0 and days == 0:
+                self.add_error('hours', 'Укажите срок бана или выберите перманентный бан')
+                self.add_error('days', 'Укажите срок бана или выберите перманентный бан')
+    
+        
+        return cleaned_data
+
+
+@staff_member_required
+def ban_operation_view(request):
+    session_data = request.session.get('ban_operation')
+
+    if not session_data:
+        messages.error(request, 'Нет выбранных пользователей')
+        return redirect('admin:users_customuser_changelist')
+
+    flag = session_data['flag']
+    user_ids = session_data['user_ids']
+    usernames = session_data['usernames']
+    count = session_data['count']
+
+    users = CustomUser.objects.filter(id__in=user_ids)
+
+    if request.method == 'POST':
+        form = BanOperationForm(request.POST, flag=flag)
+
+        if form.is_valid():
+            reason = form.cleaned_data['reason']
+            permanent = form.cleaned_data['permanent']
+            hours = form.cleaned_data['hours']
+            days = form.cleaned_data['days']
+
+            success_count = 0
+            failed_users = []
+
+
+            for user in users:
+                try:
+                    user.ban(reason, days, hours, permanent) if flag == 'ban' else user.unban(reason)
+
+                    # log info
+                    success_count += 1
+
+                except Exception as e:
+                    failed_users.append(f"{user.username} (ошибка: {str(e)})")
+                    # log info
+
+            del request.session['ban_operation']
+
+            if success_count > 0:
+                messages.success(
+                    request,
+                    f"{'Забанено' if flag == 'ban' else 'Разбанено'} {success_count} из {count} пользователей"
+                )
+            
+            if failed_users:
+                messages.warning(
+                    request,
+                    f"Не удалось {'забанить' if flag == 'ban' else 'разбанить'}: {', '.join(failed_users)}"
+                )
+            
+            return redirect('admin:users_customuser_changelist')
+    
+    else:
+        form = BanOperationForm(flag=flag)
+
+    context = {
+        'form': form,
+        'users': users,
+        'usernames': usernames,
+        'count': count,
+        'flag': flag,
+    }
+    return render(request, 'admin/ban_operation.html', context)
