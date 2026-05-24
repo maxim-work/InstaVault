@@ -76,8 +76,6 @@ class CustomUser(AbstractUser):
             self.is_superuser = True
             self.is_staff = True
         
-        self.full_clean()
-        
         if not self.is_owner and self.pk:
             old = CustomUser.objects.filter(pk=self.pk).first()
             if old and old.is_owner:
@@ -105,6 +103,7 @@ class CustomUser(AbstractUser):
         self.started_ban = None
         self.ended_ban = None
         self.reason_ban = ''
+        self.save()
 
     def is_banned(self):
         return not self.is_active
@@ -175,16 +174,7 @@ class UserSettings(models.Model):
         return f'Настройки {self.user.username}'
     
     def get(self, key, default=None):
-        with transaction.atomic():
-            if self.settings is None:
-                settings = UserSettings.objects.select_for_update().get(pk=self.pk)
-                if settings.settings is None:
-                    settings.settings = {}
-                    settings.save(update_fields=['settings'])
-                    self.settings = settings.settings
-                else:
-                    self.settings = settings.settings
-        return self.settings.get(key, default)
+        return self.settings.get(key, default) if self.settings else default
 
     def set(self, key, value):
         with transaction.atomic():

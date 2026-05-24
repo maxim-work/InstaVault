@@ -1,4 +1,5 @@
 from django import forms
+from users.models import CustomUser
 
 class LoginForm(forms.Form):
     identifier = forms.CharField(
@@ -25,7 +26,6 @@ class LoginForm(forms.Form):
         password = cleaned_data.get('password')
         
         if identifier and password:
-            from users.models import CustomUser
             
             user = None
             if '@' in identifier:
@@ -90,5 +90,11 @@ class RegisterForm(forms.Form):
         if all([username, email, password, password_confirm]):
             if password != password_confirm:
                 self.add_error('password_confirm', 'Пароли не совпадают')
+            
+            from users.models import CustomUser
+            if CustomUser.objects.filter(username=username).exists():
+                self.add_error('username', 'Имя уже занято')
+            if CustomUser.objects.filter(email=email).exists():
+                self.add_error('email', 'Email уже зарегистрирован')
         
         return cleaned_data
