@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from users.models import CustomUser, UserSettings, Appeal
 from django.contrib.auth.models import Group
 from django.contrib.admin import DateFieldListFilter
 from django.urls import reverse
@@ -10,6 +9,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.forms import Form, CharField, Textarea, TextInput, BooleanField, IntegerField, CheckboxInput, NumberInput
 from django import forms
+from users.models import CustomUser, UserSettings, Appeal
+from audit.utils import log_action
 
 
 class UserSettingsInline(admin.StackedInline):
@@ -365,6 +366,15 @@ def confirm_ownership_transfer(request):
                     CustomUser.objects.filter(pk=current_owner.pk).update(is_owner=False)
                 
                 CustomUser.objects.filter(pk=new_owner.pk).update(is_owner=True)
+
+                log_action(
+                    user=new_owner,
+                    performed_by=request.user,
+                    action='ownership_transfer',
+                    category='admin',
+                    details=f'Ownership transferred from {current_owner} to {new_owner.username}',
+                    request=request
+                )
                 
                 del request.session['pending_ownership_transfer']
                 
@@ -434,6 +444,15 @@ def send_telegram_message_view(request):
                     print(f"[TELEGRAM] Сообщение: {message}")
                     
                     success_count += 1
+
+                    log_action(
+                        user=user,
+                        performed_by=request.user,
+                        action='send_telegram',
+                        category='admin',
+                        details=f'Sent message to {user.username}: {message[:200]}',
+                        request=request
+                    )
                     
                 except Exception as e:
                     failed_users.append(f"{user.username} (ошибка: {str(e)})")
@@ -518,6 +537,15 @@ def send_email_message_view(request):
                     print(f"[EMAIL] Сообщение: {message}")
                     
                     success_count += 1
+
+                    log_action(
+                        user=user,
+                        performed_by=request.user,
+                        action='send_email',
+                        category='admin',
+                        details=f'Sent message to {user.username}: {message[:200]}',
+                        request=request
+                    )
                     
                 except Exception as e:
                     failed_users.append(f"{user.username} (ошибка: {str(e)})")
@@ -645,14 +673,30 @@ def ban_operation_view(request):
 
             for user in users:
                 try:
-                    user.ban(reason, days, hours, permanent) if flag == 'ban' else user.unban(reason)
-
-                    # log info
+                    if flag == 'ban':
+                        user.ban(reason, days, hours, permanent)
+                        log_action(
+                            user=user,
+                            performed_by=request.user,
+                            action='ban',
+                            category='admin',
+                            details=f'Ban via admin panel, reason: {reason}, {days}d {hours}h, permanent: {permanent}',
+                            request=request
+                        )
+                    else:
+                        user.unban(reason)
+                        log_action(
+                            user=user,
+                            performed_by=request.user,
+                            action='unban',
+                            category='admin',
+                            details=f'Unbanned via admin panel, reason: {reason}',
+                            request=request
+                        )
                     success_count += 1
 
                 except Exception as e:
                     failed_users.append(f"{user.username} (ошибка: {str(e)})")
-                    # log info
 
             del request.session['ban_operation']
 
@@ -738,12 +782,34 @@ class AppealAdmin(admin.ModelAdmin):
             'usernames': [user.username],
             'count': 1
         }
+
+        log_action(
+            user=user,
+            performed_by=request.user,
+            action='appeal_approved',
+            category='admin',
+            details=f'Appeal #{appeal.id} approved for {user.username}',
+            request=request
+        )
+
         return redirect(reverse('users:ban_operation'))
+
     approve_appeal.short_description = 'Разбанить'
     
     def reject_appeal(self, request, queryset):
+        count = queryset.count()
+        for appeal in queryset:
+            log_action(
+                user=None,
+                performed_by=request.user,
+                action='appeal_rejected',
+                category='admin',
+                details=f'Appeal #{appeal.id} rejected from {appeal.username}',
+                request=request
+            )
         updated = queryset.update(status='rejected')
         self.message_user(request, f'Отклонено апелляций: {updated}')
+
     reject_appeal.short_description = 'Отклонить'
     
     def get_urls(self):
@@ -768,12 +834,33 @@ class AppealAdmin(admin.ModelAdmin):
             }
             appeal.status = 'approved'
             appeal.save()
+            
+            log_action(
+                user=user,
+                performed_by=request.user,
+                action='appeal_approved',
+                category='admin',
+                details=f'Appeal #{appeal.id} approved for {user.username} (from detail view)',
+                request=request
+            )
             return redirect(reverse('users:ban_operation'))
         
         self.message_user(request, 'Пользователь не найден', level='ERROR')
         return redirect('admin:users_appeal_changelist')
-    
+
     def reject_view(self, request, appeal_id):
-        Appeal.objects.filter(id=appeal_id).update(status='rejected')
+        appeal = Appeal.objects.get(id=appeal_id)
+        appeal.status = 'rejected'
+        appeal.save()
+        
+        log_action(
+            user=None,
+            performed_by=request.user,
+            action='appeal_rejected',
+            category='admin',
+            details=f'Appeal #{appeal.id} rejected from {appeal.username} (from detail view)',
+            request=request
+        )
+        
         self.message_user(request, 'Апелляция отклонена')
         return redirect('admin:users_appeal_changelist')

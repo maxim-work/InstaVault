@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.utils import timezone
+from audit.utils import log_action
 
 class BanCheckMiddleware:
     EXEMPT_URLS = [
@@ -19,12 +20,14 @@ class BanCheckMiddleware:
         if user.is_authenticated:
             if user._should_auto_unban():
                 user._perform_auto_unban()
-                user.save(update_fields=[
-                    'is_active',
-                    'started_ban',
-                    'ended_ban',
-                    'reason_ban',
-                ])
+
+                log_action(
+                    user=user,
+                    performed_by=None,
+                    action='auto_unban',
+                    category='system',
+                    request=request
+                )
             
             if user.is_banned():
                 return self._render_ban_page(request, user)

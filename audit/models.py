@@ -5,7 +5,7 @@ from users.models import CustomUser
 
 class AuditLog(models.Model):
     CATEGORY_CHOICES = [
-        ('user', 'Дейстивя пользователя'),
+        ('user', 'Действия пользователя'),
         ('admin', 'Действия администратора'),
         ('system', 'Системное действие')]
 
@@ -24,10 +24,12 @@ class AuditLog(models.Model):
         ('register', 'Регистрация'),
         ('password_change', 'Смена пароля'),
         ('email_change', 'Смена email'),
+        ('name_change', 'Смена имени'),
         ('username_change', 'Смена username'),
         ('telegram_connect', 'Подключение Telegram'),
         ('telegram_disconnect', 'Отключение Telegram'),
         ('avatar_upload', 'Загрузка аватара'),
+        ('delete_account', 'Удаление аккаунта'),
         
         ('auto_unban', 'Авторазблокировка'),]
 
