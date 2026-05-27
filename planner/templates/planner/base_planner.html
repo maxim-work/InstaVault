@@ -1,0 +1,1058 @@
+{% extends "users/base.html" %}
+
+{% block content %}
+<style>
+    #main-content {
+        display: flex !important;
+        flex-direction: column !important;
+        height: calc(100vh - 32px) !important;
+        max-height: 900px !important;
+        width: 100% !important;
+        max-width: 1000px !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+    }
+    .app-layout { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
+    .topbar { display: flex; align-items: center; gap: 24px; padding: 12px 20px; background: rgba(12,12,15,0.85); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 2px; }
+    .topbar-user-link { text-decoration: none; flex-shrink: 0; }
+    .topbar-user { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border-radius: 12px; transition: background 0.2s; }
+    .topbar-user-link:hover .topbar-user { background: rgba(224,122,95,0.1); }
+    .avatar-topbar { width: 34px; height: 34px; border-radius: 10px; background: #E07A5F; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex-shrink: 0; color: white; }
+    .topbar-user-info { display: flex; flex-direction: column; line-height: 1.2; }
+    .topbar-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+    .topbar-user-streak { font-size: 11px; color: #E07A5F; }
+    .topbar-nav { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .topbar-nav-link { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; color: #B0B0C0; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s; }
+    .topbar-nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .topbar-nav-link.active { background: rgba(224,122,95,0.15); color: #E07A5F; }
+    .topbar-nav-link i { font-size: 15px; width: 18px; text-align: center; }
+    .topbar-actions { flex-shrink: 0; display: flex; align-items: center; width: 36px; }
+    .main-area { flex: 1 1 0; background: rgba(12,12,15,0.85); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .day-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; min-height: 68px; }
+    .header-left { display: flex; align-items: center; gap: 24px; flex: 1; }
+    .date-nav { display: flex; align-items: center; gap: 12px; width: 260px; flex-shrink: 0; }
+    .date-arrow { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: #B0B0C0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .date-arrow:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .date-display { 
+        font-size: 14px; color: #fff; font-weight: 500; text-align: center; 
+        cursor: pointer; padding: 4px 12px; border-radius: 8px; transition: all 0.2s; user-select: none;
+    }
+    .date-display:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .header-stats { 
+        display: flex; align-items: center; gap: 12px; font-size: 13px; color: #B0B0C0; 
+        width: 380px; flex-shrink: 0; 
+    }
+    .header-stats span { display: flex; align-items: center; gap: 4px; }
+    .header-stats strong { color: #E07A5F; font-weight: 600; }
+    .stats-separator { color: #3A3A45; }
+    .stat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .stat-dot.urgent { background: #ff4d4d; }
+    .stat-dot.important { background: #f0c040; }
+    .stat-dot.none-dot { background: #6B6B7A; }
+    .header-right { width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
+    .btn-add-header { width: 36px; height: 36px; border-radius: 50%; background: #E07A5F; border: none; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(224,122,95,0.3); transition: all 0.2s; }
+    .btn-add-header:hover { background: #c96b51; transform: translateY(-2px); }
+    .day-content { flex: 1 1 0; display: flex; flex-direction: column; padding: 24px 24px 0 24px; min-height: 0; overflow: hidden; }
+    .daily-greeting { font-size: 24px; font-weight: 600; color: #fff; margin-bottom: 16px; flex-shrink: 0; }
+    .day-note { background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 16px; overflow: hidden; flex-shrink: 0; }
+    .note-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; font-weight: 600; color: #B0B0C0; text-transform: uppercase; letter-spacing: 0.5px; cursor: default; }
+    .note-header i { transition: transform 0.2s; font-size: 12px; }
+    .note-header.collapsed i { transform: rotate(-90deg); }
+    .note-menu { margin-left: auto; position: relative; }
+    .note-menu-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 16px; cursor: pointer; }
+    .note-dropdown { position: absolute; top: 35px; right: 0; width: 150px; background: #1A1A20; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 20px rgba(0,0,0,0.5); display: none; z-index: 10; }
+    .note-dropdown.active { display: block; }
+    .dropdown-item { padding: 10px 14px; font-size: 13px; color: #E1E1E6; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .note-body { padding: 16px; }
+    .note-body.collapsed { display: none; }
+    .note-body textarea { width: 100%; background: transparent; border: none; color: #E1E1E6; font-size: 15px; line-height: 1.7; resize: none; min-height: 60px; outline: none; font-family: inherit; overflow: hidden; }
+    
+    /* Custom Select */
+    .custom-select-wrapper { position: relative; flex: 1; }
+    .custom-select-trigger { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; color: white; font-size: 14px; cursor: pointer; transition: all 0.2s; user-select: none; width: 100%; }
+    .custom-select-trigger:hover { border-color: rgba(224,122,95,0.4); }
+    .custom-select-trigger i { font-size: 10px; color: #6B6B7A; transition: transform 0.2s; }
+    .custom-select-wrapper.open .custom-select-trigger { border-color: #E07A5F; }
+    .custom-select-wrapper.open .custom-select-trigger i { transform: rotate(180deg); color: #E07A5F; }
+    .custom-select-dropdown { position: fixed; background: #1A1A20; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; z-index: 9999; box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: none; max-height: 240px; overflow-y: auto; }
+    .custom-select-dropdown.active { display: block; }
+    .custom-option { padding: 11px 16px; font-size: 14px; color: #B0B0C0; cursor: pointer; transition: all 0.15s; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .custom-option:last-child { border-bottom: none; }
+    .custom-option:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .custom-option.active { color: #E07A5F; background: rgba(224,122,95,0.08); }
+    .custom-option.priority-urgent { color: #ff4d4d; }
+    .custom-option.priority-important { color: #f0c040; }
+    
+    /* Tasks */
+    .section-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0; }
+    .section-label { font-size: 14px; font-weight: 600; color: #B0B0C0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .section-actions { display: flex; gap: 8px; align-items: center; }
+    .section-actions .custom-select-wrapper { width: 180px; }
+    .subheader { font-size: 12px; font-weight: 600; color: #6B6B7A; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 0; flex-shrink: 0; }
+    .tasks-scroll-area { flex: 1 1 0; overflow-y: auto; min-height: 0; padding-bottom: 24px; }
+    .tasks-scroll-area::-webkit-scrollbar { width: 4px; }
+    .tasks-scroll-area::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 4px; }
+    .task-card { display: flex; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.02); border-radius: 14px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.03); transition: all 0.2s; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .task-card.priority-urgent { border-left: 3px solid #ff4d4d; }
+    .task-card.priority-important { border-left: 3px solid #f0c040; }
+    .task-card.priority-none { border-left: 3px solid #3A3A45; }
+    .task-card.completed { opacity: 0.6; }
+    .task-card.completed .task-card-title { text-decoration: line-through; color: #6B6B7A; }
+    .task-card-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #3A3A45; cursor: pointer; transition: all 0.2s; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent; }
+    .task-card-checkbox:hover { border-color: #E07A5F; }
+    .task-card-checkbox.checked { background: #10b981; border-color: #10b981; color: white; }
+    .task-card-body { flex: 1; min-width: 0; }
+    .task-card-title { font-size: 15px; color: #fff; margin-bottom: 4px; font-weight: 500; }
+    .task-card-desc { font-size: 12px; color: #6B6B7A; margin-bottom: 6px; }
+    .task-card-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .task-card-time { font-size: 12px; color: #E07A5F; background: rgba(224,122,95,0.08); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+    .task-card-priority-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+    .task-card-priority-badge.urgent { background: rgba(255,77,77,0.15); color: #ff4d4d; }
+    .task-card-priority-badge.important { background: rgba(240,192,64,0.15); color: #f0c040; }
+    .task-card-repeat-badge { font-size: 11px; color: #A0A0B0; background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.06); }
+    .task-card-repeat-badge i { font-size: 10px; color: #8B8B9A; }
+    .task-card-actions { position: relative; display: flex; gap: 4px; align-items: flex-start; }
+    .task-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .task-btn:hover { background: rgba(224,122,95,0.15); color: #E07A5F; }
+    .task-menu-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .task-menu-btn:hover { background: rgba(224,122,95,0.15); color: #E07A5F; }
+    .task-dropdown { position: absolute; top: 35px; right: 0; width: 180px; background: #1A1A20; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 25px rgba(0,0,0,0.6); display: none; z-index: 100; overflow: hidden; }
+    .task-dropdown.active { display: block; }
+    .task-dropdown-item { padding: 10px 14px; font-size: 13px; color: #E1E1E6; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: all 0.15s; }
+    .task-dropdown-item:last-child { border-bottom: none; }
+    .task-dropdown-item:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .task-dropdown-item i { width: 16px; text-align: center; font-size: 13px; }
+    .task-dropdown-item.delete-item:hover { background: rgba(255,77,77,0.1); color: #ff4d4d; }
+    
+    /* Collapsible */
+    .collapsible-section { margin-top: 8px; }
+    .collapsible-header { display: flex; align-items: center; gap: 8px; padding: 12px 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #6B6B7A; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid rgba(255,255,255,0.03); flex-shrink: 0; }
+    .collapsible-count { margin-left: auto; color: #6B6B7A; font-size: 13px; }
+    .collapsible-body.collapsed { display: none; }
+    .completed-section { margin-top: 8px; }
+    .completed-count { margin-left: auto; color: #6B6B7A; font-size: 13px; }
+    .completed-body.collapsed { display: none; }
+    .empty-state { text-align: center; padding: 40px 16px; color: #6B6B7A; flex-shrink: 0; }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; color: #3A3A45; }
+    .empty-text { font-size: 14px; margin-bottom: 12px; }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { width: 480px; max-width: 90%; max-height: 90vh; overflow-y: auto; background: #0C0C0F; border-radius: 28px; padding: 28px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 30px 60px rgba(0,0,0,0.5); position: relative; }
+    .modal-title { font-size: 20px; font-weight: 600; color: #E07A5F; margin-bottom: 20px; }
+    .modal-input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 12px 16px; color: white; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; }
+    .modal-close-btn { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); border: none; color: #B0B0C0; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 10; }
+    .modal-close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .modal-textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+    .modal-row { display: flex; gap: 12px; }
+    .modal-select-wrapper { margin-bottom: 12px; flex: 1; }
+    .time-toggle-row { margin-bottom: 12px; }
+    .time-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .time-toggle input { display: none; }
+    .time-toggle-slider { width: 40px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 11px; position: relative; transition: all 0.2s; flex-shrink: 0; }
+    .time-toggle-slider::after { content: ''; position: absolute; width: 18px; height: 18px; background: #6B6B7A; border-radius: 50%; top: 2px; left: 2px; transition: all 0.2s; }
+    .time-toggle input:checked + .time-toggle-slider { background: rgba(224,122,95,0.3); }
+    .time-toggle input:checked + .time-toggle-slider::after { background: #E07A5F; left: 20px; }
+    .time-toggle-label { font-size: 13px; color: #B0B0C0; }
+    .time-fields { align-items: center; }
+    .time-separator { color: #6B6B7A; font-size: 14px; flex-shrink: 0; }
+    .modal-actions { display: flex; gap: 12px; margin-top: 16px; }
+    .modal-btn { flex: 1; padding: 12px; border-radius: 30px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }
+    .modal-btn.primary { background: #E07A5F; color: white; }
+    .modal-btn.primary:hover { background: #c96b51; }
+    .modal-btn.secondary { background: rgba(255,255,255,0.05); color: #B0B0C0; }
+    .modal-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+    
+    /* Habits */
+    .habits-grid { display: flex; flex-direction: column; gap: 8px; }
+    .habit-card { 
+        display: flex; align-items: center; gap: 12px; padding: 14px 18px; 
+        background: rgba(255,255,255,0.02); border-radius: 16px; 
+        border: 1px solid rgba(255,255,255,0.04); transition: all 0.2s; 
+        overflow: visible !important;
+    }
+    .habit-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+    .habit-card.completed .habit-name { text-decoration: line-through; color: #8B8B9A; }
+    .habit-check-square { 
+        width: 22px; height: 22px; border-radius: 6px; border: 2px solid #3A3A45; 
+        cursor: pointer; transition: all 0.2s; flex-shrink: 0; 
+        display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; 
+    }
+    .habit-check-square:hover { border-color: #E07A5F; }
+    .habit-check-square.checked { background: #10b981; border-color: #10b981; color: white; box-shadow: 0 0 12px rgba(16,185,129,0.25); }
+    .habit-info { flex: 1; min-width: 0; }
+    .habit-name { font-size: 15px; color: #fff; font-weight: 500; margin-bottom: 4px; letter-spacing: -0.2px; }
+    .habit-meta { display: flex; gap: 10px; align-items: center; }
+    .habit-streak { font-size: 11px; color: #E07A5F; font-weight: 500; }
+    .habit-right { flex-shrink: 0; }
+    .habit-progress-ring { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    .habit-progress-ring .progress-text { position: absolute; font-size: 10px; font-weight: 600; color: #B0B0C0; }
+    .add-habit-section { display: none; }
+    .avatar-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .avatar-option { 
+        width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.03); 
+        border: 2px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; 
+        font-size: 18px; cursor: pointer; transition: all 0.2s; user-select: none; 
+    }
+    .avatar-option:hover { background: rgba(224,122,95,0.1); border-color: rgba(224,122,95,0.3); transform: scale(1.05); }
+    .avatar-option.selected { background: rgba(224,122,95,0.15); border-color: #E07A5F; box-shadow: 0 0 12px rgba(224,122,95,0.2); }
+    .expandable-field { margin-bottom: 4px; }
+    .expandable-toggle { font-size: 13px; color: #6B6B7A; cursor: pointer; padding: 8px 12px; border-radius: 10px; transition: all 0.2s; user-select: none; }
+    .expandable-toggle:hover { color: #E07A5F; background: rgba(224,122,95,0.05); }
+    .expandable-body { margin-top: 8px; }
+    
+    /* Calendar */
+    .calendar-weekdays { 
+        display: grid; 
+        grid-template-columns: repeat(7, 1fr); 
+        text-align: center; 
+        margin-bottom: 6px; 
+        flex-shrink: 0;
+        width: 100%;
+    }
+    .calendar-weekday { 
+        font-size: 14px; 
+        font-weight: 600; 
+        color: #6B6B7A; 
+        text-transform: uppercase; 
+        padding: 8px 0; 
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        margin-bottom: 10px;
+        flex-shrink: 0;
+        width: 100%;
+    }
+
+    .calendar-day-cell {
+        aspect-ratio: 1;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        position: relative;
+        font-size: 15px;
+        font-weight: 500;
+        color: #B0B0C0;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid transparent;
+        min-width: 0;
+    }
+    .calendar-day-cell:hover { transform: scale(1.08); z-index: 2; box-shadow: 0 3px 10px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.15); }
+    .calendar-day-cell.other-month { opacity: 0.15; pointer-events: none; }
+    .calendar-day-cell.today { border-color: rgba(255,255,255,0.2); color: #fff; font-weight: 700; }
+    .calendar-day-cell.selected { outline: 2px solid rgba(255,255,255,0.3); outline-offset: 1px; }
+    .day-indicator { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); display: flex; gap: 1.5px; }
+    .day-indicator-dot { width: 4px; height: 4px; border-radius: 50%; }
+    .day-indicator-dot.completed { background: #10b981; }
+    .day-indicator-dot.partial { background: #f0c040; }
+    .day-indicator-dot.habit { background: #64a0dc; }
+    /* Calendar */
+    .calendar-legend { 
+        display: flex; 
+        align-items: center; 
+        justify-content: flex-end; 
+        gap: 4px; 
+        margin-bottom: 8px; 
+        flex-shrink: 0;
+        width: 100%;
+    }
+    .legend-label { font-size: 9px; color: #6B6B7A; }
+    .legend-cell { width: 10px; height: 10px; border-radius: 2px; }
+    .legend-cell.level-0 { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }
+    .legend-cell.level-1 { background: #0e4429; }
+    .legend-cell.level-2 { background: #006d32; }
+    .legend-cell.level-3 { background: #26a641; }
+    .legend-cell.level-4 { background: #39d353; }
+
+    .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 4px; flex-shrink: 0; max-width: 560px; margin-left: auto; margin-right: auto; }
+    .calendar-weekday { font-size: 11px; font-weight: 600; color: #6B6B7A; text-transform: uppercase; padding: 4px 0; }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        margin-bottom: 10px;
+        flex-shrink: 0;
+        max-width: 560px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .calendar-day-cell {
+        aspect-ratio: 1;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        position: relative;
+        font-size: 13px;
+        font-weight: 500;
+        color: #B0B0C0;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.04);
+        min-width: 0;
+    }
+    .calendar-day-cell:hover { transform: scale(1.08); z-index: 2; box-shadow: 0 3px 10px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.12); }
+    .calendar-day-cell.other-month { opacity: 0.2; pointer-events: none; }
+    .calendar-day-cell.today { border-color: #E07A5F; color: #E07A5F; font-weight: 700; }
+    .calendar-day-cell.selected { outline: 2px solid rgba(224,122,95,0.4); outline-offset: -1px; }
+
+    .day-indicator { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); display: flex; gap: 1.5px; }
+    .day-indicator-dot { width: 4px; height: 4px; border-radius: 50%; }
+    .day-indicator-dot.completed { background: #10b981; }
+    .day-indicator-dot.partial { background: #f0c040; }
+    .day-indicator-dot.habit { background: #64a0dc; }
+
+    .calendar-footer { display: flex; justify-content: center; gap: 16px; padding: 6px 0 0; flex-shrink: 0; }
+    .calendar-footer-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #6B6B7A; }
+    .footer-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .footer-dot.completed-dot { background: #39d353; }
+    .footer-dot.partial-dot { background: #0e4429; }
+    .footer-dot.none-dot { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); }
+    .footer-dot.habit-dot { background: #64a0dc; }
+
+    /* Мини-график */
+    .mini-chart-container { 
+        flex-shrink: 0; 
+        margin-top: 12px; 
+        background: rgba(255,255,255,0.015); 
+        border-radius: 14px; 
+        padding: 14px 16px 10px; 
+        border: 1px solid rgba(255,255,255,0.04);
+    }
+    .mini-chart-title { font-size: 12px; color: #8B8B9A; margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .mini-chart-title::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.04); }
+    .mini-chart { 
+        position: relative;
+        width: 100%; 
+    }
+    .mini-chart svg { width: 100%; height: 100%; }
+    .mini-chart-line {
+        fill: none;
+        stroke: #E07A5F;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 0 4px rgba(224,122,95,0.3));
+    }
+    .mini-chart-area {
+        fill: url(#chartGradient);
+        opacity: 0.3;
+    }
+    .mini-chart-dot {
+        fill: #E07A5F;
+        stroke: #1A1A20;
+        stroke-width: 2;
+        cursor: pointer;
+        transition: r 0.2s;
+    }
+    .mini-chart-dot:hover { r: 5; }
+
+    .day-preview { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+    .day-preview-content { background: #141419; border-radius: 20px; padding: 24px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.6); width: 260px; text-align: center; }
+    .day-preview-date { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 14px; }
+    .day-preview-stats { display: flex; justify-content: center; gap: 24px; margin-bottom: 18px; }
+    .preview-stat { display: flex; flex-direction: column; align-items: center; }
+    .preview-stat-value { font-size: 20px; font-weight: 700; color: #E07A5F; }
+    .preview-stat-label { font-size: 10px; color: #6B6B7A; text-transform: uppercase; margin-top: 2px; }
+    .day-preview-actions { display: flex; gap: 8px; }
+    .preview-btn { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #E1E1E6; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .preview-btn:hover { background: rgba(224,122,95,0.1); border-color: #E07A5F; color: #E07A5F; }
+    .preview-btn i { font-size: 13px; }
+
+    .day-content::-webkit-scrollbar { width: 4px; }
+    .day-content::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 4px; }
+    /* Misc */
+    .reschedule-options { display: flex; gap: 8px; margin-bottom: 20px; }
+    .reschedule-option { flex: 1; padding: 12px 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.2s; color: #B0B0C0; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .reschedule-option:hover { background: rgba(224,122,95,0.1); border-color: rgba(224,122,95,0.3); color: #E07A5F; }
+    .reschedule-option.active { background: rgba(224,122,95,0.15); border-color: #E07A5F; color: #E07A5F; }
+    .reschedule-option i { font-size: 18px; }
+    
+    @media (max-width: 700px) {
+        .topbar { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+        .topbar-user-info { display: none; }
+        .topbar-nav { order: 3; width: 100%; justify-content: center; }
+        .topbar-nav-link span { display: none; }
+        .header-stats { display: none; }
+    }
+</style>
+
+<div class="app-layout">
+    <header class="topbar">
+        <a href="{% url 'users:profile' %}" class="topbar-user-link">
+            <div class="topbar-user">
+                <div class="avatar-topbar">{{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}</div>
+                <div class="topbar-user-info">
+                    <span class="topbar-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                    <span class="topbar-user-streak">🔥 52 дня подряд</span>
+                </div>
+            </div>
+        </a>
+        <nav class="topbar-nav">
+            <a href="{% url 'planner:day' %}" class="topbar-nav-link {% if page == 'day' %}active{% endif %}"
+               hx-get="{% url 'planner:day' %}" hx-target="#mainContent" hx-push-url="true" hx-swap="innerHTML"
+               onclick="setActive(this)">
+                <i class="fas fa-calendar-day"></i> <span>Ежедневник</span>
+            </a>
+            <a href="{% url 'planner:habits' %}" class="topbar-nav-link {% if page == 'habits' %}active{% endif %}"
+               hx-get="{% url 'planner:habits' %}" hx-target="#mainContent" hx-push-url="true" hx-swap="innerHTML"
+               onclick="setActive(this)">
+                <i class="fas fa-fire"></i> <span>Привычки</span>
+            </a>
+            <a href="{% url 'planner:calendar' %}" class="topbar-nav-link {% if page == 'calendar' %}active{% endif %}"
+               hx-get="{% url 'planner:calendar' %}" hx-target="#mainContent" hx-push-url="true" hx-swap="innerHTML"
+               onclick="setActive(this)">
+                <i class="fas fa-calendar"></i> <span>Календарь</span>
+            </a>
+        </nav>
+        <div class="topbar-actions"></div>
+    </header>
+    <main class="main-area" id="mainContent">{% block planner_content %}{% endblock %}</main>
+</div>
+
+<script>
+function setActive(el) { document.querySelectorAll('.topbar-nav-link').forEach(l => l.classList.remove('active')); el.classList.add('active'); }
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.topbar-nav-link').forEach(l => { if (l.getAttribute('href') === window.location.pathname) l.classList.add('active'); });
+});
+</script>
+
+<script>
+(function() {
+const state = {
+    currentDate: new Date(2026, 4, 25),
+    tasks: [
+        { id: 1, title: 'Купить продукты', description: 'Молоко, хлеб, яйца', date: '2026-05-25', timeStart: '09:00', timeEnd: '10:00', priority: 'urgent', repeat: 'none', notificationTime: '08:45', completed: false },
+        { id: 2, title: 'Пробежка в парке', description: '', date: '2026-05-25', timeStart: '07:00', timeEnd: '', priority: 'important', repeat: 'daily', completed: false },
+        { id: 3, title: 'Прочитать 20 страниц', description: 'Атомные привычки', date: '2026-05-25', timeStart: '', timeEnd: '', priority: 'none', repeat: 'none', completed: false },
+        { id: 4, title: 'Позвонить дизайнеру', description: 'Макеты', date: '2026-05-25', timeStart: '14:00', timeEnd: '14:30', priority: 'urgent', repeat: 'none', completed: false },
+        { id: 5, title: 'Заполнить отчёт', description: 'Квартальный', date: '2026-05-25', timeStart: '16:00', timeEnd: '17:30', priority: 'important', repeat: 'weekly', completed: true },
+        { id: 6, title: 'Созвониться с клиентом', description: '', date: '2026-05-25', timeStart: '11:00', timeEnd: '', priority: 'urgent', repeat: 'none', completed: false },
+        { id: 7, title: 'Обновить резюме', description: '', date: '2026-05-25', timeStart: '', timeEnd: '', priority: 'none', repeat: 'none', completed: false },
+        { id: 8, title: 'Записаться к врачу', description: '', date: '2026-05-25', timeStart: '08:00', timeEnd: '08:30', priority: 'important', repeat: 'none', completed: true },
+    ],
+    nextId: 9, currentSort: 'time', currentPriority: 'none', currentRepeat: 'none', 
+    completedCollapsed: false, noTimeCollapsed: false, allCollapsed: false,
+};
+const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const days = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+const repeatLabels = { none:'Не повторять', daily:'Ежедневно', weekly:'Еженедельно', weekdays:'По будням' };
+const priorityLabels = { urgent:'Срочный', important:'Важный', none:'Без уровня' };
+const priorityOrder = { urgent:0, important:1, none:2 };
+
+function formatDate(d) { return d.getDate()+' '+months[d.getMonth()]+', '+days[d.getDay()]; }
+function dateToString(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+// Note auto-resize
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'dailyNote') {
+        e.target.style.height = 'auto';
+        e.target.style.height = e.target.scrollHeight + 'px';
+    }
+});
+
+// Collapsible sections
+window.toggleNoTime = function() {
+    state.noTimeCollapsed = !state.noTimeCollapsed;
+    document.getElementById('noTimeBody').classList.toggle('collapsed', state.noTimeCollapsed);
+    document.getElementById('noTimeIcon').className = state.noTimeCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+};
+window.toggleAllTasks = function(event) {
+    if (event) event.stopPropagation();
+    state.allCollapsed = !state.allCollapsed;
+    if (state.allCollapsed) {
+        document.getElementById('activeTasksContainer').style.display = 'none';
+        document.getElementById('noTimeSection').style.display = 'none';
+        document.getElementById('completedSection').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+    } else {
+        document.getElementById('activeTasksContainer').style.display = 'block';
+        renderAll();
+    }
+    document.getElementById('collapseAllIcon').className = state.allCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+};
+
+// Dropdowns
+let activeDropdown = null;
+function createDropdown() {
+    let el = document.getElementById('dynamicDropdown');
+    if (el) el.remove();
+    el = document.createElement('div'); el.id = 'dynamicDropdown'; el.className = 'custom-select-dropdown';
+    document.body.appendChild(el); return el;
+}
+
+window.toggleCustomSelect = function(event, wrapperId) {
+    event.stopPropagation();
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+    if (wrapper.classList.contains('open')) { closeAllDropdowns(); return; }
+    closeAllDropdowns(); wrapper.classList.add('open');
+    const trigger = wrapper.querySelector('.custom-select-trigger');
+    const dropdown = createDropdown();
+    let options = [], currentValue = '', onSelect = null;
+
+    if (wrapperId === 'sortFilterSelectWrapper') {
+        options = [{ value:'time', label:'По времени' }, { value:'priority', label:'По важности' }];
+        currentValue = state.currentSort;
+        onSelect = (v,l) => { state.currentSort=v; document.getElementById('sortFilterLabel').textContent=l; renderAll(); };
+    } else if (wrapperId === 'prioritySelectWrapper') {
+        options = [
+            { value:'none', label:'Без уровня', cssClass:'priority-none' },
+            { value:'urgent', label:'Срочный', cssClass:'priority-urgent' },
+            { value:'important', label:'Важный', cssClass:'priority-important' },
+        ];
+        currentValue = state.currentPriority;
+        onSelect = (v,l) => { state.currentPriority=v; const le = document.getElementById('priorityLabel'); le.textContent=l; le.style.color=''; if (v==='urgent') le.style.color='#ff4d4d'; else if (v==='important') le.style.color='#f0c040'; };
+    } else if (wrapperId === 'repeatSelectWrapper') {
+        options = [{ value:'none', label:'Не повторять' }, { value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        currentValue = state.currentRepeat;
+        onSelect = (v,l) => { state.currentRepeat=v; document.getElementById('repeatLabel').textContent=l; };
+    } else if (wrapperId === 'habitRepeatSelectWrapper') {
+        options = [{ value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        currentValue = 'daily';
+        onSelect = (v,l) => { document.getElementById('habitRepeatLabel').textContent = l; };
+    } else if (wrapperId === 'editHabitRepeatWrapper') {
+        options = [{ value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        currentValue = 'daily';
+        onSelect = (v,l) => { document.getElementById('editHabitRepeatLabel').textContent = l; };
+    }
+
+    dropdown.innerHTML = options.map(o => `<div class="custom-option${o.value===currentValue?' active':''}${o.cssClass?' '+o.cssClass:''}" data-value="${o.value}">${o.label}</div>`).join('');
+    dropdown.querySelectorAll('.custom-option').forEach(opt => { opt.addEventListener('click', function(e) { e.stopPropagation(); if (onSelect) onSelect(this.dataset.value, this.textContent); closeAllDropdowns(); }); });
+    positionDropdown(trigger, dropdown); dropdown.classList.add('active'); activeDropdown = { wrapper, dropdown };
+};
+
+function positionDropdown(trigger, dropdown) {
+    const r = trigger.getBoundingClientRect(); const dh = Math.min(dropdown.scrollHeight||200, 240);
+    let top = r.bottom+4; if (window.innerHeight-r.bottom < dh && r.top > dh) top = r.top-dh-4;
+    if (top+dh > window.innerHeight-8) top = window.innerHeight-dh-8; if (top<8) top=8;
+    let left = r.left; if (left+r.width > window.innerWidth-8) left = window.innerWidth-r.width-8; if (left<8) left=8;
+    dropdown.style.top=top+'px'; dropdown.style.left=left+'px'; dropdown.style.width=r.width+'px'; dropdown.style.maxHeight='240px';
+}
+
+function closeAllDropdowns() { if (activeDropdown) { activeDropdown.wrapper.classList.remove('open'); activeDropdown.dropdown.remove(); activeDropdown=null; } document.querySelectorAll('.custom-select-wrapper.open').forEach(w => w.classList.remove('open')); }
+document.addEventListener('click', e => { if (!e.target.closest('.custom-select-wrapper') && !e.target.closest('#dynamicDropdown')) closeAllDropdowns(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeAllDropdowns(); });
+
+// Note
+window.changeDate = function(d) { state.currentDate.setDate(state.currentDate.getDate()+d); document.getElementById('currentDate').textContent=formatDate(state.currentDate); renderAll(); };
+window.toggleNote = function() { document.getElementById('noteBody').classList.toggle('collapsed'); document.querySelector('.note-header').classList.toggle('collapsed'); };
+window.toggleNoteDropdown = function(e) { e.stopPropagation(); document.getElementById('noteDropdown').classList.toggle('active'); };
+window.clearNote = function() {
+    const textarea = document.getElementById('dailyNote');
+    textarea.value = ''; textarea.style.height = 'auto';
+    document.getElementById('noteDropdown').classList.remove('active');
+};
+document.addEventListener('click', e => { if (!e.target.closest('.note-menu')) document.getElementById('noteDropdown')?.classList.remove('active'); });
+
+// Modals
+window.openModal = function(id) { const el = document.getElementById(id); if (el) el.classList.add('active'); createDropdown(); };
+window.closeModal = function(id) { 
+    const el = document.getElementById(id); 
+    if (!el) return;
+    el.classList.remove('active'); 
+    if (id === 'modalTask') {
+        document.getElementById('normalActions').style.display=''; 
+        document.getElementById('editRepeatingBlock').style.display='none'; 
+        document.getElementById('deleteRepeatingBlock').style.display='none'; 
+        resetModalFields(); 
+    }
+    closeAllDropdowns(); 
+};
+window.toggleTimeFields = function() { 
+    const h = document.getElementById('hasTime').checked; 
+    document.getElementById('timeFields').style.display = h?'flex':'none'; 
+    if (!h) { document.getElementById('taskTimeStart').value=''; document.getElementById('taskTimeEnd').value=''; } 
+    else { if (!document.getElementById('taskTimeStart').value) document.getElementById('taskTimeStart').value='09:00'; } 
+};
+window.toggleNotificationFields = function() {
+    const hasNotification = document.getElementById('hasNotification').checked;
+    document.getElementById('notificationFields').style.display = hasNotification ? 'flex' : 'none';
+    if (!hasNotification) { document.getElementById('taskNotificationTime').value = ''; }
+    else if (!document.getElementById('taskNotificationTime').value) { document.getElementById('taskNotificationTime').value = '09:00'; }
+};
+
+// Task modals
+window.openAddTaskModal = function() {
+    document.getElementById('modalTaskTitle').textContent = 'Новая задача';
+    document.getElementById('taskTitle').value = ''; document.getElementById('taskDescription').value = '';
+    document.getElementById('taskDate').value = dateToString(state.currentDate);
+    document.getElementById('taskTimeStart').value = ''; document.getElementById('taskTimeEnd').value = '';
+    document.getElementById('hasTime').checked = false; document.getElementById('timeFields').style.display = 'none';
+    document.getElementById('hasNotification').checked = false; document.getElementById('notificationFields').style.display = 'none';
+    document.getElementById('taskNotificationTime').value = '';
+    document.getElementById('editingTaskId').value = ''; state.currentPriority = 'none'; state.currentRepeat = 'none';
+    document.getElementById('priorityLabel').textContent = 'Без уровня'; document.getElementById('priorityLabel').style.color = '';
+    document.getElementById('repeatLabel').textContent = 'Не повторять';
+    document.getElementById('normalActions').style.display = ''; document.getElementById('editRepeatingBlock').style.display = 'none'; document.getElementById('deleteRepeatingBlock').style.display = 'none';
+    resetModalFields(); openModal('modalTask'); setTimeout(() => document.getElementById('taskTitle').focus(), 100);
+};
+
+window.openEditTaskModal = function(taskId) {
+    const task = state.tasks.find(t => t.id === taskId); if (!task) return;
+    document.getElementById('modalTaskTitle').textContent = 'Редактировать задачу';
+    document.getElementById('taskTitle').value = task.title; document.getElementById('taskDescription').value = task.description || '';
+    document.getElementById('taskDate').value = task.date; document.getElementById('editingTaskId').value = taskId;
+    state.currentPriority = task.priority; state.currentRepeat = task.repeat;
+    const le = document.getElementById('priorityLabel'); le.textContent = priorityLabels[task.priority]; le.style.color = '';
+    if (task.priority === 'urgent') le.style.color = '#ff4d4d'; else if (task.priority === 'important') le.style.color = '#f0c040';
+    document.getElementById('repeatLabel').textContent = repeatLabels[task.repeat];
+    const hasTime = !!(task.timeStart || task.timeEnd); document.getElementById('hasTime').checked = hasTime;
+    document.getElementById('timeFields').style.display = hasTime ? 'flex' : 'none';
+    document.getElementById('taskTimeStart').value = task.timeStart || ''; document.getElementById('taskTimeEnd').value = task.timeEnd || '';
+    const hasNotification = !!task.notificationTime;
+    document.getElementById('hasNotification').checked = hasNotification;
+    document.getElementById('notificationFields').style.display = hasNotification ? 'flex' : 'none';
+    document.getElementById('taskNotificationTime').value = task.notificationTime || '';
+    resetModalFields(); document.getElementById('normalActions').style.display = 'none'; document.getElementById('deleteRepeatingBlock').style.display = 'none';
+    if (task.repeat !== 'none') { document.getElementById('editRepeatingBlock').style.display = 'block'; }
+    else { document.getElementById('normalActions').style.display = ''; }
+    openModal('modalTask'); setTimeout(() => document.getElementById('taskTitle').focus(), 100);
+};
+
+window.openDeleteTaskModal = function(taskId) {
+    const task = state.tasks.find(t => t.id === taskId); if (!task) return;
+    document.getElementById('modalTaskTitle').textContent = 'Удалить задачу';
+    document.getElementById('taskTitle').value = task.title; document.getElementById('taskTitle').disabled = true;
+    document.getElementById('taskDescription').value = task.description || ''; document.getElementById('taskDescription').disabled = true;
+    document.getElementById('taskDate').value = task.date; document.getElementById('taskDate').disabled = true;
+    document.getElementById('hasTime').disabled = true; document.getElementById('taskTimeStart').value = task.timeStart || ''; document.getElementById('taskTimeStart').disabled = true;
+    document.getElementById('taskTimeEnd').value = task.timeEnd || ''; document.getElementById('taskTimeEnd').disabled = true;
+    document.getElementById('hasNotification').disabled = true; document.getElementById('taskNotificationTime').value = task.notificationTime || ''; document.getElementById('taskNotificationTime').disabled = true;
+    document.getElementById('editingTaskId').value = taskId; state.currentPriority = task.priority; state.currentRepeat = task.repeat;
+    document.getElementById('priorityLabel').textContent = priorityLabels[task.priority]; document.getElementById('repeatLabel').textContent = repeatLabels[task.repeat];
+    document.getElementById('normalActions').style.display = 'none'; document.getElementById('editRepeatingBlock').style.display = 'none'; document.getElementById('deleteRepeatingBlock').style.display = 'block';
+    openModal('modalTask');
+};
+
+window.saveTask = function(mode) {
+    const title = document.getElementById('taskTitle').value.trim(); if (!title) return;
+    const editingId = document.getElementById('editingTaskId').value; const m = mode||'single';
+    if (editingId && m==='all') { const task = state.tasks.find(t => t.id===parseInt(editingId)); if (task && task.repeat!=='none') { const nd = getTaskData(); state.tasks.forEach(t => { if (t.title===task.title && t.repeat===task.repeat) { Object.assign(t, nd); } }); } }
+    else if (editingId) { const task = state.tasks.find(t => t.id===parseInt(editingId)); if (task) Object.assign(task, getTaskData()); }
+    else { const td = getTaskData(); td.id = state.nextId++; td.completed = false; state.tasks.push(td); }
+    closeModal('modalTask'); renderAll();
+};
+
+function getTaskData() { 
+    const h = document.getElementById('hasTime').checked; 
+    const hasNotification = document.getElementById('hasNotification').checked;
+    return { title: document.getElementById('taskTitle').value.trim(), description: document.getElementById('taskDescription').value.trim(), date: document.getElementById('taskDate').value, timeStart: h ? document.getElementById('taskTimeStart').value : '', timeEnd: h ? document.getElementById('taskTimeEnd').value : '', notificationTime: hasNotification ? document.getElementById('taskNotificationTime').value : '', priority: state.currentPriority, repeat: state.currentRepeat }; 
+}
+function resetModalFields() { ['taskTitle','taskDescription','taskDate','hasTime','taskTimeStart','taskTimeEnd','hasNotification','taskNotificationTime'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; }); }
+
+window.deleteSingleTask = function() { state.tasks = state.tasks.filter(t => t.id!==parseInt(document.getElementById('editingTaskId').value)); closeModal('modalTask'); renderAll(); };
+window.deleteAllRepeating = function() { const task = state.tasks.find(t => t.id===parseInt(document.getElementById('editingTaskId').value)); if (task && task.repeat!=='none') state.tasks = state.tasks.filter(t => !(t.title===task.title && t.repeat===task.repeat)); closeModal('modalTask'); renderAll(); };
+window.toggleTask = function(id) { const t = state.tasks.find(t => t.id===id); if (!t) return; t.completed=!t.completed; renderAll(); };
+window.toggleCompleted = function() { 
+    state.completedCollapsed = !state.completedCollapsed; 
+    document.getElementById('completedBody').classList.toggle('collapsed', state.completedCollapsed);
+    document.getElementById('completedIcon').className = state.completedCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+};
+
+function getTimeValue(t) { return t.timeStart||'99:99'; }
+function formatTimeDisplay(t) { if (t.timeStart && t.timeEnd) return t.timeStart+' — '+t.timeEnd; if (t.timeStart) return t.timeStart; return ''; }
+
+// Task dropdown
+let activeTaskDropdown = null;
+window.toggleTaskMenu = function(event, taskId) {
+    event.stopPropagation();
+    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); if (activeTaskDropdown.dataset.taskId === taskId.toString()) { activeTaskDropdown = null; return; } }
+    const dropdown = document.getElementById(`task-dropdown-${taskId}`);
+    if (dropdown) { dropdown.classList.add('active'); activeTaskDropdown = dropdown; }
+};
+
+// Reschedule
+window.openRescheduleModal = function(taskId) {
+    const task = state.tasks.find(t => t.id === taskId); if (!task) return;
+    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown = null; }
+    document.getElementById('rescheduleTaskId').value = taskId;
+    document.getElementById('rescheduleDate').value = task.date;
+    const hasTime = !!(task.timeStart || task.timeEnd);
+    document.getElementById('rescheduleHasTime').checked = hasTime;
+    document.getElementById('rescheduleTimeStart').value = task.timeStart || '09:00';
+    document.getElementById('rescheduleTimeEnd').value = task.timeEnd || '';
+    toggleRescheduleTimeFields();
+    document.querySelectorAll('.reschedule-option').forEach(opt => opt.classList.remove('active'));
+    openModal('modalReschedule'); setTimeout(() => document.getElementById('rescheduleDate').focus(), 100);
+};
+window.toggleRescheduleTimeFields = function() {
+    const hasTime = document.getElementById('rescheduleHasTime').checked;
+    document.getElementById('rescheduleTimeFields').style.display = hasTime ? 'flex' : 'none';
+    if (!hasTime) { document.getElementById('rescheduleTimeStart').value = ''; document.getElementById('rescheduleTimeEnd').value = ''; }
+    else if (!document.getElementById('rescheduleTimeStart').value) { document.getElementById('rescheduleTimeStart').value = '09:00'; }
+};
+window.setQuickReschedule = function(option) {
+    const today = new Date(state.currentDate); let targetDate = new Date(today);
+    switch(option) {
+        case 'tomorrow': targetDate.setDate(today.getDate() + 1); break;
+        case 'nextWeek': targetDate.setDate(today.getDate() + 7); break;
+        case 'nextMonth': targetDate.setMonth(today.getMonth() + 1); break;
+    }
+    document.getElementById('rescheduleDate').value = dateToString(targetDate);
+    document.querySelectorAll('.reschedule-option').forEach(opt => opt.classList.remove('active'));
+    const clicked = window.event?.target?.closest('.reschedule-option');
+    if (clicked) clicked.classList.add('active');
+};
+window.saveReschedule = function() {
+    const taskId = parseInt(document.getElementById('rescheduleTaskId').value);
+    const task = state.tasks.find(t => t.id === taskId); if (!task) return;
+    const newDate = document.getElementById('rescheduleDate').value;
+    const hasTime = document.getElementById('rescheduleHasTime').checked;
+    task.date = newDate; task.timeStart = hasTime ? document.getElementById('rescheduleTimeStart').value : ''; task.timeEnd = hasTime ? document.getElementById('rescheduleTimeEnd').value : '';
+    closeModal('modalReschedule'); renderAll();
+};
+
+// Render task card
+function renderTaskCard(task) {
+    const td = formatTimeDisplay(task);
+    return `
+    <div class="task-card priority-${task.priority} ${task.completed?'completed':''}" id="task-${task.id}">
+        <div class="task-card-checkbox ${task.completed?'checked':''}" onclick="toggleTask(${task.id})">${task.completed?'✓':''}</div>
+        <div class="task-card-body">
+            <div class="task-card-title">${escapeHtml(task.title)}</div>
+            ${task.description ? `<div class="task-card-desc">${escapeHtml(task.description)}</div>` : ''}
+            <div class="task-card-meta">
+                ${td ? `<span class="task-card-time">🕛 ${td}</span>` : ''}
+                ${task.repeat !== 'none' ? `<span class="task-card-repeat-badge"><i class="fas fa-redo"></i> ${repeatLabels[task.repeat]}</span>` : ''}
+                ${task.notificationTime ? `<span class="task-card-time" style="background:rgba(100,160,220,0.1);color:#64a0dc;"><i class="fab fa-telegram"></i> ${task.notificationTime}</span>` : ''}
+            </div>
+        </div>
+        <div class="task-card-actions">
+            <button class="task-menu-btn" onclick="toggleTaskMenu(event, ${task.id})"><i class="fas fa-ellipsis-v"></i></button>
+            <div class="task-dropdown" id="task-dropdown-${task.id}" data-task-id="${task.id}">
+                <div class="task-dropdown-item" onclick="openEditTaskModal(${task.id})"><i class="fas fa-pen"></i> Редактировать</div>
+                <div class="task-dropdown-item" onclick="openRescheduleModal(${task.id})"><i class="fas fa-calendar-alt"></i> Перенести</div>
+                <div class="task-dropdown-item delete-item" onclick="openDeleteTaskModal(${task.id})"><i class="fas fa-trash-alt"></i> Удалить</div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderAll() {
+    if (!document.getElementById('activeTasksContainer')) return;
+    const today = dateToString(state.currentDate);
+    const todayTasks = state.tasks.filter(t => t.date===today);
+    const active = todayTasks.filter(t => !t.completed);
+    const completed = todayTasks.filter(t => t.completed);
+
+    document.getElementById('activeTasksContainer').innerHTML = '';
+    document.getElementById('completedTasksContainer').innerHTML = '';
+    document.getElementById('noTimeTasksContainer').innerHTML = '';
+
+    let sorted = [...active]; let without = [];
+
+    if (state.currentSort === 'time') {
+        const withTime = sorted.filter(t => t.timeStart).sort((a, b) => getTimeValue(a).localeCompare(getTimeValue(b)));
+        without = sorted.filter(t => !t.timeStart);
+        sorted = withTime;
+    } else { sorted.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]); }
+
+    document.getElementById('activeTasksContainer').innerHTML = sorted.map(renderTaskCard).join('');
+    document.getElementById('activeTasksContainer').style.display = state.allCollapsed ? 'none' : 'block';
+
+    if (without.length > 0) {
+        document.getElementById('noTimeSection').style.display = 'block';
+        document.getElementById('noTimeCount').textContent = without.length;
+        document.getElementById('noTimeTasksContainer').innerHTML = without.map(renderTaskCard).join('');
+        document.getElementById('noTimeBody').classList.toggle('collapsed', state.noTimeCollapsed);
+        document.getElementById('noTimeIcon').className = state.noTimeCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+    } else { document.getElementById('noTimeSection').style.display = 'none'; }
+
+    if (completed.length > 0) {
+        document.getElementById('completedSection').style.display = 'block';
+        document.getElementById('completedTasksCount').textContent = completed.length;
+        document.getElementById('completedTasksContainer').innerHTML = completed.map(renderTaskCard).join('');
+        document.getElementById('completedBody').classList.toggle('collapsed', state.completedCollapsed);
+        document.getElementById('completedIcon').className = state.completedCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+    } else { document.getElementById('completedSection').style.display = 'none'; }
+
+    document.getElementById('emptyState').style.display = todayTasks.length ? 'none' : 'block';
+    updateStats();
+    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown = null; }
+}
+
+function updateStats() { 
+    const today = dateToString(state.currentDate); 
+    const tasks = state.tasks.filter(t => t.date===today); 
+    const total = tasks.length, done = tasks.filter(t => t.completed).length; 
+    document.getElementById('completedCount').textContent = done+'/'+total; 
+    document.getElementById('productivityPercent').textContent = total?Math.round(done/total*100)+'%':'0%'; 
+    document.getElementById('urgentCount').textContent = tasks.filter(t => t.priority==='urgent').length; 
+    document.getElementById('importantCount').textContent = tasks.filter(t => t.priority==='important').length; 
+    document.getElementById('noneCount').textContent = tasks.filter(t => t.priority==='none').length; 
+}
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+document.addEventListener('click', function(e) {
+    if (activeTaskDropdown && !e.target.closest('.task-card-actions')) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown = null; }
+});
+
+// Habits
+window.selectAvatar = function(el) { document.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected')); el.classList.add('selected'); };
+window.toggleHabitNotificationFields = function() { const has = document.getElementById('habitHasNotification').checked; document.getElementById('habitNotificationFields').style.display = has ? 'block' : 'none'; };
+window.toggleEditHabitNotification = function() { const has = document.getElementById('editHabitHasNotification').checked; document.getElementById('editHabitNotificationFields').style.display = has ? 'block' : 'none'; };
+window.toggleExpandable = function(id) {
+    const el = document.getElementById(id);
+    const toggle = el.previousElementSibling.querySelector('span');
+    if (el.style.display === 'none') { el.style.display = 'block'; toggle.textContent = toggle.textContent.replace('+', '−'); }
+    else { el.style.display = 'none'; toggle.textContent = toggle.textContent.replace('−', '+'); }
+};
+
+let activeHabitDropdown = null;
+window.toggleHabitMenu = function(event, habitId) {
+    event.stopPropagation();
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); if (activeHabitDropdown._habitId === habitId) { activeHabitDropdown = null; return; } activeHabitDropdown = null; }
+    const btn = event.currentTarget; const rect = btn.getBoundingClientRect();
+    const dropdown = document.createElement('div'); dropdown._habitId = habitId;
+    dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;width:180px;background:#1A1A20;border-radius:12px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 10px 25px rgba(0,0,0,0.6);z-index:9999;overflow:hidden;`;
+    dropdown.innerHTML = `
+        <div class="task-dropdown-item" onclick="openEditHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-pen" style="width:16px;text-align:center;font-size:13px;"></i> Редактировать</div>
+        <div class="task-dropdown-item delete-item" onclick="openDeleteHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;"><i class="fas fa-trash-alt" style="width:16px;text-align:center;font-size:13px;"></i> Удалить</div>`;
+    const items = dropdown.querySelectorAll('.task-dropdown-item');
+    items[0].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';});
+    items[0].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    items[1].addEventListener('mouseenter', function(){this.style.background='rgba(255,77,77,0.1)';this.style.color='#ff4d4d';});
+    items[1].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    document.body.appendChild(dropdown); activeHabitDropdown = dropdown;
+};
+window.openEditHabitModal = function(habitId) { if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; } document.getElementById('editHabitId').value = habitId; openModal('modalEditHabit'); };
+window.openDeleteHabitModal = function(habitId) { if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; } document.getElementById('deleteHabitId').value = habitId; document.getElementById('deleteHabitName').textContent = 'Привычка #' + habitId; openModal('modalDeleteHabit'); };
+document.addEventListener('click', function(e) { if (activeHabitDropdown && !e.target.closest('.task-card-actions')) { activeHabitDropdown.remove(); activeHabitDropdown = null; } });
+
+// Date picker
+let datePickerInput = null;
+window.openDatePicker = function() {
+    if (!datePickerInput) {
+        datePickerInput = document.createElement('input'); datePickerInput.type = 'date';
+        datePickerInput.style.cssText = 'position:fixed;top:-100px;left:0;opacity:0;pointer-events:none;'; datePickerInput.id = 'hiddenDatePicker';
+        document.body.appendChild(datePickerInput);
+        datePickerInput.addEventListener('change', function() {
+            if (this.value) { const parts = this.value.split('-'); state.currentDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])); document.getElementById('currentDate').textContent = formatDate(state.currentDate); renderAll(); }
+        });
+    }
+    datePickerInput.value = dateToString(state.currentDate);
+    datePickerInput.showPicker ? datePickerInput.showPicker() : datePickerInput.click();
+};
+
+// ======== КАЛЕНДАРЬ ========
+const calendarState = { currentYear: 2026, currentMonth: 4, selectedDay: null, monthData: {} };
+(function generateTestData() {
+    const y = calendarState.currentYear, m = calendarState.currentMonth;
+    const dim = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= dim; d++) {
+        const tasks = Math.floor(Math.random() * 8), completed = Math.floor(Math.random() * (tasks + 1));
+        const habits = Math.floor(Math.random() * 5), habitsDone = Math.floor(Math.random() * (habits + 1));
+        calendarState.monthData[d] = { tasks, completed, habits, habitsDone };
+    }
+})();
+
+function getLevel(tasks, completed, habits, habitsDone) {
+    const totalItems = tasks + habits;
+    const completedItems = completed + habitsDone;
+    if (totalItems === 0) return 0;
+    const ratio = completedItems / totalItems;
+    if (ratio === 1) return 4;
+    if (ratio >= 0.7) return 3;
+    if (ratio >= 0.4) return 2;
+    return 1;
+}
+function getLevelColor(level) {
+    return ['rgba(255,255,255,0.03)','#0e4429','#006d32','#26a641','#39d353'][level] || 'rgba(255,255,255,0.03)';
+}
+
+function renderCalendar() {
+    const y = calendarState.currentYear, m = calendarState.currentMonth;
+    const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    document.getElementById('calendarMonthTitle').textContent = monthNames[m] + ' ' + y;
+    const fd = new Date(y, m, 1).getDay(), dim = new Date(y, m + 1, 0).getDate(), pdim = new Date(y, m, 0).getDate();
+    const today = new Date();
+    let so = fd === 0 ? 6 : fd - 1, html = '';
+    for (let i = so - 1; i >= 0; i--) { html += `<div class="calendar-day-cell other-month"><span class="day-number">${pdim - i}</span></div>`; }
+    for (let d = 1; d <= dim; d++) {
+        const data = calendarState.monthData[d] || { tasks: 0, completed: 0, habits: 0, habitsDone: 0 };
+        const level = getLevel(data.tasks, data.completed, data.habits, data.habitsDone);
+        let cls = 'calendar-day-cell';
+        if (d === today.getDate() && m === today.getMonth() && y === today.getFullYear()) cls += ' today';
+        if (d === calendarState.selectedDay) cls += ' selected';
+        const hasTasks = data.tasks > 0, hasHabits = data.habits > 0;
+        const tasksDone = data.completed === data.tasks && hasTasks;
+        html += `<div class="${cls}" style="background:${getLevelColor(level)}" onclick="openDayPreview(${d})"><span class="day-number">${d}</span></div>`;
+    }
+    document.getElementById('calendarGrid').innerHTML = html;
+    updateCalendarStats(); renderMiniChart();
+}
+
+function updateCalendarStats() {
+    const dim = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0).getDate();
+    let tt = 0, tc = 0, bd = 0, bc = 0, dw = 0;
+    for (let d = 1; d <= dim; d++) { const data = calendarState.monthData[d]; if (data && data.tasks > 0) { tt += data.tasks; tc += data.completed; dw++; if (data.completed > bc) { bc = data.completed; bd = d; } } }
+    document.getElementById('calendarProductivity').textContent = tt > 0 ? Math.round((tc/tt)*100) + '%' : '0%';
+    const mn = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][calendarState.currentMonth];
+    document.getElementById('calendarBestDay').textContent = bd > 0 ? bd + ' ' + mn : '—';
+    document.getElementById('calendarAvgTasks').textContent = dw > 0 ? (tt/dw).toFixed(1) : '0';
+}
+
+function renderMiniChart() {
+    const chart = document.getElementById('miniChart');
+    if (!chart) return;
+    
+    const dim = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0).getDate();
+    
+    const points = [];
+    let maxVal = 0;
+    for (let d = 1; d <= dim; d++) {
+        const data = calendarState.monthData[d] || { tasks: 0, completed: 0, habits: 0, habitsDone: 0 };
+        const tasksPct = data.tasks > 0 ? Math.round((data.completed / data.tasks) * 100) : null;
+        const habitsPct = data.habits > 0 ? Math.round((data.habitsDone / data.habits) * 100) : null;
+        
+        let val = null;
+        if (tasksPct !== null && habitsPct !== null) val = Math.round((tasksPct + habitsPct) / 2);
+        else if (tasksPct !== null) val = tasksPct;
+        else if (habitsPct !== null) val = habitsPct;
+        
+        points.push({ day: d, val: val, tasks: data.tasks, completed: data.completed, habits: data.habits, habitsDone: data.habitsDone });
+        if (val !== null && val > maxVal) maxVal = val;
+    }
+    maxVal = Math.max(maxVal, 10);
+    maxVal = Math.ceil(maxVal / 25) * 25;
+    if (maxVal > 100) maxVal = 100;
+    
+    const width = chart.clientWidth || 600;
+    const pad = { top: 10, right: 12, bottom: 22, left: 38 };
+    const cw = width - pad.left - pad.right;
+    
+    // Авто-высота: maxVal + запас
+    const pixelsPerPercent = 1.6;
+    const ch = Math.max(60, maxVal * pixelsPerPercent);
+    const height = ch + pad.top + pad.bottom;
+    
+    // Сетка: шаг 25%
+    let gridHTML = '';
+    for (let v = 0; v <= maxVal; v += 25) {
+        const y = pad.top + ch - (v / maxVal) * ch;
+        gridHTML += `<line x1="${pad.left}" y1="${y}" x2="${pad.left + cw}" y2="${y}" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4,4"/>`;
+        gridHTML += `<text x="${pad.left - 6}" y="${y + 4}" fill="#6B6B7A" font-size="10" text-anchor="end">${v}%</text>`;
+    }
+    
+    // Линия и область
+    let pathD = '', areaD = '', firstValid = true;
+    points.forEach((p, i) => {
+        if (p.val === null) return;
+        const x = pad.left + (i / (dim - 1)) * cw;
+        const y = pad.top + ch - (p.val / maxVal) * ch;
+        if (firstValid) { pathD += `M${x},${y}`; areaD += `M${x},${pad.top + ch} L${x},${y}`; firstValid = false; }
+        else { pathD += ` L${x},${y}`; areaD += ` L${x},${y}`; }
+    });
+    if (!firstValid) { areaD += ` L${pad.left + cw},${pad.top + ch} Z`; }
+    
+    // Точки
+    let dotsHTML = '', labelsHTML = '';
+    const labelDays = dim <= 31 ? [1, 5, 10, 15, 20, 25, dim] : [1, Math.floor(dim/3), Math.floor(2*dim/3), dim];
+    
+    points.forEach((p, i) => {
+        if (p.val === null) return;
+        const x = pad.left + (i / (dim - 1)) * cw;
+        const y = pad.top + ch - (p.val / maxVal) * ch;
+        const isLabel = labelDays.includes(p.day);
+        dotsHTML += `<circle class="mini-chart-dot" cx="${x}" cy="${y}" r="${isLabel ? 5 : 3}" data-day="${p.day}" data-val="${p.val}%" data-tasks="${p.completed}/${p.tasks}" data-habits="${p.habitsDone}/${p.habits}" onclick="openDayPreview(${p.day})"><title>${p.day}: ${p.val}% | Задачи: ${p.completed}/${p.tasks} | Привычки: ${p.habitsDone}/${p.habits}</title></circle>`;
+        if (isLabel) labelsHTML += `<text x="${x}" y="${height - 4}" fill="#8B8B9A" font-size="10" text-anchor="middle" font-weight="600">${p.day}</text>`;
+    });
+    
+    // Вертикальная линия сегодня
+    const today = new Date();
+    if (calendarState.currentMonth === today.getMonth() && calendarState.currentYear === today.getFullYear()) {
+        const ti = today.getDate() - 1;
+        if (ti >= 0 && ti < dim) {
+            const tx = pad.left + (ti / (dim - 1)) * cw;
+            gridHTML += `<line x1="${tx}" y1="${pad.top}" x2="${tx}" y2="${pad.top + ch}" stroke="#E07A5F" stroke-width="1" stroke-dasharray="3,6" opacity="0.4"/>`;
+        }
+    }
+    
+    // Среднее за месяц — пунктирная линия
+    const validVals = points.filter(p => p.val !== null).map(p => p.val);
+    if (validVals.length > 0) {
+        const avg = Math.round(validVals.reduce((a,b) => a+b, 0) / validVals.length);
+        const ay = pad.top + ch - (avg / maxVal) * ch;
+        gridHTML += `<line x1="${pad.left}" y1="${ay}" x2="${pad.left + cw}" y2="${ay}" stroke="rgba(100,160,220,0.3)" stroke-width="1" stroke-dasharray="2,6"/>`;
+        gridHTML += `<text x="${pad.left + cw + 4}" y="${ay + 3}" fill="rgba(100,160,220,0.6)" font-size="9">ср.${avg}%</text>`;
+    }
+    
+    chart.innerHTML = `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#E07A5F" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#E07A5F" stop-opacity="0.02"/>
+                </linearGradient>
+            </defs>
+            ${gridHTML}
+            <path class="mini-chart-area" d="${areaD}"/>
+            <path class="mini-chart-line" d="${pathD}"/>
+            ${dotsHTML}
+            ${labelsHTML}
+        </svg>`;
+}
+
+window.changeCalendarMonth = function(delta) {
+    calendarState.currentMonth += delta;
+    if (calendarState.currentMonth < 0) { calendarState.currentMonth = 11; calendarState.currentYear--; }
+    else if (calendarState.currentMonth > 11) { calendarState.currentMonth = 0; calendarState.currentYear++; }
+    calendarState.selectedDay = null; calendarState.monthData = {};
+    const dim = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0).getDate();
+    for (let d = 1; d <= dim; d++) { const tasks = Math.floor(Math.random() * 8), completed = Math.floor(Math.random() * (tasks + 1)); const habits = Math.floor(Math.random() * 5), habitsDone = Math.floor(Math.random() * (habits + 1)); calendarState.monthData[d] = { tasks, completed, habits, habitsDone }; }
+    renderCalendar();
+};
+
+window.openMonthPicker = function() {
+    const inp = document.createElement('input'); inp.type = 'month';
+    inp.value = `${calendarState.currentYear}-${String(calendarState.currentMonth + 1).padStart(2, '0')}`;
+    inp.style.cssText = 'position:fixed;top:-100px;left:0;opacity:0;pointer-events:none;';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', function() {
+        if (this.value) { const [y, m] = this.value.split('-'); calendarState.currentYear = parseInt(y); calendarState.currentMonth = parseInt(m) - 1; calendarState.selectedDay = null; calendarState.monthData = {}; const dim = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0).getDate(); for (let d = 1; d <= dim; d++) { const tasks = Math.floor(Math.random() * 8), completed = Math.floor(Math.random() * (tasks + 1)); const habits = Math.floor(Math.random() * 5), habitsDone = Math.floor(Math.random() * (habits + 1)); calendarState.monthData[d] = { tasks, completed, habits, habitsDone }; } renderCalendar(); }
+        this.remove();
+    });
+    inp.showPicker ? inp.showPicker() : inp.click();
+};
+
+window.openDayPreview = function(day) {
+    const data = calendarState.monthData[day] || { tasks: 0, completed: 0, habits: 0, habitsDone: 0 };
+    calendarState.selectedDay = day; renderCalendar();
+    const mn = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+    document.getElementById('previewDate').textContent = day + ' ' + mn[calendarState.currentMonth];
+    document.getElementById('previewTasksStat').textContent = data.completed + '/' + data.tasks;
+    document.getElementById('previewHabitsStat').textContent = data.habitsDone + '/' + data.habits;
+    document.getElementById('dayPreview').style.display = 'flex';
+    document.getElementById('dayPreview')._selectedDay = day;
+};
+
+document.addEventListener('click', function(e) { const p = document.getElementById('dayPreview'); if (p && p.style.display === 'flex' && e.target === p) p.style.display = 'none'; });
+
+window.goToDay = function(type) {
+    const preview = document.getElementById('dayPreview'); const day = preview._selectedDay || 1; preview.style.display = 'none';
+    if (type === 'tasks' && typeof state !== 'undefined') { state.currentDate = new Date(calendarState.currentYear, calendarState.currentMonth, day); document.querySelector('.topbar-nav-link[href*="day"]')?.click(); }
+    else if (type === 'habits') { document.querySelector('.topbar-nav-link[href*="habits"]')?.click(); }
+};
+
+// Init
+if (document.getElementById('currentDate')) { document.getElementById('currentDate').textContent = formatDate(state.currentDate); createDropdown(); renderAll(); }
+if (document.getElementById('calendarGrid')) { renderCalendar(); }
+})();
+</script>
+{% endblock %}
