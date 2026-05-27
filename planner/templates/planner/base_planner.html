@@ -530,6 +530,26 @@ window.toggleCustomSelect = function(event, wrapperId) {
         options = [{ value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
         currentValue = 'daily';
         onSelect = (v,l) => { document.getElementById('editHabitRepeatLabel').textContent = l; };
+    } else if (wrapperId === 'prioritySelectWrapper') {
+        options = [
+            { value:'none', label:'Без уровня', cssClass:'priority-none' },
+            { value:'urgent', label:'Срочный', cssClass:'priority-urgent' },
+            { value:'important', label:'Важный', cssClass:'priority-important' },
+        ];
+        currentValue = state.currentPriority;
+        onSelect = (v,l) => { 
+            state.currentPriority = v;
+            document.getElementById('priorityLabel').textContent = l;
+            document.getElementById('priorityValue').value = v;  // ← добавить
+        };
+    } else if (wrapperId === 'repeatSelectWrapper') {
+        options = [{ value:'none', label:'Не повторять' }, { value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        currentValue = state.currentRepeat;
+        onSelect = (v,l) => { 
+            state.currentRepeat = v;
+            document.getElementById('repeatLabel').textContent = l;
+            document.getElementById('repeatValue').value = v;  // ← добавить
+        };
     }
 
     dropdown.innerHTML = options.map(o => `<div class="custom-option${o.value===currentValue?' active':''}${o.cssClass?' '+o.cssClass:''}" data-value="${o.value}">${o.label}</div>`).join('');
@@ -627,17 +647,22 @@ window.openEditTaskModal = function(taskId) {
 
 window.openDeleteTaskModal = function(taskId) {
     const task = state.tasks.find(t => t.id === taskId); if (!task) return;
-    document.getElementById('modalTaskTitle').textContent = 'Удалить задачу';
-    document.getElementById('taskTitle').value = task.title; document.getElementById('taskTitle').disabled = true;
-    document.getElementById('taskDescription').value = task.description || ''; document.getElementById('taskDescription').disabled = true;
-    document.getElementById('taskDate').value = task.date; document.getElementById('taskDate').disabled = true;
-    document.getElementById('hasTime').disabled = true; document.getElementById('taskTimeStart').value = task.timeStart || ''; document.getElementById('taskTimeStart').disabled = true;
-    document.getElementById('taskTimeEnd').value = task.timeEnd || ''; document.getElementById('taskTimeEnd').disabled = true;
-    document.getElementById('hasNotification').disabled = true; document.getElementById('taskNotificationTime').value = task.notificationTime || ''; document.getElementById('taskNotificationTime').disabled = true;
-    document.getElementById('editingTaskId').value = taskId; state.currentPriority = task.priority; state.currentRepeat = task.repeat;
-    document.getElementById('priorityLabel').textContent = priorityLabels[task.priority]; document.getElementById('repeatLabel').textContent = repeatLabels[task.repeat];
-    document.getElementById('normalActions').style.display = 'none'; document.getElementById('editRepeatingBlock').style.display = 'none'; document.getElementById('deleteRepeatingBlock').style.display = 'block';
-    openModal('modalTask');
+    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown = null; }
+    
+    document.getElementById('deleteTaskTitle').textContent = task.title;
+    document.getElementById('deleteTaskId').value = taskId;
+    
+    if (task.repeat !== 'none') {
+        document.getElementById('deleteTaskRepeat').textContent = 'Повторяется: ' + repeatLabels[task.repeat];
+        document.getElementById('deleteSingleAction').style.display = 'none';
+        document.getElementById('deleteRepeatingActions').style.display = 'flex';
+    } else {
+        document.getElementById('deleteTaskRepeat').textContent = 'Обычная задача';
+        document.getElementById('deleteSingleAction').style.display = 'flex';
+        document.getElementById('deleteRepeatingActions').style.display = 'none';
+    }
+    
+    openModal('modalDeleteTask');
 };
 
 window.saveTask = function(mode) {
@@ -725,7 +750,7 @@ function renderTaskCard(task) {
     <div class="task-card priority-${task.priority} ${task.completed?'completed':''}" id="task-${task.id}">
         <div class="task-card-checkbox ${task.completed?'checked':''}" onclick="toggleTask(${task.id})">${task.completed?'✓':''}</div>
         <div class="task-card-body">
-            <div class="task-card-title">${escapeHtml(task.title)}</div>
+            <div class="task-card-title" onclick="openViewTaskModal(${task.id})" style="cursor:pointer;" title="Нажмите для просмотра">${escapeHtml(task.title)}</div>
             ${task.description ? `<div class="task-card-desc">${escapeHtml(task.description)}</div>` : ''}
             <div class="task-card-meta">
                 ${td ? `<span class="task-card-time">🕛 ${td}</span>` : ''}
@@ -736,6 +761,7 @@ function renderTaskCard(task) {
         <div class="task-card-actions">
             <button class="task-menu-btn" onclick="toggleTaskMenu(event, ${task.id})"><i class="fas fa-ellipsis-v"></i></button>
             <div class="task-dropdown" id="task-dropdown-${task.id}" data-task-id="${task.id}">
+                <div class="task-dropdown-item" onclick="openViewTaskModal(${task.id})"><i class="fas fa-eye"></i> Просмотр</div>
                 <div class="task-dropdown-item" onclick="openEditTaskModal(${task.id})"><i class="fas fa-pen"></i> Редактировать</div>
                 <div class="task-dropdown-item" onclick="openRescheduleModal(${task.id})"><i class="fas fa-calendar-alt"></i> Перенести</div>
                 <div class="task-dropdown-item delete-item" onclick="openDeleteTaskModal(${task.id})"><i class="fas fa-trash-alt"></i> Удалить</div>
@@ -743,6 +769,49 @@ function renderTaskCard(task) {
         </div>
     </div>`;
 }
+
+window.openViewTaskModal = function(taskId) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown = null; }
+    
+    document.getElementById('viewTaskId').value = taskId;
+    document.getElementById('viewTaskTitle').textContent = task.title;
+    document.getElementById('viewTaskDescription').textContent = task.description || 'Нет описания';
+    document.getElementById('viewTaskDate').textContent = task.date;
+    
+    // Приоритет
+    const priorityEl = document.getElementById('viewTaskPriority');
+    const priorityLabels = { urgent: 'Срочный', important: 'Важный', none: 'Без уровня' };
+    const priorityColors = { urgent: 'rgba(255,77,77,0.15)', important: 'rgba(240,192,64,0.15)', none: 'rgba(255,255,255,0.05)' };
+    const priorityTextColors = { urgent: '#ff4d4d', important: '#f0c040', none: '#B0B0C0' };
+    priorityEl.textContent = priorityLabels[task.priority];
+    priorityEl.style.background = priorityColors[task.priority];
+    priorityEl.style.color = priorityTextColors[task.priority];
+    
+    // Повтор
+    const repeatLabels = { none: '', daily: 'Ежедневно', weekly: 'Еженедельно', weekdays: 'По будням' };
+    document.getElementById('viewTaskRepeat').textContent = repeatLabels[task.repeat] ? '🔄 ' + repeatLabels[task.repeat] : '';
+    
+    // Время
+    if (task.timeStart) {
+        const timeStr = task.timeEnd ? `${task.timeStart} — ${task.timeEnd}` : task.timeStart;
+        document.getElementById('viewTaskTime').textContent = '🕛 ' + timeStr;
+        document.getElementById('viewTaskTime').style.display = '';
+    } else {
+        document.getElementById('viewTaskTime').style.display = 'none';
+    }
+    
+    // Уведомление
+    if (task.notificationTime) {
+        document.getElementById('viewTaskNotification').textContent = '🔔 ' + task.notificationTime;
+        document.getElementById('viewTaskNotification').style.display = '';
+    } else {
+        document.getElementById('viewTaskNotification').style.display = 'none';
+    }
+    
+    openModal('modalViewTask');
+};
 
 function renderAll() {
     if (!document.getElementById('activeTasksContainer')) return;

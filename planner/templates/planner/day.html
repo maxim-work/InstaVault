@@ -149,6 +149,24 @@
     </div>
 </div>
 
+<!-- Модальное окно удаления задачи -->
+<div id="modalDeleteTask" class="modal-overlay" onclick="if(event.target===this)closeModal('modalDeleteTask')">
+    <div class="modal-content" style="text-align:center;">
+        <button class="modal-close-btn" onclick="closeModal('modalDeleteTask')"><i class="fas fa-times"></i></button>
+        <div class="modal-title" style="color:#ff4d4d;">Удалить задачу</div>
+        <p style="font-size:16px;color:#fff;margin-bottom:4px;font-weight:500;" id="deleteTaskTitle">Название задачи</p>
+        <p style="font-size:12px;color:#6B6B7A;margin-bottom:24px;" id="deleteTaskRepeat">Обычная задача</p>
+        <input type="hidden" id="deleteTaskId">
+        <div class="modal-actions" id="deleteSingleAction">
+            <button class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);" onclick="deleteSingleTask()">Удалить</button>
+        </div>
+        <div class="modal-actions" id="deleteRepeatingActions" style="display:none;">
+            <button class="modal-btn" style="background:rgba(255,77,77,0.1);color:#ff4d4d;border:1px solid rgba(255,77,77,0.2);" onclick="deleteSingleTask()">Только эту</button>
+            <button class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);" onclick="deleteAllRepeating()">Все повторения</button>
+        </div>
+    </div>
+</div>
+
 <!-- Модальное окно переноса задачи -->
 <div id="modalReschedule" class="modal-overlay" onclick="if(event.target===this)closeModal('modalReschedule')">
     <div class="modal-content">
@@ -201,6 +219,38 @@
                 <i class="fas fa-check" style="margin-right: 6px;"></i> Перенести
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра задачи -->
+<div id="modalViewTask" class="modal-overlay" onclick="if(event.target===this)closeModal('modalViewTask')">
+    <div class="modal-content" style="text-align:left;">
+        <button class="modal-close-btn" onclick="closeModal('modalViewTask')"><i class="fas fa-times"></i></button>
+        <div class="modal-title" id="viewTaskTitle" style="margin-bottom:8px;">Название задачи</div>
+        
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <span id="viewTaskPriority" style="font-size:12px;padding:4px 10px;border-radius:20px;"></span>
+            <span id="viewTaskRepeat" style="font-size:12px;color:#8B8B9A;"></span>
+            <span id="viewTaskTime" style="font-size:12px;color:#E07A5F;"></span>
+            <span id="viewTaskNotification" style="font-size:12px;color:#64a0dc;"></span>
+        </div>
+        
+        <div id="viewTaskDescription" style="font-size:14px;color:#B0B0C0;line-height:1.6;margin-bottom:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;">
+            Нет описания
+        </div>
+        
+        <div style="font-size:11px;color:#6B6B7A;margin-bottom:20px;">
+            <span>Создана: <span id="viewTaskDate"></span></span>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="modal-btn secondary" onclick="closeModal('modalViewTask'); openEditTaskModal(document.getElementById('viewTaskId').value)">
+                <i class="fas fa-pen" style="margin-right:4px;"></i> Редактировать
+            </button>
+            <button class="modal-btn primary" onclick="closeModal('modalViewTask')">Закрыть</button>
+        </div>
+        
+        <input type="hidden" id="viewTaskId">
     </div>
 </div>
 {% endblock %}
