@@ -5,9 +5,9 @@
     <div class="app">
         <div class="profile-card">
             <div class="profile-nav">
-                <div class="back-btn" onclick="window.location.href='/daily'">
+               <a href="{% url 'planner:day' %}" class="back-btn">
                     <i class="fas fa-arrow-left"></i> Вернуться в ежедневник
-                </div>
+                </a>
                 <form action="{% url 'users:logout' %}" method="post" style="display: inline;">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn">

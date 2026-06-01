@@ -167,3 +167,16 @@ class RescheduleTaskForm(forms.Form):
         if not date:
             raise forms.ValidationError('Дата обязательна')
         return date
+
+    def clean(self):
+        cleaned_data = super().clean()
+        time_start = cleaned_data.get('time_start')
+        time_end = cleaned_data.get('time_end')
+
+        if time_end and not time_start:
+            self.add_error('time_start', 'Укажите время начала')
+
+        if time_start and time_end and time_start >= time_end:
+            self.add_error('time_end', 'Конец должен быть позже начала')
+
+        return cleaned_data

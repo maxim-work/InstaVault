@@ -1,252 +1,117 @@
 <div class="day-header">
     <div class="header-left">
         <div class="date-nav">
-            <button class="date-arrow" onclick="changeDate(-1)"><i class="fas fa-chevron-left"></i></button>
-            <span class="date-display" id="currentDate" onclick="openDatePicker()" style="cursor:pointer;" title="Нажмите, чтобы выбрать дату">25 мая, понедельник</span>
-            <button class="date-arrow" onclick="changeDate(1)"><i class="fas fa-chevron-right"></i></button>
+            <button class="date-arrow" hx-get="{% url 'planner:day_nav' %}?date={{ prev_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-left"></i></button>
+            <span class="date-display" id="currentDate" style="cursor:pointer;">{{ current_date }}</span>
+            <button class="date-arrow" hx-get="{% url 'planner:day_nav' %}?date={{ next_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-right"></i></button>
         </div>
         <div class="header-stats">
-            <span>Выполнено: <strong id="completedCount">0/0</strong> (<span id="productivityPercent">0%</span>)</span>
+            <span>Выполнено: <strong id="completedCount">{{ completed }}/{{ total }}</strong> (<span id="productivityPercent">{{ productivity }}%</span>)</span>
             <span class="stats-separator">|</span>
-            <span>🔴 <span id="urgentCount">0</span></span>
-            <span>🟡 <span id="importantCount">0</span></span>
-            <span>⚪ <span id="noneCount">0</span></span>
+            <span>🔴 <span id="urgentCount">{{ urgent }}</span></span>
+            <span>🟡 <span id="importantCount">{{ important }}</span></span>
+            <span>⚪ <span id="noneCount">{{ none }}</span></span>
         </div>
     </div>
     <div class="header-right">
-        <button class="btn-add-header" onclick="openAddTaskModal()">+</button>
+        <button class="btn-add-header" type="button" onclick="openAddTaskModal()">+</button>
     </div>
 </div>
 
 <div class="day-content">
-    <div class="daily-greeting">Доброе утро, Алекс</div>
+    <div class="daily-greeting">Доброе утро, {{ name }}</div>
     <div class="day-note">
         <div class="note-header">
-            <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleNote()">
-                <i class="fas fa-chevron-down" id="noteIcon"></i>
-                <span>Заметка дня</span>
-            </div>
+            <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleNote()"><i class="fas fa-chevron-down" id="noteIcon"></i><span>Заметка дня</span></div>
             <div class="note-menu" onclick="event.stopPropagation()">
-                <button class="note-menu-btn" onclick="toggleNoteDropdown(event)">⋯</button>
-                <div class="note-dropdown" id="noteDropdown">
-                    <div class="dropdown-item" onclick="clearNote()">Очистить</div>
-                </div>
+                <button type="button" class="note-menu-btn" onclick="toggleNoteDropdown(event)">⋯</button>
+                <div class="note-dropdown" id="noteDropdown"><div class="dropdown-item" onclick="clearNote()">Очистить</div></div>
             </div>
         </div>
-        <div class="note-body" id="noteBody"><textarea placeholder="Напишите заметку на день..." id="dailyNote"></textarea></div>
+        <div class="note-body" id="noteBody">
+            <form id="noteForm">{% csrf_token %}<input type="hidden" name="date" value="{{ today_iso }}"><textarea placeholder="Напишите заметку на день..." id="dailyNote" name="description" hx-post="{% url 'planner:note_save' %}" hx-trigger="keyup changed delay:1s">{{ note_content }}</textarea></form>
+        </div>
     </div>
-
     <div class="section-top-bar">
-        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleAllTasks(event)">
-            <i class="fas fa-chevron-down" id="collapseAllIcon" style="font-size: 12px; color: #B0B0C0;"></i>
-            <span class="section-label">Задачи</span>
-        </div>
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleAllTasks(event)"><i class="fas fa-chevron-down" id="collapseAllIcon" style="font-size:12px;color:#B0B0C0;"></i><span class="section-label">Задачи</span></div>
         <div class="section-actions">
-            <div class="custom-select-wrapper" id="sortFilterSelectWrapper">
-                <div class="custom-select-trigger" onclick="toggleCustomSelect(event, 'sortFilterSelectWrapper')">
-                    <span id="sortFilterLabel">По времени</span><i class="fas fa-chevron-down"></i>
-                </div>
-            </div>
+            <div class="custom-select-wrapper" id="sortFilterSelectWrapper"><div class="custom-select-trigger" onclick="toggleCustomSelect(event,'sortFilterSelectWrapper')"><span id="sortFilterLabel">По времени</span><i class="fas fa-chevron-down"></i></div></div>
         </div>
     </div>
-
-    <div class="tasks-scroll-area">
-        <div id="activeTasksContainer"></div>
-        
-        <div class="collapsible-section" id="noTimeSection" style="display:none;">
-            <div class="collapsible-header" onclick="toggleNoTime()">
-                <i class="fas fa-chevron-down" id="noTimeIcon"></i>
-                <span>Без времени</span>
-                <span class="collapsible-count" id="noTimeCount">0</span>
-            </div>
-            <div class="collapsible-body" id="noTimeBody">
-                <div id="noTimeTasksContainer"></div>
-            </div>
-        </div>
-
-        <div class="collapsible-section" id="completedSection" style="display:none;">
-            <div class="collapsible-header" onclick="toggleCompleted()">
-                <i class="fas fa-chevron-down" id="completedIcon"></i>
-                <span>Завершённые</span>
-                <span class="collapsible-count" id="completedTasksCount">0</span>
-            </div>
-            <div class="collapsible-body" id="completedBody">
-                <div id="completedTasksContainer"></div>
-            </div>
-        </div>
-
-        <div class="empty-state" id="emptyState" style="display:none;">
-            <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
-            <p class="empty-text">Нет задач на сегодня</p>
-        </div>
+    <div class="tasks-scroll-area" id="tasksScrollArea">
+        {% include 'planner/htmx/task_list.html' %}
     </div>
 </div>
 
-<!-- Модальное окно задачи -->
 <div id="modalTask" class="modal-overlay" onclick="if(event.target===this)closeModal('modalTask')">
     <div class="modal-content modal-task-content">
-        <button class="modal-close-btn" onclick="closeModal('modalTask')"><i class="fas fa-times"></i></button>
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalTask')"><i class="fas fa-times"></i></button>
         <div class="modal-title" id="modalTaskTitle">Новая задача</div>
-        <input type="text" class="modal-input" id="taskTitle" placeholder="Название задачи" autofocus>
-        <textarea class="modal-input modal-textarea" id="taskDescription" placeholder="Описание (необязательно)" rows="3"></textarea>
-        <div class="modal-row"><input type="date" class="modal-input" id="taskDate"></div>
-        <div class="time-toggle-row">
-            <label class="time-toggle">
-                <input type="checkbox" id="hasTime" onchange="toggleTimeFields()">
-                <span class="time-toggle-slider"></span><span class="time-toggle-label">Указать время</span>
-            </label>
-        </div>
-        <div class="modal-row time-fields" id="timeFields" style="display:none;">
-            <input type="time" class="modal-input" id="taskTimeStart" value="09:00" placeholder="Начало">
-            <span class="time-separator">—</span>
-            <input type="time" class="modal-input" id="taskTimeEnd" value="" placeholder="Конец">
-        </div>
-        <!-- Уведомление -->
-        <div class="time-toggle-row">
-            <label class="time-toggle">
-                <input type="checkbox" id="hasNotification" onchange="toggleNotificationFields()">
-                <span class="time-toggle-slider"></span>
-                <span class="time-toggle-label">Уведомление в Telegram</span>
-            </label>
-        </div>
-        <div class="modal-row time-fields" id="notificationFields" style="display:none;">
-            <input type="time" class="modal-input" id="taskNotificationTime" value="09:00" placeholder="Время уведомления">
-            <span style="font-size:12px;color:#6B6B7A;display:flex;align-items:center;gap:4px;">
-                <i class="fab fa-telegram-plane"></i> Придёт в Telegram
-            </span>
-        </div>
-        <div class="modal-row">
-            <div class="custom-select-wrapper modal-select-wrapper" id="prioritySelectWrapper">
-                <div class="custom-select-trigger" onclick="toggleCustomSelect(event, 'prioritySelectWrapper')">
-                    <span id="priorityLabel">Без уровня</span><i class="fas fa-chevron-down"></i>
-                </div>
-            </div>
-            <div class="custom-select-wrapper modal-select-wrapper" id="repeatSelectWrapper">
-                <div class="custom-select-trigger" onclick="toggleCustomSelect(event, 'repeatSelectWrapper')">
-                    <span id="repeatLabel">Не повторять</span><i class="fas fa-chevron-down"></i>
-                </div>
-            </div>
-        </div>
-        <input type="hidden" id="editingTaskId">
-        <div class="modal-actions" id="normalActions"><button class="modal-btn primary" onclick="saveTask()" id="saveTaskBtn">Добавить</button></div>
-        <div id="editRepeatingBlock" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.05);">
-            <p style="font-size:12px;color:#B0B0C0;margin-bottom:8px;">Сохранить изменения:</p>
+        <form method="POST" hx-post="{% url 'planner:task_create' %}" hx-target="#tasksScrollArea" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalTask');">
+            {% csrf_token %}
+            <input type="text" class="modal-input" id="taskTitle" name="title" placeholder="Название задачи" autofocus>
+            <textarea class="modal-input modal-textarea" id="taskDescription" name="description" placeholder="Описание" rows="3"></textarea>
+            <input type="date" class="modal-input" id="taskDate" name="date">
+            <div class="time-toggle-row"><label class="time-toggle"><input type="checkbox" id="hasTime" onchange="toggleTimeFields()"><span class="time-toggle-slider"></span><span class="time-toggle-label">Указать время</span></label></div>
+            <div class="modal-row time-fields" id="timeFields" style="display:none;"><input type="time" class="modal-input" id="taskTimeStart" name="time_start" value="09:00"><span class="time-separator">—</span><input type="time" class="modal-input" id="taskTimeEnd" name="time_end"></div>
+            <div class="time-toggle-row"><label class="time-toggle"><input type="checkbox" id="hasNotification" onchange="toggleNotificationFields()"><span class="time-toggle-slider"></span><span class="time-toggle-label">Уведомление в Telegram</span></label></div>
+            <div class="modal-row time-fields" id="notificationFields" style="display:none;"><input type="time" class="modal-input" id="taskNotificationTime" name="notification_time" value="09:00"><span style="font-size:12px;color:#6B6B7A;"><i class="fab fa-telegram-plane"></i> Придёт в Telegram</span></div>
             <div class="modal-row">
-                <button class="modal-btn primary" onclick="saveTask('single')">Только эту</button>
-                <button class="modal-btn" style="background:rgba(224,122,95,0.15);color:#E07A5F;border:1px solid rgba(224,122,95,0.3);" onclick="saveTask('all')">Все повторения</button>
+                <div class="custom-select-wrapper modal-select-wrapper" id="prioritySelectWrapper"><div class="custom-select-trigger" onclick="toggleCustomSelect(event,'prioritySelectWrapper')"><span id="priorityLabel">Без уровня</span><i class="fas fa-chevron-down"></i></div></div>
+                <div class="custom-select-wrapper modal-select-wrapper" id="repeatSelectWrapper"><div class="custom-select-trigger" onclick="toggleCustomSelect(event,'repeatSelectWrapper')"><span id="repeatLabel">Не повторять</span><i class="fas fa-chevron-down"></i></div></div>
             </div>
-        </div>
-        <div id="deleteRepeatingBlock" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.05);">
-            <p style="font-size:12px;color:#B0B0C0;margin-bottom:8px;">Удалить задачу:</p>
-            <div class="modal-row">
-                <button class="modal-btn" style="background:rgba(255,77,77,0.1);color:#ff4d4d;border:1px solid rgba(255,77,77,0.2);" onclick="deleteSingleTask()">Только эту</button>
-                <button class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);" onclick="deleteAllRepeating()">Все повторения</button>
-            </div>
-        </div>
+            <input type="hidden" name="editing_task_id" id="editingTaskId"><input type="hidden" name="priority" id="priorityValue" value="none"><input type="hidden" name="repeat" id="repeatValue" value="none">
+            <div class="modal-actions"><button type="submit" class="modal-btn primary">Добавить</button></div>
+        </form>
     </div>
 </div>
 
-<!-- Модальное окно удаления задачи -->
 <div id="modalDeleteTask" class="modal-overlay" onclick="if(event.target===this)closeModal('modalDeleteTask')">
     <div class="modal-content" style="text-align:center;">
-        <button class="modal-close-btn" onclick="closeModal('modalDeleteTask')"><i class="fas fa-times"></i></button>
-        <div class="modal-title" style="color:#ff4d4d;">Удалить задачу</div>
-        <p style="font-size:16px;color:#fff;margin-bottom:4px;font-weight:500;" id="deleteTaskTitle">Название задачи</p>
-        <p style="font-size:12px;color:#6B6B7A;margin-bottom:24px;" id="deleteTaskRepeat">Обычная задача</p>
-        <input type="hidden" id="deleteTaskId">
-        <div class="modal-actions" id="deleteSingleAction">
-            <button class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);" onclick="deleteSingleTask()">Удалить</button>
-        </div>
-        <div class="modal-actions" id="deleteRepeatingActions" style="display:none;">
-            <button class="modal-btn" style="background:rgba(255,77,77,0.1);color:#ff4d4d;border:1px solid rgba(255,77,77,0.2);" onclick="deleteSingleTask()">Только эту</button>
-            <button class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);" onclick="deleteAllRepeating()">Все повторения</button>
-        </div>
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalDeleteTask')"><i class="fas fa-times"></i></button>
+        <form method="POST" hx-post="{% url 'planner:task_delete' %}" hx-target="#tasksScrollArea" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalDeleteTask');">
+            {% csrf_token %}
+            <div class="modal-title" style="color:#ff4d4d;">Удалить задачу</div>
+            <p style="font-size:16px;color:#fff;margin-bottom:4px;font-weight:500;" id="deleteTaskTitle">Название задачи</p>
+            <p style="font-size:12px;color:#6B6B7A;margin-bottom:24px;" id="deleteTaskRepeat">Обычная задача</p>
+            <input type="hidden" name="task_id" id="deleteTaskId"><input type="hidden" name="delete_mode" id="deleteMode" value="single">
+            <div class="modal-actions" id="deleteSingleAction"><button type="submit" class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;">Удалить</button></div>
+            <div class="modal-actions" id="deleteRepeatingActions" style="display:none;">
+                <button type="submit" class="modal-btn" style="background:rgba(255,77,77,0.1);color:#ff4d4d;" onclick="document.getElementById('deleteMode').value='single'">Только эту</button>
+                <button type="submit" class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;" onclick="document.getElementById('deleteMode').value='all'">Все повторения</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- Модальное окно переноса задачи -->
 <div id="modalReschedule" class="modal-overlay" onclick="if(event.target===this)closeModal('modalReschedule')">
     <div class="modal-content">
-        <button class="modal-close-btn" onclick="closeModal('modalReschedule')">
-            <i class="fas fa-times"></i>
-        </button>
-        <div class="modal-title">
-            <i class="fas fa-calendar-alt" style="margin-right: 8px;"></i> Перенести задачу
-        </div>
-        
-        <div class="reschedule-options">
-            <div class="reschedule-option" onclick="setQuickReschedule('tomorrow')">
-                <i class="fas fa-sun"></i>
-                <span>Завтра</span>
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalReschedule')"><i class="fas fa-times"></i></button>
+        <div class="modal-title"><i class="fas fa-calendar-alt" style="margin-right:8px;"></i> Перенести задачу</div>
+        <form method="POST" hx-post="{% url 'planner:task_reschedule' %}" hx-target="#tasksScrollArea" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalReschedule');">
+            {% csrf_token %}
+            <div class="reschedule-options">
+                <div class="reschedule-option" onclick="setQuickReschedule('tomorrow')"><i class="fas fa-sun"></i><span>Завтра</span></div>
+                <div class="reschedule-option" onclick="setQuickReschedule('nextWeek')"><i class="fas fa-calendar-week"></i><span>Через неделю</span></div>
+                <div class="reschedule-option" onclick="setQuickReschedule('nextMonth')"><i class="fas fa-calendar"></i><span>След. месяц</span></div>
             </div>
-            <div class="reschedule-option" onclick="setQuickReschedule('nextWeek')">
-                <i class="fas fa-calendar-week"></i>
-                <span>Через неделю</span>
-            </div>
-            <div class="reschedule-option" onclick="setQuickReschedule('nextMonth')">
-                <i class="fas fa-calendar"></i>
-                <span>След. месяц</span>
-            </div>
-        </div>
-        
-        <div class="input-group">
-            <label class="input-label">Дата</label>
-            <input type="date" class="modal-input" id="rescheduleDate">
-        </div>
-        
-        <div class="time-toggle-row">
-            <label class="time-toggle">
-                <input type="checkbox" id="rescheduleHasTime" onchange="toggleRescheduleTimeFields()">
-                <span class="time-toggle-slider"></span>
-                <span class="time-toggle-label">Указать время</span>
-            </label>
-        </div>
-        
-        <div class="modal-row time-fields" id="rescheduleTimeFields" style="display:none;">
-            <input type="time" class="modal-input" id="rescheduleTimeStart" placeholder="Начало">
-            <span class="time-separator">—</span>
-            <input type="time" class="modal-input" id="rescheduleTimeEnd" placeholder="Конец">
-        </div>
-        
-        <input type="hidden" id="rescheduleTaskId">
-        
-        <div class="modal-actions">
-            <button class="modal-btn secondary" onclick="closeModal('modalReschedule')">Отмена</button>
-            <button class="modal-btn primary" onclick="saveReschedule()">
-                <i class="fas fa-check" style="margin-right: 6px;"></i> Перенести
-            </button>
-        </div>
+            <input type="date" class="modal-input" id="rescheduleDate" name="date">
+            <div class="time-toggle-row"><label class="time-toggle"><input type="checkbox" id="rescheduleHasTime" onchange="toggleRescheduleTimeFields()"><span class="time-toggle-slider"></span><span class="time-toggle-label">Указать время</span></label></div>
+            <div class="modal-row time-fields" id="rescheduleTimeFields" style="display:none;"><input type="time" class="modal-input" id="rescheduleTimeStart" name="time_start"><span class="time-separator">—</span><input type="time" class="modal-input" id="rescheduleTimeEnd" name="time_end"></div>
+            <input type="hidden" name="task_id" id="rescheduleTaskId">
+            <div class="modal-actions"><button type="button" class="modal-btn secondary" onclick="closeModal('modalReschedule')">Отмена</button><button type="submit" class="modal-btn primary"><i class="fas fa-check" style="margin-right:6px;"></i> Перенести</button></div>
+        </form>
     </div>
 </div>
 
-<!-- Модальное окно просмотра задачи -->
 <div id="modalViewTask" class="modal-overlay" onclick="if(event.target===this)closeModal('modalViewTask')">
     <div class="modal-content" style="text-align:left;">
-        <button class="modal-close-btn" onclick="closeModal('modalViewTask')"><i class="fas fa-times"></i></button>
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalViewTask')"><i class="fas fa-times"></i></button>
         <div class="modal-title" id="viewTaskTitle" style="margin-bottom:8px;">Название задачи</div>
-        
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-            <span id="viewTaskPriority" style="font-size:12px;padding:4px 10px;border-radius:20px;"></span>
-            <span id="viewTaskRepeat" style="font-size:12px;color:#8B8B9A;"></span>
-            <span id="viewTaskTime" style="font-size:12px;color:#E07A5F;"></span>
-            <span id="viewTaskNotification" style="font-size:12px;color:#64a0dc;"></span>
-        </div>
-        
-        <div id="viewTaskDescription" style="font-size:14px;color:#B0B0C0;line-height:1.6;margin-bottom:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;">
-            Нет описания
-        </div>
-        
-        <div style="font-size:11px;color:#6B6B7A;margin-bottom:20px;">
-            <span>Создана: <span id="viewTaskDate"></span></span>
-        </div>
-        
-        <div class="modal-actions">
-            <button class="modal-btn secondary" onclick="closeModal('modalViewTask'); openEditTaskModal(document.getElementById('viewTaskId').value)">
-                <i class="fas fa-pen" style="margin-right:4px;"></i> Редактировать
-            </button>
-            <button class="modal-btn primary" onclick="closeModal('modalViewTask')">Закрыть</button>
-        </div>
-        
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;"><span id="viewTaskPriority" style="font-size:12px;padding:4px 10px;border-radius:20px;"></span><span id="viewTaskRepeat" style="font-size:12px;color:#8B8B9A;"></span><span id="viewTaskTime" style="font-size:12px;color:#E07A5F;"></span><span id="viewTaskNotification" style="font-size:12px;color:#64a0dc;"></span></div>
+        <div id="viewTaskDescription" style="font-size:14px;color:#B0B0C0;line-height:1.6;margin-bottom:20px;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;">Нет описания</div>
+        <div style="font-size:11px;color:#6B6B7A;margin-bottom:20px;"><span>Создана: <span id="viewTaskDate"></span></span></div>
+        <div class="modal-actions"><button type="button" class="modal-btn secondary" onclick="closeModal('modalViewTask');openEditTaskModal(document.getElementById('viewTaskId').value)"><i class="fas fa-pen" style="margin-right:4px;"></i> Редактировать</button><button type="button" class="modal-btn primary" onclick="closeModal('modalViewTask')">Закрыть</button></div>
         <input type="hidden" id="viewTaskId">
     </div>
 </div>

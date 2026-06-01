@@ -1,0 +1,67 @@
+{% if tasks %}
+    <div id="activeTasksContainer">
+        {% for task in tasks %}{% if not task.completed %}
+        <div class="task-card priority-{{ task.priority }}" id="task-{{ task.id }}">
+            <div class="task-card-checkbox" onclick="toggleTask({{ task.id }})"></div>
+            <div class="task-card-body">
+                <div class="task-card-title">{{ task.title }}</div>
+                {% if task.description %}<div class="task-card-desc">{{ task.description }}</div>{% endif %}
+                <div class="task-card-meta">
+                    {% if task.time_start %}<span class="task-card-time">🕛 {{ task.time_start|time:"H:i" }}{% if task.time_end %} — {{ task.time_end|time:"H:i" }}{% endif %}</span>{% endif %}
+                    {% if task.template %}<span class="task-card-repeat-badge"><i class="fas fa-redo"></i> {{ task.template.get_repeat_display }}</span>{% endif %}
+                    {% if task.notification_time %}<span class="task-card-time" style="background:rgba(100,160,220,0.1);color:#64a0dc;"><i class="fab fa-telegram"></i> {{ task.notification_time|time:"H:i" }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="task-card-actions">
+                <button class="task-menu-btn" onclick="toggleTaskMenu(event, {{ task.id }})"><i class="fas fa-ellipsis-v"></i></button>
+                <div class="task-dropdown" id="task-dropdown-{{ task.id }}">
+                    <div class="task-dropdown-item" onclick="openViewTaskModal({{ task.id }})"><i class="fas fa-eye"></i> Просмотр</div>
+                    <div class="task-dropdown-item" onclick="openEditTaskModal({{ task.id }})"><i class="fas fa-pen"></i> Редактировать</div>
+                    <div class="task-dropdown-item" onclick="openRescheduleModal({{ task.id }})"><i class="fas fa-calendar-alt"></i> Перенести</div>
+                    <div class="task-dropdown-item delete-item" onclick="openDeleteTaskModal({{ task.id }})"><i class="fas fa-trash-alt"></i> Удалить</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+
+    <div class="collapsible-section" id="completedSection" style="{% if completed > 0 %}display:block;{% else %}display:none;{% endif %}">
+        <div class="collapsible-header" onclick="toggleCompleted()">
+            <i class="fas fa-chevron-down" id="completedIcon"></i>
+            <span>Завершённые</span>
+            <span class="collapsible-count" id="completedTasksCount">{{ completed }}</span>
+        </div>
+        <div class="collapsible-body" id="completedBody">
+            <div id="completedTasksContainer">
+                {% for task in tasks %}{% if task.completed %}
+                <div class="task-card priority-{{ task.priority }} completed" id="task-{{ task.id }}">
+                    <div class="task-card-checkbox checked" onclick="toggleTask({{ task.id }})">✓</div>
+                    <div class="task-card-body">
+                        <div class="task-card-title">{{ task.title }}</div>
+                        {% if task.description %}<div class="task-card-desc">{{ task.description }}</div>{% endif %}
+                        <div class="task-card-meta">
+                            {% if task.time_start %}<span class="task-card-time">🕛 {{ task.time_start|time:"H:i" }}{% if task.time_end %} — {{ task.time_end|time:"H:i" }}{% endif %}</span>{% endif %}
+                            {% if task.template %}<span class="task-card-repeat-badge"><i class="fas fa-redo"></i> {{ task.template.get_repeat_display }}</span>{% endif %}
+                            {% if task.notification_time %}<span class="task-card-time" style="background:rgba(100,160,220,0.1);color:#64a0dc;"><i class="fab fa-telegram"></i> {{ task.notification_time|time:"H:i" }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="task-card-actions">
+                        <button class="task-menu-btn" onclick="toggleTaskMenu(event, {{ task.id }})"><i class="fas fa-ellipsis-v"></i></button>
+                        <div class="task-dropdown" id="task-dropdown-{{ task.id }}">
+                            <div class="task-dropdown-item" onclick="openViewTaskModal({{ task.id }})"><i class="fas fa-eye"></i> Просмотр</div>
+                            <div class="task-dropdown-item" onclick="openEditTaskModal({{ task.id }})"><i class="fas fa-pen"></i> Редактировать</div>
+                            <div class="task-dropdown-item" onclick="openRescheduleModal({{ task.id }})"><i class="fas fa-calendar-alt"></i> Перенести</div>
+                            <div class="task-dropdown-item delete-item" onclick="openDeleteTaskModal({{ task.id }})"><i class="fas fa-trash-alt"></i> Удалить</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}{% endfor %}
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="empty-state" id="emptyState">
+        <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
+        <p class="empty-text">Нет задач на сегодня</p>
+    </div>
+{% endif %}
