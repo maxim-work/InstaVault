@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import NoteForm, TaskForm, RescheduleTaskForm
-from .models import Note, Task, TaskTemplate
+from .forms import NoteForm, TaskForm, RescheduleTaskForm, HabitForm
+from .models import Note, Task, TaskTemplate, Habit, HabitCompletion
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.utils import timezone
 from django.template.loader import render_to_string
 
@@ -15,8 +15,8 @@ def day_get_context(request, date):
     total = tasks.count()
     completed_count = tasks.filter(completed=True).count()
     productivity = round(completed_count / total * 100) if total > 0 else 0
-    
-    context = {
+
+    return {
         'page': 'day',
         'note_content': note.description if note else '',
         'tasks': tasks,
@@ -32,7 +32,7 @@ def day_get_context(request, date):
         'none': tasks.filter(priority='none').count(),
         'name': request.user.username,
     }
-    return context
+
 @login_required
 def day_view(request):
     date_str = request.GET.get('date')
@@ -44,8 +44,9 @@ def day_view(request):
     generate_tasks_from_templates(request.user, today)
     
     context = day_get_context(request, today)
-    
-    return render(request, 'planner/day.html', {**{'page': 'day'}, **context})
+    if request.headers.get('HX-Request'):
+        return render(request, 'planner/htmx/day.html', context)
+    return render(request, 'planner/day.html', context)
 
 @login_required
 def save_note(request):
@@ -203,11 +204,117 @@ def generate_tasks_from_templates(user, date):
                 notification_time=template.notification_time,
             )
 
+def habit_get_context(request, date=None):
+    if date == None:
+        date = timezone.now().date()
+    habits = Habit.objects.filter(user=request.user)
+    list_habits = []
+    for habit in habits:
+        if habit.repeat == 'weekly':
+            if habit.created_at.weekday() == date.weekday():
+                list_habits.append(habit)
+
+        elif habit.repeat == 'weekdays':
+            if date.weekday() < 5:
+                list_habits.append(habit)
+        else:
+            list_habits.append(habit)
+
+    for habit in list_habits:
+        habit.completed_on_date = habit.is_completed_on_date(date)
+
+    return {
+        'page': 'habits',
+        'current_date': f"{date.day} {['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][date.month-1]}, {['понедельник','вторник','среда','четверг','пятница','суббота','воскресенье'][date.weekday()]}",
+        'today_iso': date.isoformat(),
+        'prev_date': (date - timedelta(days=1)).isoformat(),
+        'next_date': (date + timedelta(days=1)).isoformat(),
+        'name': request.user.username,
+        'habits': list_habits,
+        'total': len(list_habits),
+        'completed': sum(1 for h in list_habits if h.is_completed_today),
+        'max_streak': max((h.longest_streak for h in habits), default=0),
+    }
+
 @login_required
 def habits_view(request):
+    date_str = request.GET.get('date')
+    if date_str:
+        today = datetime.strptime(date_str, '%Y-%m-%d').date()
+    else:
+        today = timezone.now().date()
+    context = habit_get_context(request, today)
     if request.headers.get('HX-Request'):
-        return render(request, 'planner/htmx/habits.html', {'page': 'habits'})
-    return render(request, 'planner/habits.html', {'page': 'habits'})
+        return render(request, 'planner/htmx/habits.html', context)
+    return render(request, 'planner/habits.html', context)
+
+@login_required
+def create_habit(request):
+    if request.method == 'POST':
+        form = HabitForm(request.POST)
+        if form.is_valid():
+            editing_id = request.POST.get('habit_id')
+            if editing_id and editing_id.isdigit():
+                update_habit(request, int(editing_id), form)
+            else:
+                Habit.objects.create(
+                    user=request.user,
+                    avatar=form.cleaned_data['avatar'],
+                    title=form.cleaned_data['title'],
+                    description=form.cleaned_data['description'],
+                    motivation=form.cleaned_data['motivation'],
+                    time=form.cleaned_data['time'],
+                    repeat=form.cleaned_data['repeat'],
+                    notification_enabled=bool(form.cleaned_data['notification_time']),
+                    notification_time=form.cleaned_data['notification_time'],
+                    )
+            context = habit_get_context(request)
+            html = render_to_string('planner/htmx/habits_list.html', context, request)
+            return HttpResponse(html)
+        return JsonResponse({'errors': form.errors}, status=400)
+
+@login_required
+def update_habit(request, editing_id, form):
+    habit = get_object_or_404(Habit, id=int(editing_id), user=request.user)
+    fields = ['avatar', 'title', 'description', 'motivation', 'time', 'repeat', 'notification_time']
+    for field in fields:
+        setattr(habit, field, form.cleaned_data[field])
+    habit.notification_enabled = bool(form.cleaned_data['notification_time'])
+    habit.save()
+
+@login_required
+def delete_habit(request):
+    if request.method == 'POST':
+        habit_id = request.POST.get('habit_id')
+        habit = get_object_or_404(Habit, id=habit_id, user=request.user)
+        habit.delete()
+        
+        context = habit_get_context(request)
+        html = render_to_string('planner/htmx/habits_list.html', context, request)
+        return HttpResponse(html)
+
+@login_required
+def toggle_habit(request, habit_id):
+    habit = get_object_or_404(Habit, id=habit_id, user=request.user)
+    today = timezone.now().date()
+    date_str = request.GET.get('date', today.isoformat())
+    date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    
+    if date > today:
+        return JsonResponse({'status': 'error', 'message': 'Нельзя выполнить наперёд'}, status=400)
+    
+    completion, created = HabitCompletion.objects.get_or_create(
+        habit=habit,
+        date=date,
+        defaults={'completed': True, 'completed_at': timezone.now()}
+    )
+    
+    if not created:
+        completion.completed = not completion.completed
+        completion.completed_at = timezone.now() if completion.completed else None
+        completion.save()
+    
+    return JsonResponse({'status': 'ok', 'completed': completion.completed})
 
 @login_required
 def calendar_view(request):

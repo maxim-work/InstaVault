@@ -278,9 +278,16 @@ window.toggleCustomSelect = function(event, wrapperId) {
     } else if (wrapperId === 'repeatSelectWrapper') {
         options = [{ value:'none', label:'Не повторять' }, { value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
         onSelect = (v,l) => { document.getElementById('repeatLabel').textContent=l; document.getElementById('repeatValue').value=v; };
-    } else if (wrapperId === 'habitRepeatSelectWrapper' || wrapperId === 'editHabitRepeatWrapper') {
-        options = [{ value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
-        onSelect = (v,l) => { document.getElementById(wrapperId==='habitRepeatSelectWrapper'?'habitRepeatLabel':'editHabitRepeatLabel').textContent=l; };
+    } else if (wrapperId === 'habitRepeatSelectWrapper') {
+        options = [
+            { value:'daily', label:'Ежедневно' },
+            { value:'weekly', label:'Еженедельно' },
+            { value:'weekdays', label:'По будням' },
+        ];
+        onSelect = (v,l) => {
+            document.getElementById('habitRepeatLabel').textContent = l;
+            document.getElementById('habitRepeatValue').value = v;  // ← вот эта строка должна быть
+        };
     }
 
     dropdown.innerHTML = options.map(o => `<div class="custom-option${o.value===currentValue?' active':''}${o.cssClass?' '+o.cssClass:''}" data-value="${o.value}">${o.label}</div>`).join('');
@@ -496,7 +503,11 @@ function distributeTasks() {
     updateStats(); updateEmptyState();
 }
 
-window.selectAvatar = function(el) { el.parentElement.querySelectorAll('.avatar-option').forEach(a=>a.classList.remove('selected')); el.classList.add('selected'); };
+window.selectAvatar = function(el) {
+    el.parentElement.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('habitAvatarValue').value = el.textContent;  // ← добавить
+};
 window.toggleHabitNotificationFields = function() { document.getElementById('habitNotificationFields').style.display = document.getElementById('habitHasNotification').checked?'block':'none'; };
 window.toggleEditHabitNotification = function() { document.getElementById('editHabitNotificationFields').style.display = document.getElementById('editHabitHasNotification').checked?'block':'none'; };
 window.toggleExpandable = function(id) { const el = document.getElementById(id); const t = el.previousElementSibling.querySelector('span'); if (el.style.display==='none') { el.style.display='block'; t.textContent=t.textContent.replace('+','−'); } else { el.style.display='none'; t.textContent=t.textContent.replace('−','+'); } };
@@ -507,15 +518,120 @@ window.toggleHabitMenu = function(event, habitId) {
     const btn = event.currentTarget; const rect = btn.getBoundingClientRect();
     const dropdown = document.createElement('div'); dropdown._habitId = habitId;
     dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;width:180px;background:#1A1A20;border-radius:12px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 10px 25px rgba(0,0,0,0.6);z-index:9999;overflow:hidden;`;
-    dropdown.innerHTML = `<div class="task-dropdown-item" onclick="openEditHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-pen" style="width:16px;font-size:13px;"></i> Редактировать</div><div class="task-dropdown-item delete-item" onclick="openDeleteHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;"><i class="fas fa-trash-alt" style="width:16px;font-size:13px;"></i> Удалить</div>`;
+    dropdown.innerHTML = `
+        <div class="task-dropdown-item" onclick="openViewHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-eye" style="width:16px;font-size:13px;"></i> Просмотр</div>
+        <div class="task-dropdown-item" onclick="openEditHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-pen" style="width:16px;font-size:13px;"></i> Редактировать</div>
+        <div class="task-dropdown-item delete-item" onclick="openDeleteHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;"><i class="fas fa-trash-alt" style="width:16px;font-size:13px;"></i> Удалить</div>`;
     const items = dropdown.querySelectorAll('.task-dropdown-item');
     items[0].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';}); items[0].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
-    items[1].addEventListener('mouseenter', function(){this.style.background='rgba(255,77,77,0.1)';this.style.color='#ff4d4d';}); items[1].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    items[1].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';}); items[1].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    items[2].addEventListener('mouseenter', function(){this.style.background='rgba(255,77,77,0.1)';this.style.color='#ff4d4d';}); items[2].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
     document.body.appendChild(dropdown); activeHabitDropdown = dropdown;
 };
-window.openEditHabitModal = function(id) { if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown=null; } document.getElementById('editHabitId').value=id; openModal('modalEditHabit'); };
-window.openDeleteHabitModal = function(id) { if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown=null; } document.getElementById('deleteHabitId').value=id; openModal('modalDeleteHabit'); };
+window.toggleHabit = function(habitId) {
+    const dateEl = document.getElementById('habitsDate');
+    const date = dateEl ? dateEl.dataset.iso : '';
+    fetch(`/planner/habits/habit/${habitId}/toggle/?date=${date}`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCSRF()}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            const card = document.getElementById(`habit-${habitId}`);
+            if (card) {
+                card.classList.toggle('completed', data.completed);
+                const checkbox = card.querySelector('.habit-check-square');
+                if (checkbox) {
+                    checkbox.classList.toggle('checked', data.completed);
+                    checkbox.textContent = data.completed ? '✓' : '';
+                }
+            }
+            updateHabitsStats();
+        }
+    });
+};
+window.openViewHabitModal = function(habitId) {
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
+    const card = document.getElementById(`habit-${habitId}`);
+    if (!card) return;
+    
+    document.getElementById('viewHabitId').value = habitId;
+    document.getElementById('viewHabitTitle').textContent = card.querySelector('.habit-name').textContent;
+    document.getElementById('viewHabitDescription').textContent = card.dataset.description || 'Нет описания';
+    document.getElementById('viewHabitMotivation').textContent = card.dataset.motivation || '';
+    document.getElementById('viewHabitRepeat').textContent = card.dataset.repeat || '';
+    document.getElementById('viewHabitTime').textContent = card.dataset.time || '';
+    document.getElementById('viewHabitStreak').textContent = card.dataset.streak || '0';
+    document.getElementById('viewHabitBestStreak').textContent = card.dataset.bestStreak || '0';
+    document.getElementById('viewHabitRate').textContent = (card.dataset.rate || '0') + '%';
+    
+    if (!card.dataset.motivation) {
+        document.getElementById('viewHabitMotivation').style.display = 'none';
+    } else {
+        document.getElementById('viewHabitMotivation').style.display = '';
+    }
+    
+    openModal('modalViewHabit');
+};
+
+window.openEditHabitModal = function(habitId) {
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
+    const card = document.getElementById(`habit-${habitId}`);
+    if (!card) return;
+    
+    document.getElementById('modalHabitTitle').textContent = 'Редактировать привычку';
+    document.getElementById('habitId').value = habitId;
+    const fullName = card.querySelector('.habit-name').textContent;
+    const avatar = card.dataset.avatar || '';
+    document.getElementById('habitTitle').value = fullName.replace(avatar, '').trim();
+    document.getElementById('habitDescription').value = card.dataset.description || '';
+    document.getElementById('habitTime').value = card.dataset.time || '';
+    document.getElementById('habitMotivation').value = card.dataset.motivation || '';
+    document.getElementById('habitNotificationTime').value = card.dataset.notificationTime || '';
+    
+    const hasNotification = card.dataset.notification === 'true';
+    document.getElementById('habitHasNotification').checked = hasNotification;
+    document.getElementById('habitNotificationFields').style.display = hasNotification ? 'block' : 'none';
+    
+    document.getElementById('habitRepeatLabel').textContent = card.dataset.repeatLabel || 'Ежедневно';
+    document.getElementById('habitRepeatValue').value = card.dataset.repeat || 'daily';
+    
+    document.getElementById('habitAvatarValue').value = card.dataset.avatar || '🏃';
+    document.querySelectorAll('#habitAvatarPicker .avatar-option').forEach(a => {
+        a.classList.toggle('selected', a.textContent === (card.dataset.avatar || '🏃'));
+    });
+    
+    document.getElementById('habitSubmitBtn').textContent = 'Сохранить';
+    openModal('modalHabit');
+    setTimeout(() => document.getElementById('habitTitle').focus(), 100);
+};
+window.openDeleteHabitModal = function(habitId) {
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
+    const card = document.getElementById(`habit-${habitId}`);
+    document.getElementById('deleteHabitName').textContent = card ? card.querySelector('.habit-name').textContent : 'Привычка';
+    document.getElementById('deleteHabitId').value = habitId;
+    openModal('modalDeleteHabit');
+};
 document.addEventListener('click', function(e) { if (activeHabitDropdown && !e.target.closest('.task-card-actions')) { activeHabitDropdown.remove(); activeHabitDropdown=null; } });
+
+window.updateHabitsStats = function() {
+    const completed = document.querySelectorAll('.habit-card:not(.completed)').length === 0 ? 
+        document.querySelectorAll('.habit-card.completed').length : 
+        document.querySelectorAll('.habit-card.completed').length;
+    const total = document.querySelectorAll('.habit-card').length;
+    const streaks = Array.from(document.querySelectorAll('.habit-card')).map(card => 
+        parseInt(card.dataset.bestStreak) || 0
+    );
+    const maxStreak = streaks.length > 0 ? Math.max(...streaks) : 0;
+    
+    const cEl = document.getElementById('habitsCompleted');
+    const tEl = document.getElementById('habitsTotal');
+    const sEl = document.getElementById('habitsMaxStreak');
+    if (cEl) cEl.textContent = completed;
+    if (tEl) tEl.textContent = total;
+    if (sEl) sEl.textContent = '🔥 ' + maxStreak + ' дней';
+};
 
 const calendarState={currentYear:2026,currentMonth:4,selectedDay:null,monthData:{}};
 (function(){const y=calendarState.currentYear,m=calendarState.currentMonth;const dim=new Date(y,m+1,0).getDate();for(let d=1;d<=dim;d++){calendarState.monthData[d]={tasks:Math.floor(Math.random()*8),completed:Math.floor(Math.random()*9),habits:Math.floor(Math.random()*5),habitsDone:Math.floor(Math.random()*6)};}})();
@@ -537,6 +653,28 @@ window.openMonthPicker = function(){const i=document.createElement('input');i.ty
 window.openDayPreview = function(day){const data=calendarState.monthData[day]||{tasks:0,completed:0,habits:0,habitsDone:0};calendarState.selectedDay=day;renderCalendar();const mn=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];document.getElementById('previewDate').textContent=day+' '+mn[calendarState.currentMonth];document.getElementById('previewTasksStat').textContent=data.completed+'/'+data.tasks;document.getElementById('previewHabitsStat').textContent=data.habitsDone+'/'+data.habits;document.getElementById('dayPreview').style.display='flex';document.getElementById('dayPreview')._selectedDay=day;};
 document.addEventListener('click',function(e){const p=document.getElementById('dayPreview');if(p&&p.style.display==='flex'&&e.target===p)p.style.display='none';});
 window.goToDay = function(type){const p=document.getElementById('dayPreview');const day=p._selectedDay||1;p.style.display='none';if(type==='tasks'){window.location.href=`/planner/day/?date=${calendarState.currentYear}-${String(calendarState.currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;}else if(type==='habits'){document.querySelector('.topbar-nav-link[href*="habits"]')?.click();}};
+
+window.openAddHabitModal = function() {
+    document.getElementById('modalHabitTitle').textContent = 'Новая привычка';
+    document.getElementById('habitId').value = '';
+    document.getElementById('habitTitle').value = '';
+    document.getElementById('habitDescription').value = '';
+    document.getElementById('habitTime').value = '';
+    document.getElementById('habitMotivation').value = '';
+    document.getElementById('habitNotificationTime').value = '';
+    document.getElementById('habitHasNotification').checked = false;
+    document.getElementById('habitNotificationFields').style.display = 'none';
+    document.getElementById('habitRepeatLabel').textContent = 'Ежедневно';
+    document.getElementById('habitRepeatValue').value = 'daily';
+    document.getElementById('habitAvatarValue').value = '🏃';
+    document.getElementById('habitSubmitBtn').textContent = 'Добавить';
+    // Сброс аватаров
+    document.querySelectorAll('#habitAvatarPicker .avatar-option').forEach((a, i) => {
+        a.classList.toggle('selected', i === 0);
+    });
+    openModal('modalHabit');
+    setTimeout(() => document.getElementById('habitTitle').focus(), 100);
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('tasksScrollArea')) { distributeTasks(); }

@@ -99,30 +99,93 @@ class Habit(models.Model):
     def current_streak(self):
         today = timezone.now().date()
         streak = 0
-        check_date = today
-        while self.completions.filter(date=check_date, completed=True).exists():
-            streak += 1
-            check_date -= timedelta(days=1)
-        if streak == 0:
-            check_date = today - timedelta(days=1)
+        
+        if self.repeat == 'daily':
+            check_date = today
             while self.completions.filter(date=check_date, completed=True).exists():
                 streak += 1
                 check_date -= timedelta(days=1)
+            if streak == 0:
+                check_date = today - timedelta(days=1)
+                while self.completions.filter(date=check_date, completed=True).exists():
+                    streak += 1
+                    check_date -= timedelta(days=1)
+                    
+        elif self.repeat == 'weekly':
+            check_date = today
+            while self.completions.filter(date=check_date, completed=True).exists():
+                streak += 1
+                check_date -= timedelta(days=7)
+            if streak == 0:
+                check_date = today - timedelta(days=7)
+                while self.completions.filter(date=check_date, completed=True).exists():
+                    streak += 1
+                    check_date -= timedelta(days=7)
+                    
+        elif self.repeat == 'weekdays':
+            check_date = today
+            while self.completions.filter(date=check_date, completed=True).exists():
+                streak += 1
+                check_date -= timedelta(days=1)
+                while check_date.weekday() >= 5:
+                    check_date -= timedelta(days=1)
+            if streak == 0:
+                check_date = today - timedelta(days=1)
+                while check_date.weekday() >= 5:
+                    check_date -= timedelta(days=1)
+                while self.completions.filter(date=check_date, completed=True).exists():
+                    streak += 1
+                    check_date -= timedelta(days=1)
+                    while check_date.weekday() >= 5:
+                        check_date -= timedelta(days=1)
+        
         return streak
+
 
     @property
     def longest_streak(self):
-        completions = list(self.completions.filter(completed=True).order_by('date').values_list('date', flat=True))
+        completions = list(
+            self.completions.filter(completed=True)
+            .order_by('date')
+            .values_list('date', flat=True)
+        )
         if not completions:
             return 0
+        
+        if self.repeat == 'daily':
+            step = timedelta(days=1)
+        elif self.repeat == 'weekly':
+            step = timedelta(days=7)
+        elif self.repeat == 'weekdays':
+            step = None
+        
         longest = 1
         current = 1
+        
         for i in range(1, len(completions)):
-            if (completions[i] - completions[i-1]).days == 1:
+            delta = (completions[i] - completions[i-1]).days
+            
+            if self.repeat == 'daily' and delta == 1:
                 current += 1
-                longest = max(longest, current)
+            elif self.repeat == 'weekly' and delta == 7:
+                current += 1
+            elif self.repeat == 'weekdays' and delta <= 3:
+                middle = completions[i-1] + timedelta(days=1)
+                only_weekends = True
+                while middle < completions[i]:
+                    if middle.weekday() < 5:
+                        only_weekends = False
+                        break
+                    middle += timedelta(days=1)
+                if only_weekends:
+                    current += 1
+                else:
+                    current = 1
             else:
                 current = 1
+            
+            longest = max(longest, current)
+        
         return longest
 
     @property
@@ -132,6 +195,9 @@ class Habit(models.Model):
         start = today - timedelta(days=days - 1)
         done = self.completions.filter(date__gte=start, date__lte=today, completed=True).count()
         return round((done / days) * 100)
+
+    def is_completed_on_date(self, date):
+        return self.completions.filter(date=date, completed=True).exists()
 
     @property
     def is_completed_today(self):

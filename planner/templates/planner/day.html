@@ -4,9 +4,9 @@
 <div class="day-header">
     <div class="header-left">
         <div class="date-nav">
-            <button class="date-arrow" hx-get="{% url 'planner:day_nav' %}?date={{ prev_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-left"></i></button>
+            <button class="date-arrow" hx-get="{% url 'planner:day' %}?date={{ prev_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-left"></i></button>
             <span class="date-display" id="currentDate" style="cursor:pointer;">{{ current_date }}</span>
-            <button class="date-arrow" hx-get="{% url 'planner:day_nav' %}?date={{ next_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-right"></i></button>
+            <button class="date-arrow" hx-get="{% url 'planner:day' %}?date={{ next_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-right"></i></button>
         </div>
         <div class="header-stats">
             <span>Выполнено: <strong id="completedCount">{{ completed }}/{{ total }}</strong> (<span id="productivityPercent">{{ productivity }}%</span>)</span>

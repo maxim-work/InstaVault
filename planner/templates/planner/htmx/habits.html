@@ -1,145 +1,81 @@
 <div class="day-header">
     <div class="header-left">
         <div class="date-nav">
-            <button class="date-arrow"><i class="fas fa-chevron-left"></i></button>
-            <span class="date-display">26 мая, вторник</span>
-            <button class="date-arrow"><i class="fas fa-chevron-right"></i></button>
+            <button class="date-arrow" hx-get="{% url 'planner:habits' %}?date={{ prev_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-left"></i></button>
+            <span class="date-display" id="habitsDate" data-iso="{{ today_iso }}">{{ current_date }}</span>
+            <button class="date-arrow" hx-get="{% url 'planner:habits' %}?date={{ next_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-right"></i></button>
         </div>
-        <div class="header-stats">
-            <span>Сегодня: <strong>2/4</strong></span>
+        <div class="header-stats" id="habitsStats">
+            <span>Сегодня: <strong id="habitsCompleted">{{ completed }}</strong>/<strong id="habitsTotal">{{ total }}</strong></span>
             <span class="stats-separator">|</span>
-            <span>Общий стрик: <strong>🔥 48 дней</strong></span>
+            <span>Макс стрик: <strong id="habitsMaxStreak">🔥 {{ max_streak }} дней</strong></span>
         </div>
     </div>
     <div class="header-right">
-        <button class="btn-add-header" onclick="openModal('modalHabit')">+</button>
+        <button class="btn-add-header" onclick="openAddHabitModal()">+</button>
     </div>
 </div>
 
 <div class="day-content">
-    <div class="habits-grid">
-        <div class="habit-card completed">
-            <div class="habit-check-square checked">✓</div>
-            <div class="habit-info">
-                <div class="habit-name">🏃 Утренняя пробежка</div>
-                <div class="habit-meta">
-                    <span class="habit-streak">🔥 12 дней</span>
-                </div>
-            </div>
-            <div class="task-card-actions" style="position:relative;">
-                <button class="task-menu-btn" onclick="toggleHabitMenu(event, 101)"><i class="fas fa-ellipsis-v"></i></button>
-            </div>
-        </div>
-        
-        <div class="habit-card">
-            <div class="habit-check-square">✓</div>
-            <div class="habit-info">
-                <div class="habit-name">📖 Чтение 30 минут</div>
-                <div class="habit-meta">
-                    <span class="habit-streak">🔥 5 дней</span>
-                </div>
-            </div>
-            <div class="habit-right">
-                <div class="habit-progress-ring">
-                    <svg width="40" height="40" viewBox="0 0 40 40">
-                        <circle cx="20" cy="20" r="17" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/>
-                        <circle cx="20" cy="20" r="17" fill="none" stroke="#E07A5F" stroke-width="3" 
-                                stroke-dasharray="106.8" stroke-dashoffset="42.7" 
-                                stroke-linecap="round" transform="rotate(-90 20 20)"/>
-                    </svg>
-                    <span class="progress-text">60%</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="habit-card completed">
-            <div class="habit-check-square checked">✓</div>
-            <div class="habit-info">
-                <div class="habit-name">🧘 Медитация</div>
-                <div class="habit-meta">
-                    <span class="habit-streak">🔥 23 дня</span>
-                </div>
-            </div>
-            <div class="task-card-actions" style="position:relative;">
-                <button class="task-menu-btn" onclick="toggleHabitMenu(event, 103)"><i class="fas fa-ellipsis-v"></i></button>
-            </div>
-        </div>
-        
-        <div class="habit-card">
-            <div class="habit-check-square">✓</div>
-            <div class="habit-info">
-                <div class="habit-name">🇬🇧 Английский язык</div>
-                <div class="habit-meta">
-                    <span class="habit-streak">🔥 8 дней</span>
-                </div>
-            </div>
-            <div class="habit-right">
-                <div class="habit-progress-ring">
-                    <svg width="40" height="40" viewBox="0 0 40 40">
-                        <circle cx="20" cy="20" r="17" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/>
-                        <circle cx="20" cy="20" r="17" fill="none" stroke="#E07A5F" stroke-width="3" 
-                                stroke-dasharray="106.8" stroke-dashoffset="64.1" 
-                                stroke-linecap="round" transform="rotate(-90 20 20)"/>
-                    </svg>
-                    <span class="progress-text">40%</span>
-                </div>
-            </div>
-        </div>
+    <div class="habits-grid" id="habitsGrid">
+        {% include 'planner/htmx/habits_list.html' %}
     </div>
 </div>
 
+<!-- Модальное окно создания/редактирования привычки -->
 <div id="modalHabit" class="modal-overlay" onclick="if(event.target===this)closeModal('modalHabit')">
     <div class="modal-content">
-        <button class="modal-close-btn" onclick="closeModal('modalHabit')"><i class="fas fa-times"></i></button>
-        <div class="modal-title">Новая привычка</div>
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalHabit')"><i class="fas fa-times"></i></button>
+        <div class="modal-title" id="modalHabitTitle">Новая привычка</div>
         
-        <label class="input-label">Аватар</label>
-        <div class="avatar-picker">
-            <div class="avatar-option selected" onclick="selectAvatar(this)">🏃</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">📖</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🧘</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🇬🇧</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">💪</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🎯</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">💧</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🥗</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">😴</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🚭</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">✍️</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">💻</div>
-        </div>
-        
-        <label class="input-label">Название</label>
-        <input type="text" class="modal-input" placeholder="Например: Утренняя пробежка">
-        
-        <div class="expandable-field">
-            <div class="expandable-toggle" onclick="toggleExpandable('habitDesc')">
-                <span>+ Описание</span>
+        <form method="POST" hx-post="{% url 'planner:habit_create' %}" hx-target="#habitsGrid" hx-swap="innerHTML" hx-on::after-request="updateHabitsStats(); closeModal('modalHabit');">
+            {% csrf_token %}
+            <input type="hidden" name="habit_id" id="habitId">
+            
+            <label class="input-label">Аватар</label>
+            <div class="avatar-picker" id="habitAvatarPicker">
+                <div class="avatar-option selected" onclick="selectAvatar(this)">🏃</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">📖</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">🧘</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">🇬🇧</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">💪</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">🎯</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">💧</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">🥗</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">😴</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">🚭</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">✍️</div>
+                <div class="avatar-option" onclick="selectAvatar(this)">💻</div>
             </div>
-            <div class="expandable-body" id="habitDesc" style="display:none;">
-                <textarea class="modal-input modal-textarea" placeholder="Краткое описание привычки" rows="2"></textarea>
-            </div>
-        </div>
-        
-        <div class="expandable-field">
-            <div class="expandable-toggle" onclick="toggleExpandable('habitTimeField')">
-                <span>+ Время выполнения</span>
-            </div>
-            <div class="expandable-body" id="habitTimeField" style="display:none;">
-                <input type="time" class="modal-input" value="09:00">
-            </div>
-        </div>
-        
-        <label class="input-label" style="margin-top:12px;">Повтор</label>
-        <div class="modal-row">
-            <div class="custom-select-wrapper modal-select-wrapper" id="habitRepeatSelectWrapper" style="margin-bottom:0;">
-                <div class="custom-select-trigger" onclick="toggleCustomSelect(event, 'habitRepeatSelectWrapper')">
-                    <span id="habitRepeatLabel">Ежедневно</span><i class="fas fa-chevron-down"></i>
+            <input type="hidden" name="avatar" id="habitAvatarValue" value="🏃">
+            
+            <label class="input-label">Название</label>
+            <input type="text" class="modal-input" id="habitTitle" name="title" placeholder="Например: Утренняя пробежка" required>
+            
+            <div class="expandable-field">
+                <div class="expandable-toggle" onclick="toggleExpandable('habitDesc')"><span>+ Описание</span></div>
+                <div class="expandable-body" id="habitDesc" style="display:none;">
+                    <textarea class="modal-input modal-textarea" id="habitDescription" name="description" placeholder="Краткое описание привычки" rows="2"></textarea>
                 </div>
             </div>
-        </div>
-        
-        <div class="habit-notification-block">
+            
+            <div class="expandable-field">
+                <div class="expandable-toggle" onclick="toggleExpandable('habitTimeField')"><span>+ Время выполнения</span></div>
+                <div class="expandable-body" id="habitTimeField" style="display:none;">
+                    <input type="time" class="modal-input" id="habitTime" name="time">
+                </div>
+            </div>
+            
+            <label class="input-label" style="margin-top:12px;">Повтор</label>
+            <div class="modal-row">
+                <div class="custom-select-wrapper modal-select-wrapper" id="habitRepeatSelectWrapper" style="margin-bottom:0;">
+                    <div class="custom-select-trigger" onclick="toggleCustomSelect(event, 'habitRepeatSelectWrapper')">
+                        <span id="habitRepeatLabel">Ежедневно</span><i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" name="repeat" id="habitRepeatValue" value="daily">
+            
             <div class="time-toggle-row" style="margin-top:16px;">
                 <label class="time-toggle">
                     <input type="checkbox" id="habitHasNotification" onchange="toggleHabitNotificationFields()">
@@ -148,100 +84,63 @@
                 </label>
             </div>
             <div id="habitNotificationFields" style="display:none;">
-                <textarea class="modal-input modal-textarea" placeholder="Зачем тебе это? Будет приходить с уведомлением" rows="2"></textarea>
+                <textarea class="modal-input modal-textarea" id="habitMotivation" name="motivation" placeholder="Зачем тебе это?" rows="2"></textarea>
                 <div class="modal-row" style="align-items:center;">
-                    <input type="time" class="modal-input" value="09:00" style="margin-bottom:0;flex:1;">
-                    <span style="font-size:12px;color:#6B6B7A;white-space:nowrap;">
-                        <i class="fab fa-telegram-plane"></i> в TG
-                    </span>
+                    <input type="time" class="modal-input" id="habitNotificationTime" name="notification_time" style="margin-bottom:0;flex:1;">
+                    <span style="font-size:12px;color:#6B6B7A;"><i class="fab fa-telegram-plane"></i> в TG</span>
                 </div>
             </div>
-        </div>
-        
-        <div class="modal-actions" style="margin-top:20px;">
-            <button class="modal-btn secondary" onclick="closeModal('modalHabit')">Отмена</button>
-            <button class="modal-btn primary">Добавить</button>
-        </div>
+            
+            <div class="modal-actions" style="margin-top:20px;">
+                <button type="submit" class="modal-btn primary" id="habitSubmitBtn">Добавить</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- Модальное окно редактирования привычки -->
-<div id="modalEditHabit" class="modal-overlay" onclick="if(event.target===this)closeModal('modalEditHabit')">
-    <div class="modal-content">
-        <button class="modal-close-btn" onclick="closeModal('modalEditHabit')"><i class="fas fa-times"></i></button>
-        <div class="modal-title">Редактировать привычку</div>
+<!-- Модальное окно просмотра привычки -->
+<div id="modalViewHabit" class="modal-overlay" onclick="if(event.target===this)closeModal('modalViewHabit')">
+    <div class="modal-content" style="text-align:left;">
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalViewHabit')"><i class="fas fa-times"></i></button>
+        <div class="modal-title" id="viewHabitTitle" style="margin-bottom:8px;">Название привычки</div>
         
-        <label class="input-label">Аватар</label>
-        <div class="avatar-picker" id="editAvatarPicker">
-            <div class="avatar-option" onclick="selectAvatar(this)">🏃</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">📖</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🧘</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🇬🇧</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">💪</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🎯</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">💧</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🥗</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">😴</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">🚭</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">✍️</div>
-            <div class="avatar-option" onclick="selectAvatar(this)">💻</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span id="viewHabitRepeat" style="font-size:12px;color:#8B8B9A;"></span>
+            <span id="viewHabitTime" style="font-size:12px;color:#E07A5F;"></span>
         </div>
         
-        <label class="input-label">Название</label>
-        <input type="text" class="modal-input" id="editHabitName" placeholder="Название привычки">
+        <div id="viewHabitDescription" style="font-size:14px;color:#B0B0C0;line-height:1.6;margin-bottom:16px;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;">Нет описания</div>
         
-        <label class="input-label">Описание</label>
-        <textarea class="modal-input modal-textarea" id="editHabitDesc" placeholder="Краткое описание" rows="2"></textarea>
+        <div id="viewHabitMotivation" style="font-size:14px;color:#B0B0C0;line-height:1.6;margin-bottom:16px;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;border-left:3px solid #E07A5F;"></div>
         
-        <label class="input-label">Время выполнения</label>
-        <input type="time" class="modal-input" id="editHabitTime" value="09:00">
-        
-        <label class="input-label">Повтор</label>
-        <div class="modal-row">
-            <div class="custom-select-wrapper modal-select-wrapper" id="editHabitRepeatWrapper" style="margin-bottom:0;">
-                <div class="custom-select-trigger" onclick="toggleCustomSelect(event, 'editHabitRepeatWrapper')">
-                    <span id="editHabitRepeatLabel">Ежедневно</span><i class="fas fa-chevron-down"></i>
-                </div>
-            </div>
+        <div style="display:flex;gap:16px;margin-bottom:20px;">
+            <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#E07A5F;" id="viewHabitStreak">0</div><div style="font-size:10px;color:#6B6B7A;">дней подряд</div></div>
+            <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#E07A5F;" id="viewHabitBestStreak">0</div><div style="font-size:10px;color:#6B6B7A;">рекорд</div></div>
+            <div style="text-align:center;"><div style="font-size:20px;font-weight:700;color:#E07A5F;" id="viewHabitRate">0%</div><div style="font-size:10px;color:#6B6B7A;">за 30 дней</div></div>
         </div>
         
-        <div class="time-toggle-row" style="margin-top:16px;">
-            <label class="time-toggle">
-                <input type="checkbox" id="editHabitHasNotification" onchange="toggleEditHabitNotification()">
-                <span class="time-toggle-slider"></span>
-                <span class="time-toggle-label">🔔 Мотивация и уведомление в Telegram</span>
-            </label>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn secondary" onclick="closeModal('modalViewHabit'); openEditHabitModal(document.getElementById('viewHabitId').value)">
+                <i class="fas fa-pen" style="margin-right:4px;"></i> Редактировать
+            </button>
         </div>
-        <div id="editHabitNotificationFields" style="display:none;">
-            <textarea class="modal-input modal-textarea" id="editHabitMotivation" placeholder="Зачем тебе это?" rows="2"></textarea>
-            <div class="modal-row" style="align-items:center;">
-                <input type="time" class="modal-input" id="editHabitNotificationTime" value="09:00" style="margin-bottom:0;flex:1;">
-                <span style="font-size:12px;color:#6B6B7A;white-space:nowrap;">
-                    <i class="fab fa-telegram-plane"></i> в TG
-                </span>
-            </div>
-        </div>
-        
-        <input type="hidden" id="editHabitId">
-        
-        <div class="modal-actions" style="margin-top:20px;">
-            <button class="modal-btn secondary" onclick="closeModal('modalEditHabit')">Отмена</button>
-            <button class="modal-btn primary">Сохранить</button>
-        </div>
+        <input type="hidden" id="viewHabitId">
     </div>
 </div>
 
 <!-- Модальное окно удаления привычки -->
 <div id="modalDeleteHabit" class="modal-overlay" onclick="if(event.target===this)closeModal('modalDeleteHabit')">
     <div class="modal-content" style="text-align:center;">
-        <button class="modal-close-btn" onclick="closeModal('modalDeleteHabit')"><i class="fas fa-times"></i></button>
+        <button type="button" class="modal-close-btn" onclick="closeModal('modalDeleteHabit')"><i class="fas fa-times"></i></button>
         <div class="modal-title" style="color:#ff4d4d;">Удалить привычку?</div>
         <p style="font-size:14px;color:#B0B0C0;margin-bottom:8px;" id="deleteHabitName">Привычка</p>
         <p style="font-size:12px;color:#6B6B7A;margin-bottom:24px;">Прогресс и статистика будут потеряны</p>
-        <input type="hidden" id="deleteHabitId">
-        <div class="modal-actions">
-            <button class="modal-btn secondary" onclick="closeModal('modalDeleteHabit')">Отмена</button>
-            <button class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);">Удалить</button>
-        </div>
+        <form method="POST" hx-post="{% url 'planner:habit_delete' %}" hx-target="#habitsGrid" hx-swap="innerHTML" hx-on::after-request="updateHabitsStats(); closeModal('modalDeleteHabit');">
+            {% csrf_token %}
+            <input type="hidden" name="habit_id" id="deleteHabitId">
+            <div class="modal-actions">
+                <button type="submit" class="modal-btn" style="background:rgba(255,77,77,0.15);color:#ff4d4d;border:1px solid rgba(255,77,77,0.3);">Удалить</button>
+            </div>
+        </form>
     </div>
 </div>

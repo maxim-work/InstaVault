@@ -1,0 +1,37 @@
+{% if habits %}
+    {% for habit in habits %}
+    <div class="habit-card {% if habit.completed_on_date %}completed{% endif %}" 
+         id="habit-{{ habit.id }}"
+         data-description="{{ habit.description|default:'' }}"
+         data-motivation="{{ habit.motivation|default:'' }}"
+         data-time="{{ habit.time|time:'H:i'|default:'' }}"
+         data-repeat="{{ habit.repeat }}"
+         data-repeat-label="{{ habit.get_repeat_display }}"
+         data-avatar="{{ habit.avatar }}"
+         data-notification="{% if habit.notification_enabled %}true{% else %}false{% endif %}"
+         data-notification-time="{{ habit.notification_time|time:'H:i'|default:'' }}"
+         data-streak="{{ habit.current_streak }}"
+         data-best-streak="{{ habit.longest_streak }}"
+         data-rate="{{ habit.completion_rate }}">
+        <div class="habit-check-square {% if habit.completed_on_date %}checked{% endif %}" onclick="toggleHabit({{ habit.id }})">
+            {% if habit.completed_on_date %}✓{% endif %}
+        </div>
+        <div class="habit-info">
+            <div class="habit-name">{{ habit.avatar }} {{ habit.title }}</div>
+            {% if habit.current_streak %}
+            <div class="habit-meta">
+                <span class="habit-streak">🔥 {{ habit.current_streak }} дней</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="task-card-actions" style="position:relative;">
+            <button class="task-menu-btn" onclick="toggleHabitMenu(event, {{ habit.id }})"><i class="fas fa-ellipsis-v"></i></button>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state" id="emptyState">
+        <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
+        <p class="empty-text">Нет привычек на сегодня</p>
+    </div>
+{% endif %}

@@ -180,3 +180,82 @@ class RescheduleTaskForm(forms.Form):
             self.add_error('time_end', 'Конец должен быть позже начала')
 
         return cleaned_data
+
+
+class HabitForm(forms.Form):
+    REPEAT_CHOICES = [
+        ('daily', 'Ежедневно'),
+        ('weekly', 'Еженедельно'),
+        ('weekdays', 'По будням'),
+    ]
+
+    avatar = forms.CharField(
+        widget=forms.HiddenInput(attrs={'id': 'habitAvatarValue'}),
+        initial='🏃',
+    )
+
+    title = forms.CharField(
+        label='Название',
+        widget=forms.TextInput(attrs={
+            'id': 'habitTitle',
+            'class': 'modal-input',
+            'placeholder': 'Например: Утренняя пробежка',
+        })
+    )
+
+    description = forms.CharField(
+        label='Описание',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'id': 'habitDescription',
+            'class': 'modal-input modal-textarea',
+            'placeholder': 'Краткое описание привычки',
+            'rows': 2,
+        })
+    )
+
+    time = forms.TimeField(
+        label='Время выполнения',
+        required=False,
+        widget=forms.TimeInput(attrs={
+            'id': 'habitTime',
+            'class': 'modal-input',
+            'type': 'time',
+        })
+    )
+
+    repeat = forms.ChoiceField(
+        label='Повтор',
+        choices=REPEAT_CHOICES,
+        initial='daily',
+        widget=forms.HiddenInput(attrs={'id': 'habitRepeatValue'}),
+    )
+
+    motivation = forms.CharField(
+        label='Мотивация',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'id': 'habitMotivation',
+            'class': 'modal-input modal-textarea',
+            'placeholder': 'Зачем тебе это?',
+            'rows': 2,
+        })
+    )
+
+    notification_time = forms.TimeField(
+        label='Время уведомления',
+        required=False,
+        widget=forms.TimeInput(attrs={
+            'id': 'habitNotificationTime',
+            'class': 'modal-input',
+            'type': 'time',
+        })
+    )
+
+    def clean_title(self):
+        title = self.cleaned_data.get('title', '').strip()
+        if not title:
+            raise forms.ValidationError('Название обязательно')
+        if len(title) > 100:
+            raise forms.ValidationError('Название не должно превышать 100 символов')
+        return title
