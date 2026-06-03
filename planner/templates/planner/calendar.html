@@ -4,16 +4,30 @@
 <div class="day-header">
     <div class="header-left">
         <div class="date-nav" style="width:auto; gap:8px;">
-            <button class="date-arrow" onclick="changeCalendarMonth(-1)"><i class="fas fa-chevron-left"></i></button>
-            <span class="date-display" id="calendarMonthTitle" onclick="openMonthPicker()" style="cursor:pointer;font-size:13px;" title="Выбрать месяц">Май 2026</span>
-            <button class="date-arrow" onclick="changeCalendarMonth(1)"><i class="fas fa-chevron-right"></i></button>
+            <button class="date-arrow" 
+                    hx-get="{% url 'planner:calendar' %}?year={{ prev_year }}&month={{ prev_month }}" 
+                    hx-target="#mainContent" 
+                    hx-swap="innerHTML"
+                    hx-push-url="true">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="date-display" id="calendarMonthTitle" onclick="openMonthPicker()" style="cursor:pointer;font-size:13px;" title="Выбрать месяц">{{ current_date }}</span>
+            <button class="date-arrow" 
+                    hx-get="{% url 'planner:calendar' %}?year={{ next_year }}&month={{ next_month }}" 
+                    hx-target="#mainContent" 
+                    hx-swap="innerHTML"
+                    hx-push-url="true">
+                <i class="fas fa-chevron-right"></i>
+            </button>
         </div>
         <div class="header-stats" style="width:auto;flex:1;gap:16px;font-size:12px;">
-            <span>Продуктивность: <strong id="calendarProductivity">75%</strong></span>
+            <span>Лучший день: <strong id="statBestDay">—</strong></span>
             <span class="stats-separator">|</span>
-            <span>Лучший: <strong id="calendarBestDay">15 мая</strong></span>
+            <span>Задач: <strong id="statTasksAvg">0%</strong></span>
             <span class="stats-separator">|</span>
-            <span>Среднее: <strong id="calendarAvgTasks">3.2</strong>/день</span>
+            <span>Привычек: <strong id="statHabitsAvg">0%</strong></span>
+            <span class="stats-separator">|</span>
+            <span>Лучший месяц: <strong id="statBestMonth">—</strong></span>
         </div>
     </div>
     <div class="header-right"></div>
@@ -31,14 +45,26 @@
     </div>
     
     <div class="calendar-weekdays">
-        <div class="calendar-weekday">Пн</div><div class="calendar-weekday">Вт</div><div class="calendar-weekday">Ср</div>
-        <div class="calendar-weekday">Чт</div><div class="calendar-weekday">Пт</div><div class="calendar-weekday">Сб</div><div class="calendar-weekday">Вс</div>
+        <div class="calendar-weekday">Пн</div>
+        <div class="calendar-weekday">Вт</div>
+        <div class="calendar-weekday">Ср</div>
+        <div class="calendar-weekday">Чт</div>
+        <div class="calendar-weekday">Пт</div>
+        <div class="calendar-weekday">Сб</div>
+        <div class="calendar-weekday">Вс</div>
     </div>
     
     <div class="calendar-grid" id="calendarGrid"></div>
     
     <div class="mini-chart-container">
-        <div class="mini-chart-title">Продуктивность за месяц</div>
+        <div class="mini-chart-title">
+            <span>Продуктивность за месяц</span>
+            <span style="margin-left:auto;font-size:10px;color:#6B6B7A;">
+                <span style="color:#E07A5F;">▬</span> Продуктивность
+                <span style="color:#f0c040;margin-left:8px;">▬</span> Задачи
+                <span style="color:#64a0dc;margin-left:8px;">▬</span> Привычки
+            </span>
+        </div>
         <div class="mini-chart" id="miniChart"></div>
     </div>
 </div>
@@ -66,4 +92,370 @@
         </div>
     </div>
 </div>
+
+<script>
+// ============ ФУНКЦИИ КАЛЕНДАРЯ ============
+
+// Данные из Django
+var chartData = {{ chart_data|default:'[]'|safe }};
+var calendarData = {{ calendar_data|default:'[]'|safe }};
+var bestDayData = {{ best_day|default:'null'|safe }};
+var bestMonthData = {{ best_month|default:'null'|safe }};
+
+// Состояние календаря
+var calendarState = {
+    currentYear: {{ date.year }},
+    currentMonth: {{ date.month }} - 1,
+    selectedDay: null,
+    monthData: {}
+};
+
+function renderCalendar() {
+    const y = calendarState.currentYear;
+    const m = calendarState.currentMonth;
+    
+    const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    document.getElementById('calendarMonthTitle').textContent = months[m] + ' ' + y;
+    
+    const fd = new Date(y, m, 1).getDay();
+    const dim = new Date(y, m + 1, 0).getDate();
+    const pdim = new Date(y, m, 0).getDate();
+    const today = new Date();
+    
+    var loadMap = {};
+    var maxLoad = 0;
+    var minLoad = 999;
+    
+    if (calendarData && calendarData.length > 0) {
+        calendarData.forEach(function(item) {
+            var load = (item.tasks || 0) + (item.habits || 0);
+            loadMap[item.day] = load;
+            if (load > maxLoad) maxLoad = load;
+            if (load < minLoad) minLoad = load;
+        });
+    }
+    
+    if (maxLoad === 0) minLoad = 0;
+    var range = maxLoad - minLoad;
+    
+    var colors = [
+        'rgba(255,255,255,0.02)',
+        'rgba(224,122,95,0.20)',
+        'rgba(224,122,95,0.35)',
+        'rgba(224,122,95,0.55)',
+        'rgba(224,122,95,0.85)'
+    ];
+    
+    function getColor(load) {
+        if (load === 0 || range === 0) return colors[0];
+        var level = Math.ceil(((load - minLoad) / range) * 4);
+        return colors[Math.min(level, 4)];
+    }
+    
+    let so = fd === 0 ? 6 : fd - 1;
+    let html = '';
+    
+    for (let i = so - 1; i >= 0; i--) {
+        html += '<div class="calendar-day-cell other-month">' + (pdim - i) + '</div>';
+    }
+    
+    for (let d = 1; d <= dim; d++) {
+        var load = loadMap[d] || 0;
+        var bgColor = getColor(load);
+        var textColor = load > 0 ? '#fff' : '#B0B0C0';
+        
+        var cls = 'calendar-day-cell';
+        if (d === today.getDate() && m === today.getMonth() && y === today.getFullYear()) {
+            cls += ' today';
+        }
+        
+        html += '<div class="' + cls + '" style="background:' + bgColor + '; color:' + textColor + ';" onclick="openDayPreview(' + d + ')">' + d + '</div>';
+    }
+    
+    document.getElementById('calendarGrid').innerHTML = html;
+    renderMiniChart();
+}
+
+function renderMiniChart() {
+    const chart = document.getElementById('miniChart');
+    if (!chart) return;
+    
+    const totalDays = new Date(calendarState.currentYear, calendarState.currentMonth + 1, 0).getDate();
+    const hasData = chartData && chartData.length > 0;
+    
+    const W = chart.clientWidth;
+    const H = chart.clientHeight;
+    if (W <= 0 || H <= 0) return;
+    
+    const pad = { top: 12, right: 16, bottom: 24, left: 38 };
+    const cw = W - pad.left - pad.right;
+    const ch = H - pad.top - pad.bottom;
+    const lastIndex = totalDays - 1;
+    
+    let svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+    
+    [0, 25, 50, 75, 100].forEach(v => {
+        var y = pad.top + ch - (v / 100) * ch;
+        svg += '<line x1="' + pad.left + '" y1="' + y + '" x2="' + (pad.left + cw) + '" y2="' + y + '" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4,4"/>';
+        svg += '<text x="' + (pad.left - 8) + '" y="' + (y + 4) + '" fill="#6B6B7A" font-size="10" text-anchor="end">' + v + '%</text>';
+    });
+    
+    if (hasData) {
+        var tasksTotalSum = 0, tasksDoneSum = 0;
+        var habitsTotalSum = 0, habitsDoneSum = 0;
+        var allDays = [];
+        
+        for (let d = 1; d <= totalDays; d++) {
+            var dayData = chartData.find(item => item.day === d);
+            var tasks = 0, completedTasks = 0, habits = 0, completedHabits = 0;
+            
+            if (dayData) {
+                tasks = dayData.tasks || 0;
+                completedTasks = dayData.completed_tasks || 0;
+                habits = dayData.habits || 0;
+                completedHabits = dayData.completed_habits || 0;
+            }
+            
+            var total = tasks + habits;
+            var done = completedTasks + completedHabits;
+            var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            
+            allDays.push({ day: d, value: pct, hasData: !!dayData });
+            
+            tasksTotalSum += tasks;
+            tasksDoneSum += completedTasks;
+            habitsTotalSum += habits;
+            habitsDoneSum += completedHabits;
+        }
+        
+        var tasksAvg = tasksTotalSum > 0 ? Math.round((tasksDoneSum / tasksTotalSum) * 100) : 0;
+        var habitsAvg = habitsTotalSum > 0 ? Math.round((habitsDoneSum / habitsTotalSum) * 100) : 0;
+
+        document.getElementById('statTasksAvg').textContent = tasksAvg + '%';
+        document.getElementById('statHabitsAvg').textContent = habitsAvg + '%';
+
+        if (bestDayData) {
+            document.getElementById('statBestDay').textContent = bestDayData.day + ' (' + bestDayData.productivity + '%)';
+        } else {
+            document.getElementById('statBestDay').textContent = '—';
+        }
+
+        if (bestMonthData) {
+            document.getElementById('statBestMonth').textContent = bestMonthData.month + ' (' + bestMonthData.productivity + '%)';
+        } else {
+            document.getElementById('statBestMonth').textContent = '—';
+        }
+        
+        svg += '<defs><linearGradient id="areaGradChart" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E07A5F" stop-opacity="0.25"/><stop offset="100%" stop-color="#E07A5F" stop-opacity="0.0"/></linearGradient></defs>';
+        
+        var linePath = '';
+        var areaPath = '';
+        var firstPoint = true;
+        
+        allDays.forEach((p, i) => {
+            var x = pad.left + (i / Math.max(lastIndex, 1)) * cw;
+            var y = pad.top + ch - (p.value / 100) * ch;
+            var cx = Math.min(Math.max(x, pad.left), pad.left + cw);
+            var cy = Math.min(Math.max(y, pad.top), pad.top + ch);
+            
+            if (p.hasData) {
+                if (firstPoint) {
+                    linePath += 'M' + cx.toFixed(1) + ',' + cy.toFixed(1);
+                    areaPath += 'M' + cx.toFixed(1) + ',' + (pad.top + ch) + ' L' + cx.toFixed(1) + ',' + cy.toFixed(1);
+                    firstPoint = false;
+                } else {
+                    linePath += ' L' + cx.toFixed(1) + ',' + cy.toFixed(1);
+                    areaPath += ' L' + cx.toFixed(1) + ',' + cy.toFixed(1);
+                }
+            }
+        });
+        
+        if (!firstPoint) {
+            areaPath += ' L' + (pad.left + cw) + ',' + (pad.top + ch) + ' Z';
+            svg += '<path d="' + areaPath + '" fill="url(#areaGradChart)"/>';
+            svg += '<path d="' + linePath + '" fill="none" stroke="#E07A5F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+        }
+        
+        allDays.forEach((p, i) => {
+            if (!p.hasData) return;
+            var x = pad.left + (i / Math.max(lastIndex, 1)) * cw;
+            var y = pad.top + ch - (p.value / 100) * ch;
+            var cx = Math.min(Math.max(x, pad.left), pad.left + cw);
+            var cy = Math.min(Math.max(y, pad.top), pad.top + ch);
+            svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" fill="#141419" stroke="#E07A5F" stroke-width="1.5" style="cursor:pointer" onclick="openDayPreview(' + p.day + ')"><title>' + p.day + ': ' + p.value + '%</title></circle>';
+        });
+        
+        if (tasksTotalSum > 0) {
+            var tasksAvgY = pad.top + ch - (tasksAvg / 100) * ch;
+            var clampedTasksAvgY = Math.min(Math.max(tasksAvgY, pad.top), pad.top + ch);
+            svg += '<line x1="' + pad.left + '" y1="' + clampedTasksAvgY + '" x2="' + (pad.left + cw) + '" y2="' + clampedTasksAvgY + '" stroke="#f0c040" stroke-width="2" stroke-dasharray="6,4" opacity="0.7"/>';
+        }
+        
+        if (habitsTotalSum > 0) {
+            var habitsAvgY = pad.top + ch - (habitsAvg / 100) * ch;
+            var clampedHabitsAvgY = Math.min(Math.max(habitsAvgY, pad.top), pad.top + ch);
+            svg += '<line x1="' + pad.left + '" y1="' + clampedHabitsAvgY + '" x2="' + (pad.left + cw) + '" y2="' + clampedHabitsAvgY + '" stroke="#64a0dc" stroke-width="2" stroke-dasharray="6,4" opacity="0.7"/>';
+        }
+    } else {
+        svg += '<text x="' + (pad.left + cw / 2) + '" y="' + (pad.top + ch / 2) + '" fill="#6B6B7A" font-size="14" text-anchor="middle" dominant-baseline="middle">За этот месяц нет активности</text>';
+    }
+    
+    for (var i = 0; i < totalDays; i += 5) {
+        var x = pad.left + (i / Math.max(lastIndex, 1)) * cw;
+        svg += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" fill="#6B6B7A" font-size="10" text-anchor="middle">' + (i + 1) + '</text>';
+    }
+    
+    svg += '</svg>';
+    chart.innerHTML = svg;
+}
+
+window.openDayPreview = function(day) {
+    var tasks = 0, completedTasks = 0, habits = 0, completedHabits = 0;
+    
+    // Из chartData берём completed
+    if (typeof chartData !== 'undefined' && chartData) {
+        var found = chartData.find(function(item) { return item.day === day; });
+        if (found) {
+            tasks = found.tasks || 0;
+            completedTasks = found.completed_tasks || 0;
+            habits = found.habits || 0;
+            completedHabits = found.completed_habits || 0;
+        }
+    }
+    
+    // Если chartData пустой, берём общее количество из calendarData
+    if (tasks === 0 && habits === 0 && typeof calendarData !== 'undefined' && calendarData) {
+        var calFound = calendarData.find(function(item) { return item.day === day; });
+        if (calFound) {
+            tasks = calFound.tasks || 0;
+            habits = calFound.habits || 0;
+        }
+    }
+    
+    var mn = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+    
+    document.getElementById('previewDate').textContent = day + ' ' + mn[calendarState.currentMonth];
+    document.getElementById('previewTasksStat').textContent = completedTasks + '/' + tasks;
+    document.getElementById('previewHabitsStat').textContent = completedHabits + '/' + habits;
+    
+    document.getElementById('dayPreview').style.display = 'flex';
+    document.getElementById('dayPreview')._selectedDay = day;
+};
+
+document.addEventListener('click', function(e) {
+    const p = document.getElementById('dayPreview');
+    if (p && p.style.display === 'flex' && e.target === p) p.style.display = 'none';
+});
+
+window.goToDay = function(type) {
+    const p = document.getElementById('dayPreview');
+    const day = p._selectedDay || 1;
+    const year = calendarState.currentYear;
+    const month = calendarState.currentMonth + 1; // JS месяцы 0-11
+    
+    p.style.display = 'none';
+    
+    if (type === 'tasks') {
+        window.location.href = `/planner/day/?date=${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    } else if (type === 'habits') {
+        // Передаем дату в URL привычек
+        window.location.href = `/planner/habits/?date=${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
+};
+
+window.openMonthPicker = function() {
+    // Создаем контейнер для пикера
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    
+    const picker = document.createElement('div');
+    picker.style.cssText = 'background:#1A1A20;border-radius:20px;padding:24px;border:1px solid rgba(255,255,255,0.08);width:320px;max-height:90vh;overflow-y:auto;';
+    
+    const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const currentYear = calendarState.currentYear;
+    const currentMonth = calendarState.currentMonth;
+    
+    // Заголовок с годом и стрелками
+    let html = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <button id="prevYearBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">←</button>
+            <span id="pickerYear" style="font-size:18px;font-weight:600;color:#fff;">${currentYear}</span>
+            <button id="nextYearBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">→</button>
+        </div>
+        <div id="monthsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+    `;
+    
+    picker.innerHTML = html;
+    overlay.appendChild(picker);
+    document.body.appendChild(overlay);
+    
+    let selectedYear = currentYear;
+    
+    function renderMonths() {
+        const grid = document.getElementById('monthsGrid');
+        document.getElementById('pickerYear').textContent = selectedYear;
+        
+        grid.innerHTML = months.map((month, index) => {
+            const isCurrent = index === currentMonth && selectedYear === currentYear;
+            const isSelected = index === currentMonth && selectedYear === calendarState.currentYear;
+            
+            return `
+                <button class="month-btn" data-month="${index}" 
+                    style="padding:12px;border-radius:10px;border:1px solid ${isSelected ? '#E07A5F' : 'rgba(255,255,255,0.05)'};
+                    background:${isSelected ? 'rgba(224,122,95,0.15)' : 'rgba(255,255,255,0.03)'};
+                    color:${isCurrent ? '#E07A5F' : '#B0B0C0'};
+                    font-size:13px;font-weight:${isCurrent ? '600' : '400'};cursor:pointer;transition:all 0.2s;">
+                    ${month}
+                </button>
+            `;
+        }).join('');
+        
+        // Обработчики для месяцев
+        grid.querySelectorAll('.month-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const month = parseInt(this.dataset.month);
+                calendarState.currentYear = selectedYear;
+                calendarState.currentMonth = month;
+                
+                // Обновляем URL и загружаем данные через HTMX
+                const url = `/planner/calendar/?year=${selectedYear}&month=${month + 1}`;
+                htmx.ajax('GET', url, { target: '#mainContent', swap: 'innerHTML' });
+                window.history.pushState({}, '', url);
+                
+                overlay.remove();
+            });
+            
+            btn.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(224,122,95,0.1)';
+                this.style.borderColor = 'rgba(224,122,95,0.3)';
+            });
+            
+            btn.addEventListener('mouseleave', function() {
+                const isSel = parseInt(this.dataset.month) === currentMonth && selectedYear === calendarState.currentYear;
+                this.style.background = isSel ? 'rgba(224,122,95,0.15)' : 'rgba(255,255,255,0.03)';
+                this.style.borderColor = isSel ? '#E07A5F' : 'rgba(255,255,255,0.05)';
+            });
+        });
+    }
+    
+    // Кнопки переключения года
+    document.getElementById('prevYearBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectedYear--;
+        renderMonths();
+    });
+    
+    document.getElementById('nextYearBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectedYear++;
+        renderMonths();
+    });
+    
+    renderMonths();
+};
+
+// Запуск
+renderCalendar();
+</script>
 {% endblock %}

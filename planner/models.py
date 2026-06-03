@@ -69,6 +69,15 @@ class TaskTemplate(models.Model):
             models.Index(fields=['user', 'is_active']),
         ]
 
+    def is_applicable_on_date(self, date):
+        if self.repeat == self.Repeat.DAILY:
+            return True
+        elif self.repeat == self.Repeat.WEEKLY:
+            return date.weekday() == self.created_at.date().weekday()
+        elif self.repeat == self.Repeat.WEEKDAYS:
+            return date.weekday() < 5
+        return False
+
 
 class Habit(models.Model):
     class Repeat(models.TextChoices):
@@ -202,6 +211,15 @@ class Habit(models.Model):
     @property
     def is_completed_today(self):
         return self.completions.filter(date=timezone.now().date(), completed=True).exists()
+
+    def is_applicable_on_date(self, date):
+        if self.repeat == self.Repeat.DAILY:
+            return True
+        elif self.repeat == self.Repeat.WEEKLY:
+            return date.weekday() == self.created_at.date().weekday()
+        elif self.repeat == self.Repeat.WEEKDAYS:
+            return date.weekday() < 5
+        return False
 
 
 class HabitCompletion(models.Model):

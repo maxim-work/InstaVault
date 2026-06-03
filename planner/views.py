@@ -5,7 +5,10 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timedelta, date
 from django.utils import timezone
+import calendar
 from django.template.loader import render_to_string
+import json
+from collections import defaultdict
 
 
 def day_get_context(request, date):
@@ -316,8 +319,165 @@ def toggle_habit(request, habit_id):
     
     return JsonResponse({'status': 'ok', 'completed': completion.completed})
 
-@login_required
+def get_day_stats(habits, task_templates, date, tasks_by_day, completions_by_day):
+    day = date.day
+    
+    applicable_habits = [h for h in habits if h.is_applicable_on_date(date)]
+    completed_habit_ids = completions_by_day.get(day, set())
+    
+    total_habits = len(applicable_habits)
+    completed_habits = sum(1 for h in applicable_habits if h.id in completed_habit_ids)
+    
+    applicable_templates = [t for t in task_templates if t.is_applicable_on_date(date)]
+    day_tasks = tasks_by_day.get(day, [])
+    custom_tasks = len([t for t in day_tasks if not t.template_id])
+    
+    total_tasks = len(applicable_templates) + custom_tasks
+    completed_tasks = sum(1 for t in day_tasks if t.completed)
+    
+    return total_habits, completed_habits, total_tasks, completed_tasks
+
+
+def load_month_data(user, year, month):
+    tasks = Task.objects.filter(user=user, date__year=year, date__month=month)
+    completions = HabitCompletion.objects.filter(
+        habit__user=user, habit__is_active=True,
+        date__year=year, date__month=month, completed=True
+    ).values_list('habit_id', 'date')
+    
+    tasks_by_day = defaultdict(list)
+    for task in tasks:
+        tasks_by_day[task.date.day].append(task)
+    
+    completions_by_day = defaultdict(set)
+    for habit_id, comp_date in completions:
+        completions_by_day[comp_date.day].add(habit_id)
+    
+    return tasks_by_day, completions_by_day
+
+
+def calculate_productivity(total, completed):
+    return round((completed / total) * 100) if total > 0 else 0
+
+
+def calendar_get_context(request, date=None):
+    if not date:
+        date = timezone.now().date()
+    
+    today = timezone.now().date()
+    is_current_month = date.strftime("%Y-%m") == today.strftime("%Y-%m")
+    days = today.day if is_current_month else calendar.monthrange(date.year, date.month)[1]
+    full_month_days = calendar.monthrange(date.year, date.month)[1]
+
+    habits = list(Habit.objects.filter(user=request.user, is_active=True))
+    task_templates = list(TaskTemplate.objects.filter(user=request.user, is_active=True))
+    
+    tasks_by_day, completions_by_day = load_month_data(request.user, date.year, date.month)
+
+    chart_data = []
+    calendar_data = []
+    best_day = None
+    best_day_productivity = -1
+    
+    for day in range(1, full_month_days + 1):
+        current_date = date.replace(day=day)
+        total_habits, completed_habits, total_tasks, completed_tasks = get_day_stats(
+            habits, task_templates, current_date, tasks_by_day, completions_by_day
+        )
+        
+        total_items = total_habits + total_tasks
+        completed_items = completed_habits + completed_tasks
+        
+        is_future = date.year == today.year and date.month == today.month and day > today.day
+        
+        if total_items > 0 and not is_future:
+            day_productivity = calculate_productivity(total_items, completed_items)
+            if day_productivity > best_day_productivity:
+                best_day_productivity = day_productivity
+                best_day = {'day': day, 'productivity': day_productivity}
+        
+        if not is_future:
+            chart_data.append({
+                'day': day,
+                'tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'habits': total_habits,
+                'completed_habits': completed_habits,
+            })
+        
+        calendar_data.append({
+            'day': day,
+            'tasks': total_tasks,
+            'habits': total_habits,
+        })
+
+    best_month = None
+    best_month_productivity = -1
+    months_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+    
+    last_month = today.month if date.year == today.year else 12
+    
+    for month in range(1, last_month + 1):
+        month_tasks, month_completions = load_month_data(request.user, date.year, month)
+        max_day = today.day if (date.year == today.year and month == today.month) else calendar.monthrange(date.year, month)[1]
+        
+        month_total = month_completed = 0
+        
+        for day in range(1, max_day + 1):
+            current_date = date.replace(year=date.year, month=month, day=day)
+            h_total, h_done, t_total, t_done = get_day_stats(
+                habits, task_templates, current_date, month_tasks, month_completions
+            )
+            month_total += h_total + t_total
+            month_completed += h_done + t_done
+        
+        if month_total > 0:
+            month_productivity = calculate_productivity(month_total, month_completed)
+            if month_productivity > best_month_productivity:
+                best_month_productivity = month_productivity
+                best_month = {
+                    'month': months_names[month - 1],
+                    'productivity': month_productivity
+                }
+
+    return {
+        'page': 'calendar',
+        'chart_data': json.dumps(chart_data),
+        'calendar_data': json.dumps(calendar_data),
+        'best_day': best_day or {'day': '—', 'productivity': 0},
+        'best_month': best_month or {'month': '—', 'productivity': 0},
+    }
+
+
 def calendar_view(request):
-    if request.headers.get('HX-Request'):
-        return render(request, 'planner/htmx/calendar.html', {'page': 'calendar'})
-    return render(request, 'planner/calendar.html', {'page': 'calendar'})
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    
+    if year and month:
+        try:
+            date = timezone.now().date().replace(year=int(year), month=int(month), day=1)
+        except (ValueError, TypeError):
+            date = timezone.now().date()
+    else:
+        date = timezone.now().date()
+    
+    context = calendar_get_context(request, date)
+    
+    prev_date = date.replace(year=date.year - 1, month=12, day=1) if date.month == 1 else date.replace(month=date.month - 1, day=1)
+    next_date = date.replace(year=date.year + 1, month=1, day=1) if date.month == 12 else date.replace(month=date.month + 1, day=1)
+    
+    months = ['января','февраля','марта','апреля','мая','июня',
+              'июля','августа','сентября','октября','ноября','декабря']
+    
+    context.update({
+        'date': date,
+        'prev_year': prev_date.year,
+        'prev_month': prev_date.month,
+        'next_year': next_date.year,
+        'next_month': next_date.month,
+        'current_date': f"{months[date.month-1].capitalize()} {date.year}",
+    })
+    
+    template = 'planner/htmx/calendar.html' if request.headers.get('HX-Request') else 'planner/calendar.html'
+    return render(request, template, context)

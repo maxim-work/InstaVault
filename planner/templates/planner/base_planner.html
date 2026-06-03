@@ -152,27 +152,108 @@
     .expandable-toggle { font-size: 13px; color: #6B6B7A; cursor: pointer; padding: 8px 12px; border-radius: 10px; transition: all 0.2s; user-select: none; }
     .expandable-toggle:hover { color: #E07A5F; background: rgba(224,122,95,0.05); }
     .expandable-body { margin-top: 8px; }
-    .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 4px; flex-shrink: 0; }
-    .calendar-weekday { font-size: 12px; font-weight: 600; color: #6B6B7A; text-transform: uppercase; padding: 4px 0; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px; flex-shrink: 0; }
-    .calendar-day-cell { aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; position: relative; font-size: 13px; font-weight: 500; color: #B0B0C0; background: rgba(255,255,255,0.02); border: 1px solid transparent; min-width: 0; }
-    .calendar-day-cell:hover { transform: scale(1.08); z-index: 2; box-shadow: 0 3px 10px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.15); }
+    .calendar-weekdays {
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 4px !important;
+        width: 62.5% !important;
+        min-width: 380px !important;
+        max-width: 700px !important;
+        margin: 0 auto 4px auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .calendar-weekday {
+        text-align: center !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #6B6B7A !important;
+        text-transform: uppercase !important;
+        padding: 4px 0 !important;
+        display: block !important;
+    }
+    .calendar-grid {
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 4px !important;
+        width: 62.5% !important;          /* 5/8 = 62.5% */
+        min-width: 380px !important;
+        max-width: 700px !important;
+        margin: 0 auto 16px auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .calendar-day-cell {
+        aspect-ratio: 1 !important;
+        border-radius: 6px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: #B0B0C0 !important;
+        cursor: pointer !important;
+        transition: all 0.15s !important;
+        border: 1px solid transparent !important;
+        min-width: 0 !important;
+    }
+    .calendar-day-cell:hover { transform: scale(1.1); z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.15); }
     .calendar-day-cell.other-month { opacity: 0.15; pointer-events: none; }
     .calendar-day-cell.today { border-color: rgba(255,255,255,0.2); color: #fff; font-weight: 700; }
-    .calendar-day-cell.selected { outline: 2px solid rgba(255,255,255,0.3); outline-offset: 1px; }
-    .calendar-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 8px; flex-shrink: 0; }
-    .legend-label { font-size: 10px; color: #6B6B7A; }
-    .legend-cell { width: 10px; height: 10px; border-radius: 2px; }
-    .legend-cell.level-0 { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }
-    .legend-cell.level-1 { background: #0e4429; }
-    .legend-cell.level-2 { background: #006d32; }
-    .legend-cell.level-3 { background: #26a641; }
-    .legend-cell.level-4 { background: #39d353; }
-    .mini-chart-container { flex-shrink: 0; margin-top: 12px; background: rgba(255,255,255,0.015); border-radius: 14px; padding: 14px 16px 10px; border: 1px solid rgba(255,255,255,0.04); }
-    .mini-chart-title { font-size: 12px; color: #8B8B9A; margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-    .mini-chart-title::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.04); }
-    .mini-chart { position: relative; width: 100%; }
-    .mini-chart svg { width: 100%; height: 100%; }
+    .calendar-legend {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        width: 62.5% !important;
+        min-width: 380px !important;
+        max-width: 700px !important;
+        margin: 0 auto 8px auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .calendar-legend .legend-label {
+        font-size: 9px !important;
+        color: #6B6B7A !important;
+    }
+    .calendar-legend .legend-cell {
+        width: 10px !important;
+        height: 10px !important;
+        border-radius: 2px !important;
+        flex-shrink: 0 !important;
+    }
+    .legend-cell.level-0 { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); }
+    .legend-cell.level-1 { background: rgba(224,122,95,0.20); }
+    .legend-cell.level-2 { background: rgba(224,122,95,0.35); }
+    .legend-cell.level-3 { background: rgba(224,122,95,0.55); }
+    .legend-cell.level-4 { background: rgba(224,122,95,0.85); }
+    .mini-chart-container {
+        width: 100% !important;
+        flex-shrink: 0 !important;
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: 14px !important;
+        padding: 14px 18px 14px 18px !important;
+        border: 1px solid rgba(255,255,255,0.04) !important;
+        margin-top: 8px !important;
+        box-sizing: border-box !important;
+    }
+
+.mini-chart {
+    width: 100% !important;
+    height: 220px !important;
+    overflow: hidden !important;  /* ← обрезает всё, что выходит */
+    position: relative !important;
+}
+
+    .mini-chart svg {
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
+    }
+    .mini-chart-title { font-size: 12px; color: #8B8B9A; margin-bottom: 10px; font-weight: 500; display: flex; align-items: center; }
+
+    /* Свободное место после графика */
+    .day-content::after { content: ''; display: block; height: 20px; flex-shrink: 0; }
     .mini-chart-line { fill: none; stroke: #E07A5F; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(224,122,95,0.3)); }
     .mini-chart-area { fill: url(#chartGradient); opacity: 0.3; }
     .mini-chart-dot { fill: #E07A5F; stroke: #1A1A20; stroke-width: 2; cursor: pointer; transition: r 0.2s; }
@@ -203,7 +284,6 @@
                 <div class="avatar-topbar">{{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}</div>
                 <div class="topbar-user-info">
                     <span class="topbar-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-                    <span class="topbar-user-streak">🔥 52 дня подряд</span>
                 </div>
             </div>
         </a>
@@ -218,6 +298,7 @@
 </div>
 
 <script>
+// ============ ОБЩИЕ ФУНКЦИИ ============
 function setActive(el) { document.querySelectorAll('.topbar-nav-link').forEach(l => l.classList.remove('active')); el.classList.add('active'); }
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.topbar-nav-link').forEach(l => { if (l.getAttribute('href') === window.location.pathname) l.classList.add('active'); });
@@ -225,11 +306,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function getCSRF() { return document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''; }
 
+// ============ ЗАМЕТКИ ============
 window.toggleNote = function() { document.getElementById('noteBody').classList.toggle('collapsed'); document.querySelector('.note-header').classList.toggle('collapsed'); };
 window.toggleNoteDropdown = function(e) { e.stopPropagation(); document.getElementById('noteDropdown').classList.toggle('active'); };
 window.clearNote = function() { document.getElementById('dailyNote').value=''; document.getElementById('noteDropdown').classList.remove('active'); htmx.trigger('#dailyNote', 'keyup'); };
 document.addEventListener('click', e => { if (!e.target.closest('.note-menu')) document.getElementById('noteDropdown')?.classList.remove('active'); });
 
+// ============ ЗАДАЧИ: сворачивание ============
 window.toggleCompleted = function() {
     const body = document.getElementById('completedBody');
     const icon = document.getElementById('completedIcon');
@@ -251,6 +334,7 @@ window.toggleAllTasks = function(event) {
     icon.className = hidden ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
 };
 
+// ============ КАСТОМНЫЕ СЕЛЕКТЫ ============
 let activeDropdown = null;
 function createDropdown() {
     let el = document.getElementById('dynamicDropdown');
@@ -279,15 +363,8 @@ window.toggleCustomSelect = function(event, wrapperId) {
         options = [{ value:'none', label:'Не повторять' }, { value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
         onSelect = (v,l) => { document.getElementById('repeatLabel').textContent=l; document.getElementById('repeatValue').value=v; };
     } else if (wrapperId === 'habitRepeatSelectWrapper') {
-        options = [
-            { value:'daily', label:'Ежедневно' },
-            { value:'weekly', label:'Еженедельно' },
-            { value:'weekdays', label:'По будням' },
-        ];
-        onSelect = (v,l) => {
-            document.getElementById('habitRepeatLabel').textContent = l;
-            document.getElementById('habitRepeatValue').value = v;  // ← вот эта строка должна быть
-        };
+        options = [{ value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        onSelect = (v,l) => { document.getElementById('habitRepeatLabel').textContent = l; document.getElementById('habitRepeatValue').value = v; };
     }
 
     dropdown.innerHTML = options.map(o => `<div class="custom-option${o.value===currentValue?' active':''}${o.cssClass?' '+o.cssClass:''}" data-value="${o.value}">${o.label}</div>`).join('');
@@ -316,12 +393,14 @@ function sortTasks(sort) {
     cards.forEach(c => container.appendChild(c));
 }
 
+// ============ МОДАЛЬНЫЕ ОКНА (базовые) ============
 window.openModal = function(id) { const el = document.getElementById(id); if (el) el.classList.add('active'); };
 window.closeModal = function(id) { const el = document.getElementById(id); if (!el) return; el.classList.remove('active'); closeAllDropdowns(); };
 window.toggleTimeFields = function() { const h = document.getElementById('hasTime').checked; document.getElementById('timeFields').style.display=h?'flex':'none'; if(!h){document.getElementById('taskTimeStart').value='';document.getElementById('taskTimeEnd').value='';} };
 window.toggleNotificationFields = function() { const h = document.getElementById('hasNotification').checked; document.getElementById('notificationFields').style.display=h?'flex':'none'; if(!h)document.getElementById('taskNotificationTime').value=''; };
 window.toggleRescheduleTimeFields = function() { const h = document.getElementById('rescheduleHasTime').checked; document.getElementById('rescheduleTimeFields').style.display=h?'flex':'none'; };
 
+// ============ CRUD ЗАДАЧ ============
 window.openAddTaskModal = function() {
     document.getElementById('modalTaskTitle').textContent='Новая задача';
     document.getElementById('taskTitle').value=''; document.getElementById('taskDescription').value='';
@@ -335,6 +414,7 @@ window.openAddTaskModal = function() {
     document.getElementById('priorityValue').value='none'; document.getElementById('repeatValue').value='none';
     openModal('modalTask'); setTimeout(()=>document.getElementById('taskTitle').focus(),100);
 };
+
 window.openEditTaskModal = function(taskId) {
     const card = document.getElementById(`task-${taskId}`); 
     if (!card) return;
@@ -343,7 +423,6 @@ window.openEditTaskModal = function(taskId) {
     document.getElementById('taskTitle').value = card.querySelector('.task-card-title').textContent;
     document.getElementById('taskDescription').value = card.querySelector('.task-card-desc')?.textContent || '';
     document.getElementById('editingTaskId').value = taskId;
-    
     document.getElementById('taskDate').value = document.querySelector('#noteForm input[name="date"]')?.value || '';
     
     const timeEl = card.querySelector('.task-card-time:not([style*="64a0dc"])');
@@ -407,37 +486,56 @@ window.openEditTaskModal = function(taskId) {
     openModal('modalTask');
     setTimeout(() => document.getElementById('taskTitle').focus(), 100);
 };
+
 window.openDeleteTaskModal = function(taskId) {
-    const card = document.getElementById(`task-${taskId}`); if (!card) return;
+    const card = document.getElementById(`task-${taskId}`); 
+    if (!card) return;
     document.getElementById('deleteTaskTitle').textContent = card.querySelector('.task-card-title').textContent;
-    document.getElementById('deleteTaskId').value = taskId; document.getElementById('deleteMode').value = 'single';
+    document.getElementById('deleteTaskId').value = taskId; 
+    document.getElementById('deleteMode').value = 'single';
     const hasRepeat = card.querySelector('.task-card-repeat-badge');
     document.getElementById('deleteSingleAction').style.display = hasRepeat ? 'none' : 'flex';
     document.getElementById('deleteRepeatingActions').style.display = hasRepeat ? 'flex' : 'none';
     document.getElementById('deleteTaskRepeat').textContent = hasRepeat ? 'Повторяется' : 'Обычная задача';
     openModal('modalDeleteTask');
 };
+
 window.openRescheduleModal = function(taskId) {
     document.getElementById('rescheduleTaskId').value = taskId;
-    document.getElementById('rescheduleHasTime').checked = false; document.getElementById('rescheduleTimeFields').style.display = 'none';
-    document.querySelectorAll('.reschedule-option').forEach(o=>o.classList.remove('active'));
+    document.getElementById('rescheduleHasTime').checked = false; 
+    document.getElementById('rescheduleTimeFields').style.display = 'none';
+    document.querySelectorAll('.reschedule-option').forEach(o => o.classList.remove('active'));
     openModal('modalReschedule');
 };
+
 window.setQuickReschedule = function(option) {
-    const d = new Date(); d.setDate(d.getDate()+(option==='tomorrow'?1:option==='nextWeek'?7:30));
+    const d = new Date(); 
+    d.setDate(d.getDate() + (option === 'tomorrow' ? 1 : option === 'nextWeek' ? 7 : 30));
     document.getElementById('rescheduleDate').value = d.toISOString().split('T')[0];
-    document.querySelectorAll('.reschedule-option').forEach(o=>o.classList.remove('active'));
+    document.querySelectorAll('.reschedule-option').forEach(o => o.classList.remove('active'));
     window.event?.target?.closest('.reschedule-option')?.classList.add('active');
 };
+
 window.openViewTaskModal = function(taskId) {
-    const card = document.getElementById(`task-${taskId}`); if (!card) return;
+    const card = document.getElementById(`task-${taskId}`); 
+    if (!card) return;
     document.getElementById('viewTaskId').value = taskId;
     document.getElementById('viewTaskTitle').textContent = card.querySelector('.task-card-title').textContent;
     document.getElementById('viewTaskDescription').textContent = card.querySelector('.task-card-desc')?.textContent || 'Нет описания';
     const pEl = document.getElementById('viewTaskPriority');
-    if (card.classList.contains('priority-urgent')) { pEl.textContent='Срочный'; pEl.style.background='rgba(255,77,77,0.15)'; pEl.style.color='#ff4d4d'; }
-    else if (card.classList.contains('priority-important')) { pEl.textContent='Важный'; pEl.style.background='rgba(240,192,64,0.15)'; pEl.style.color='#f0c040'; }
-    else { pEl.textContent='Без уровня'; pEl.style.background='rgba(255,255,255,0.05)'; pEl.style.color='#B0B0C0'; }
+    if (card.classList.contains('priority-urgent')) { 
+        pEl.textContent = 'Срочный'; 
+        pEl.style.background = 'rgba(255,77,77,0.15)'; 
+        pEl.style.color = '#ff4d4d'; 
+    } else if (card.classList.contains('priority-important')) { 
+        pEl.textContent = 'Важный'; 
+        pEl.style.background = 'rgba(240,192,64,0.15)'; 
+        pEl.style.color = '#f0c040'; 
+    } else { 
+        pEl.textContent = 'Без уровня'; 
+        pEl.style.background = 'rgba(255,255,255,0.05)'; 
+        pEl.style.color = '#B0B0C0'; 
+    }
     openModal('modalViewTask');
 };
 
@@ -470,6 +568,7 @@ window.toggleTaskMenu = function(event, taskId) {
 };
 document.addEventListener('click', function(e) { if (activeTaskDropdown && !e.target.closest('.task-card-actions')) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown=null; } });
 
+// ============ СТАТИСТИКА ЗАДАЧ ============
 function updateStats() {
     const cc = document.getElementById('completedCount'); if (!cc) return;
     const done = document.querySelectorAll('#completedTasksContainer .task-card').length;
@@ -503,14 +602,16 @@ function distributeTasks() {
     updateStats(); updateEmptyState();
 }
 
+// ============ ПРИВЫЧКИ ============
 window.selectAvatar = function(el) {
     el.parentElement.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected'));
     el.classList.add('selected');
-    document.getElementById('habitAvatarValue').value = el.textContent;  // ← добавить
+    document.getElementById('habitAvatarValue').value = el.textContent;
 };
 window.toggleHabitNotificationFields = function() { document.getElementById('habitNotificationFields').style.display = document.getElementById('habitHasNotification').checked?'block':'none'; };
 window.toggleEditHabitNotification = function() { document.getElementById('editHabitNotificationFields').style.display = document.getElementById('editHabitHasNotification').checked?'block':'none'; };
 window.toggleExpandable = function(id) { const el = document.getElementById(id); const t = el.previousElementSibling.querySelector('span'); if (el.style.display==='none') { el.style.display='block'; t.textContent=t.textContent.replace('+','−'); } else { el.style.display='none'; t.textContent=t.textContent.replace('−','+'); } };
+
 let activeHabitDropdown = null;
 window.toggleHabitMenu = function(event, habitId) {
     event.stopPropagation();
@@ -528,29 +629,38 @@ window.toggleHabitMenu = function(event, habitId) {
     items[2].addEventListener('mouseenter', function(){this.style.background='rgba(255,77,77,0.1)';this.style.color='#ff4d4d';}); items[2].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
     document.body.appendChild(dropdown); activeHabitDropdown = dropdown;
 };
+
 window.toggleHabit = function(habitId) {
     const dateEl = document.getElementById('habitsDate');
     const date = dateEl ? dateEl.dataset.iso : '';
-    fetch(`/planner/habits/habit/${habitId}/toggle/?date=${date}`, {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCSRF()}
-    })
-    .then(r => r.json())
-    .then(data => {
+    fetch(`/planner/habits/habit/${habitId}/toggle/?date=${date}`, { method:'POST', headers:{'X-CSRFToken':getCSRF()} })
+    .then(r => r.json()).then(data => {
         if (data.status === 'ok') {
             const card = document.getElementById(`habit-${habitId}`);
             if (card) {
                 card.classList.toggle('completed', data.completed);
                 const checkbox = card.querySelector('.habit-check-square');
-                if (checkbox) {
-                    checkbox.classList.toggle('checked', data.completed);
-                    checkbox.textContent = data.completed ? '✓' : '';
-                }
+                if (checkbox) { checkbox.classList.toggle('checked', data.completed); checkbox.textContent = data.completed ? '✓' : ''; }
             }
             updateHabitsStats();
         }
     });
 };
+
+window.updateHabitsStats = function() {
+    const completed = document.querySelectorAll('.habit-card.completed').length;
+    const total = document.querySelectorAll('.habit-card').length;
+    const streaks = Array.from(document.querySelectorAll('.habit-card')).map(card => parseInt(card.dataset.bestStreak) || 0);
+    const maxStreak = streaks.length > 0 ? Math.max(...streaks) : 0;
+    const cEl = document.getElementById('habitsCompleted');
+    const tEl = document.getElementById('habitsTotal');
+    const sEl = document.getElementById('habitsMaxStreak');
+    if (cEl) cEl.textContent = completed;
+    if (tEl) tEl.textContent = total;
+    if (sEl) sEl.textContent = '🔥 ' + maxStreak + ' дней';
+};
+
+// ============ МОДАЛКИ ПРИВЫЧЕК ============
 window.openViewHabitModal = function(habitId) {
     if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
     const card = document.getElementById(`habit-${habitId}`);
@@ -606,6 +716,7 @@ window.openEditHabitModal = function(habitId) {
     openModal('modalHabit');
     setTimeout(() => document.getElementById('habitTitle').focus(), 100);
 };
+
 window.openDeleteHabitModal = function(habitId) {
     if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
     const card = document.getElementById(`habit-${habitId}`);
@@ -613,46 +724,6 @@ window.openDeleteHabitModal = function(habitId) {
     document.getElementById('deleteHabitId').value = habitId;
     openModal('modalDeleteHabit');
 };
-document.addEventListener('click', function(e) { if (activeHabitDropdown && !e.target.closest('.task-card-actions')) { activeHabitDropdown.remove(); activeHabitDropdown=null; } });
-
-window.updateHabitsStats = function() {
-    const completed = document.querySelectorAll('.habit-card:not(.completed)').length === 0 ? 
-        document.querySelectorAll('.habit-card.completed').length : 
-        document.querySelectorAll('.habit-card.completed').length;
-    const total = document.querySelectorAll('.habit-card').length;
-    const streaks = Array.from(document.querySelectorAll('.habit-card')).map(card => 
-        parseInt(card.dataset.bestStreak) || 0
-    );
-    const maxStreak = streaks.length > 0 ? Math.max(...streaks) : 0;
-    
-    const cEl = document.getElementById('habitsCompleted');
-    const tEl = document.getElementById('habitsTotal');
-    const sEl = document.getElementById('habitsMaxStreak');
-    if (cEl) cEl.textContent = completed;
-    if (tEl) tEl.textContent = total;
-    if (sEl) sEl.textContent = '🔥 ' + maxStreak + ' дней';
-};
-
-const calendarState={currentYear:2026,currentMonth:4,selectedDay:null,monthData:{}};
-(function(){const y=calendarState.currentYear,m=calendarState.currentMonth;const dim=new Date(y,m+1,0).getDate();for(let d=1;d<=dim;d++){calendarState.monthData[d]={tasks:Math.floor(Math.random()*8),completed:Math.floor(Math.random()*9),habits:Math.floor(Math.random()*5),habitsDone:Math.floor(Math.random()*6)};}})();
-function getLevel(t,c,h,hd){const total=t+h;const done=c+hd;if(total===0)return 0;const r=done/total;if(r===1)return 4;if(r>=0.7)return 3;if(r>=0.4)return 2;return 1;}
-function getLevelColor(l){return['rgba(255,255,255,0.03)','#0e4429','#006d32','#26a641','#39d353'][l]||'rgba(255,255,255,0.03)';}
-function renderCalendar(){
-    const y=calendarState.currentYear,m=calendarState.currentMonth;
-    document.getElementById('calendarMonthTitle').textContent=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][m]+' '+y;
-    const fd=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate(),pdim=new Date(y,m,0).getDate();
-    const today=new Date();let so=fd===0?6:fd-1,html='';
-    for(let i=so-1;i>=0;i--){html+=`<div class="calendar-day-cell other-month"><span class="day-number">${pdim-i}</span></div>`;}
-    for(let d=1;d<=dim;d++){const data=calendarState.monthData[d]||{tasks:0,completed:0,habits:0,habitsDone:0};const level=getLevel(data.tasks,data.completed,data.habits,data.habitsDone);let cls='calendar-day-cell';if(d===today.getDate()&&m===today.getMonth()&&y===today.getFullYear())cls+=' today';if(d===calendarState.selectedDay)cls+=' selected';html+=`<div class="${cls}" style="background:${getLevelColor(level)}" onclick="openDayPreview(${d})"><span class="day-number">${d}</span></div>`;}
-    document.getElementById('calendarGrid').innerHTML=html;updateCalendarStats();renderMiniChart();
-}
-function updateCalendarStats(){const dim=new Date(calendarState.currentYear,calendarState.currentMonth+1,0).getDate();let tt=0,tc=0,bd=0,bc=0,dw=0;for(let d=1;d<=dim;d++){const data=calendarState.monthData[d];if(data&&data.tasks>0){tt+=data.tasks;tc+=data.completed;dw++;if(data.completed>bc){bc=data.completed;bd=d;}}}document.getElementById('calendarProductivity').textContent=tt>0?Math.round((tc/tt)*100)+'%':'0%';const mn=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'][calendarState.currentMonth];document.getElementById('calendarBestDay').textContent=bd>0?bd+' '+mn:'—';document.getElementById('calendarAvgTasks').textContent=dw>0?(tt/dw).toFixed(1):'0';}
-function renderMiniChart(){}
-window.changeCalendarMonth = function(d){calendarState.currentMonth+=d;if(calendarState.currentMonth<0){calendarState.currentMonth=11;calendarState.currentYear--;}else if(calendarState.currentMonth>11){calendarState.currentMonth=0;calendarState.currentYear++;}calendarState.selectedDay=null;calendarState.monthData={};const dim=new Date(calendarState.currentYear,calendarState.currentMonth+1,0).getDate();for(let d=1;d<=dim;d++){calendarState.monthData[d]={tasks:Math.floor(Math.random()*8),completed:Math.floor(Math.random()*9),habits:Math.floor(Math.random()*5),habitsDone:Math.floor(Math.random()*6)};}renderCalendar();};
-window.openMonthPicker = function(){const i=document.createElement('input');i.type='month';i.value=`${calendarState.currentYear}-${String(calendarState.currentMonth+1).padStart(2,'0')}`;i.style.cssText='position:fixed;top:-100px;left:0;opacity:0;pointer-events:none;';document.body.appendChild(i);i.addEventListener('change',function(){if(this.value){const[y,m]=this.value.split('-');calendarState.currentYear=parseInt(y);calendarState.currentMonth=parseInt(m)-1;calendarState.selectedDay=null;calendarState.monthData={};const dim=new Date(calendarState.currentYear,calendarState.currentMonth+1,0).getDate();for(let d=1;d<=dim;d++){calendarState.monthData[d]={tasks:Math.floor(Math.random()*8),completed:Math.floor(Math.random()*9),habits:Math.floor(Math.random()*5),habitsDone:Math.floor(Math.random()*6)};}renderCalendar();}this.remove();});i.showPicker?i.showPicker():i.click();};
-window.openDayPreview = function(day){const data=calendarState.monthData[day]||{tasks:0,completed:0,habits:0,habitsDone:0};calendarState.selectedDay=day;renderCalendar();const mn=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];document.getElementById('previewDate').textContent=day+' '+mn[calendarState.currentMonth];document.getElementById('previewTasksStat').textContent=data.completed+'/'+data.tasks;document.getElementById('previewHabitsStat').textContent=data.habitsDone+'/'+data.habits;document.getElementById('dayPreview').style.display='flex';document.getElementById('dayPreview')._selectedDay=day;};
-document.addEventListener('click',function(e){const p=document.getElementById('dayPreview');if(p&&p.style.display==='flex'&&e.target===p)p.style.display='none';});
-window.goToDay = function(type){const p=document.getElementById('dayPreview');const day=p._selectedDay||1;p.style.display='none';if(type==='tasks'){window.location.href=`/planner/day/?date=${calendarState.currentYear}-${String(calendarState.currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;}else if(type==='habits'){document.querySelector('.topbar-nav-link[href*="habits"]')?.click();}};
 
 window.openAddHabitModal = function() {
     document.getElementById('modalHabitTitle').textContent = 'Новая привычка';
@@ -668,7 +739,6 @@ window.openAddHabitModal = function() {
     document.getElementById('habitRepeatValue').value = 'daily';
     document.getElementById('habitAvatarValue').value = '🏃';
     document.getElementById('habitSubmitBtn').textContent = 'Добавить';
-    // Сброс аватаров
     document.querySelectorAll('#habitAvatarPicker .avatar-option').forEach((a, i) => {
         a.classList.toggle('selected', i === 0);
     });
@@ -676,9 +746,135 @@ window.openAddHabitModal = function() {
     setTimeout(() => document.getElementById('habitTitle').focus(), 100);
 };
 
+document.addEventListener('click', function(e) { if (activeHabitDropdown && !e.target.closest('.task-card-actions')) { activeHabitDropdown.remove(); activeHabitDropdown=null; } });
+
+// ============ ДАТА ПИКЕР ============
+window.openDatePicker = function() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    
+    const picker = document.createElement('div');
+    picker.style.cssText = 'background:#1A1A20;border-radius:20px;padding:24px;border:1px solid rgba(255,255,255,0.08);width:340px;';
+    picker.onclick = function(e) { e.stopPropagation(); };
+    
+    const now = new Date();
+    let selectedYear = now.getFullYear();
+    let selectedMonth = now.getMonth();
+    let selectedDay = now.getDate();
+    
+    const isHabitsPage = window.location.pathname.includes('/habits');
+    const dateElement = document.getElementById('currentDate') || document.getElementById('habitsDate');
+    
+    if (dateElement) {
+        const dataIso = dateElement.getAttribute('data-iso');
+        if (dataIso) {
+            const parts = dataIso.split('-');
+            selectedYear = parseInt(parts[0]);
+            selectedMonth = parseInt(parts[1]) - 1;
+            selectedDay = parseInt(parts[2]);
+        }
+    }
+    
+    const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    
+    picker.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <button id="prevMonthBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;">←</button>
+            <span style="font-size:16px;font-weight:600;color:#fff;">
+                <span id="pickerMonth">${months[selectedMonth]}</span>
+                <span id="pickerYear" style="color:#E07A5F;">${selectedYear}</span>
+            </span>
+            <button id="nextMonthBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;">→</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;text-align:center;">
+            ${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d => `<span style="font-size:11px;color:#6B6B7A;">${d}</span>`).join('')}
+        </div>
+        <div id="daysGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+        <button id="todayBtn" style="width:100%;margin-top:16px;padding:10px;background:rgba(224,122,95,0.1);border:1px solid rgba(224,122,95,0.3);border-radius:10px;color:#E07A5F;font-size:14px;cursor:pointer;">Сегодня</button>
+    `;
+    
+    overlay.appendChild(picker);
+    document.body.appendChild(overlay);
+    
+    function goToDate(year, month, day) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const url = isHabitsPage ? `/planner/habits/?date=${dateStr}` : `/planner/day/?date=${dateStr}`;
+        htmx.ajax('GET', url, { target: '#mainContent', swap: 'innerHTML' });
+        window.history.pushState({}, '', url);
+        overlay.remove();
+    }
+    
+    function renderDays() {
+        const grid = document.getElementById('daysGrid');
+        const firstDay = new Date(selectedYear, selectedMonth, 1).getDay();
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const daysInPrevMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+        
+        let startDay = firstDay === 0 ? 6 : firstDay - 1;
+        let html = '';
+        
+        for (let i = startDay - 1; i >= 0; i--) {
+            html += `<div style="padding:8px;text-align:center;color:#3A3A45;font-size:13px;">${daysInPrevMonth - i}</div>`;
+        }
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            const date = new Date(selectedYear, selectedMonth, d);
+            const isToday = date.toDateString() === now.toDateString();
+            const isSelected = d === selectedDay && selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+            
+            let bg = 'transparent', color = '#B0B0C0', border = '1px solid transparent';
+            if (isSelected) { bg = 'rgba(224,122,95,0.15)'; border = '1px solid #E07A5F'; color = '#E07A5F'; }
+            if (isToday) { color = '#E07A5F'; border = '1px solid rgba(224,122,95,0.5)'; if (!isSelected) bg = 'rgba(224,122,95,0.05)'; }
+            
+            html += `<div class="day-cell" data-day="${d}" style="padding:8px;text-align:center;font-size:13px;border-radius:8px;background:${bg};color:${color};border:${border};cursor:pointer;transition:all 0.15s;">${d}</div>`;
+        }
+        
+        grid.innerHTML = html;
+        
+        grid.querySelectorAll('.day-cell').forEach(cell => {
+            cell.addEventListener('click', function() { goToDate(selectedYear, selectedMonth, parseInt(this.dataset.day)); });
+            cell.addEventListener('mouseenter', function() { if (this.dataset.day != selectedDay) this.style.background = 'rgba(255,255,255,0.08)'; });
+            cell.addEventListener('mouseleave', function() {
+                if (this.dataset.day == selectedDay && selectedMonth === now.getMonth() && selectedYear === now.getFullYear()) this.style.background = 'rgba(224,122,95,0.15)';
+                else this.style.background = 'transparent';
+            });
+        });
+    }
+    
+    document.getElementById('prevMonthBtn').addEventListener('click', function() {
+        selectedMonth--; if (selectedMonth < 0) { selectedMonth = 11; selectedYear--; }
+        document.getElementById('pickerMonth').textContent = months[selectedMonth];
+        document.getElementById('pickerYear').textContent = selectedYear;
+        renderDays();
+    });
+    
+    document.getElementById('nextMonthBtn').addEventListener('click', function() {
+        selectedMonth++; if (selectedMonth > 11) { selectedMonth = 0; selectedYear++; }
+        document.getElementById('pickerMonth').textContent = months[selectedMonth];
+        document.getElementById('pickerYear').textContent = selectedYear;
+        renderDays();
+    });
+    
+    document.getElementById('todayBtn').addEventListener('click', function() {
+        const today = new Date();
+        goToDate(today.getFullYear(), today.getMonth(), today.getDate());
+    });
+    
+    renderDays();
+};
+
+// ============ АВТООБНОВЛЕНИЕ СТАТИСТИКИ ПОСЛЕ HTMX ============
+document.addEventListener('htmx:afterSwap', function() {
+    setTimeout(() => {
+        if (document.getElementById('completedCount')) { updateStats(); updateEmptyState(); }
+        if (document.getElementById('habitsCompleted')) { updateHabitsStats(); }
+    }, 100);
+});
+
+// ============ ИНИЦИАЛИЗАЦИЯ ============
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('tasksScrollArea')) { distributeTasks(); }
 });
-if (document.getElementById('calendarGrid')) renderCalendar();
 </script>
 {% endblock %}

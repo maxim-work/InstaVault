@@ -2,7 +2,7 @@
     <div class="header-left">
         <div class="date-nav">
             <button class="date-arrow" hx-get="{% url 'planner:habits' %}?date={{ prev_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-left"></i></button>
-            <span class="date-display" id="habitsDate" data-iso="{{ today_iso }}">{{ current_date }}</span>
+            <span class="date-display" id="habitsDate" onclick="openDatePicker()" data-iso="{{ today_iso }}">{{ current_date }}</span>
             <button class="date-arrow" hx-get="{% url 'planner:habits' %}?date={{ next_date }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="fas fa-chevron-right"></i></button>
         </div>
         <div class="header-stats" id="habitsStats">
