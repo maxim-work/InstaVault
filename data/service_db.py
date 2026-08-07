@@ -67,7 +67,7 @@ class ResourceDB:
         with self.conn:
             self.conn.execute("DELETE FROM resources WHERE tg_id = ?", (tg_id,))
 
-    def get(self, resource_id: int, tg_id: int) -> Optional[Resource]:
+    def get_resource(self, resource_id: int, tg_id: int) -> Optional[Resource]:
         with self.conn:
             row = self.conn.execute(
                 "SELECT * FROM resources WHERE id = ? AND tg_id = ?",
@@ -83,13 +83,17 @@ class ResourceDB:
             ).fetchall()
         return [Resource(**dict(row)) for row in rows]
 
-    def count(self, tg_id: int) -> int:
+    def count_user_resources(self, tg_id: int) -> int:
         with self.conn:
             row = self.conn.execute(
-                "SELECT COUNT(*) as count FROM resources WHERE tg_id = ?",
+                "SELECT COUNT(*) FROM resources WHERE tg_id = ?",
                 (tg_id,),
             ).fetchone()
-        return row["count"] if row else 0
+        return row[0] if row else 0
+
+    def count_all_resources(self) -> int:
+        with self.conn:
+            return self.conn.execute("SELECT COUNT(*) FROM resources").fetchone()[0]
 
     def search(
         self, tg_id: int, filter: Optional[ResourceFilter] = None
@@ -234,6 +238,27 @@ class UserDB:
                 (user.first_name, user.last_name, user.username, user.tg_id),
             )
 
+    def ban(self, tg_id: int) -> None:
+        with self.conn:
+            self.conn.execute(
+                "UPDATE users SET is_active = 0 WHERE tg_id = ?",
+                (tg_id,),
+            )
+
+    def unban(self, tg_id: int) -> None:
+        with self.conn:
+            self.conn.execute(
+                "UPDATE users SET is_active = 1 WHERE tg_id = ?",
+                (tg_id,),
+            )
+
+    def is_active(self, tg_id: int) -> bool:
+        with self.conn:
+            row = self.conn.execute(
+                "SELECT is_active FROM users WHERE tg_id = ?", (tg_id,)
+            ).fetchone()
+        return bool(row and row[0])
+
     def delete(self, tg_id: int) -> None:
         with self.conn:
             self.conn.execute("DELETE FROM users WHERE tg_id = ?", (tg_id,))
@@ -243,17 +268,89 @@ class UserDB:
             self.conn.execute("DELETE FROM users")
             self.conn.execute("DELETE FROM sqlite_sequence WHERE name='users'")
 
-    def get(self, tg_id: int) -> Optional[User]:
+    def get_user(self, tg_id: int) -> Optional[User]:
         with self.conn:
             row = self.conn.execute(
                 "SELECT * FROM users WHERE tg_id = ?", (tg_id,)
             ).fetchone()
         return User(**dict(row)) if row else None
 
-    def get_users(self) -> list[User]:
+    def get_banned_users(self) -> list[User]:
+        with self.conn:
+            rows = self.conn.execute(
+                "SELECT * FROM users WHERE is_active = 0"
+            ).fetchall()
+        return [User(**dict(row)) for row in rows]
+
+    def get_active_users(self) -> list[User]:
+        with self.conn:
+            rows = self.conn.execute(
+                "SELECT * FROM users WHERE is_active = 1"
+            ).fetchall()
+        return [User(**dict(row)) for row in rows]
+
+    def get_all_users(self) -> list[User]:
         with self.conn:
             rows = self.conn.execute("SELECT * FROM users").fetchall()
         return [User(**dict(row)) for row in rows]
+
+    def get_all_tg_ids_except(self, exclude_ids: list[int]) -> list[int]:
+        placeholders = ",".join("?" * len(exclude_ids))
+        with self.conn:
+            rows = self.conn.execute(
+                f"SELECT tg_id FROM users WHERE tg_id NOT IN ({placeholders})",
+                exclude_ids,
+            ).fetchall()
+        return [row["tg_id"] for row in rows]
+
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        with self.conn:
+            row = self.conn.execute(
+                "SELECT * FROM users WHERE username = ?",
+                (username,),
+            ).fetchone()
+        return User(**dict(row)) if row else None
+
+    def search_users(self, query: str) -> list[User]:
+        with self.conn:
+            rows = self.conn.execute(
+                """
+                SELECT * FROM users
+                WHERE username LIKE ? OR first_name LIKE ? OR last_name LIKE ?
+                """,
+                (f"%{query}%", f"%{query}%", f"%{query}%"),
+            ).fetchall()
+        return [User(**dict(row)) for row in rows]
+
+    def count_banned_users(self) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COUNT(*) FROM users WHERE is_active = 0"
+            ).fetchone()[0]
+
+    def count_active_users(self) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COUNT(*) FROM users WHERE is_active = 1"
+            ).fetchone()[0]
+
+    def count_all_users(self) -> int:
+        with self.conn:
+            return self.conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+
+    def count_new_users_since(self, since: datetime) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COUNT(*) FROM users WHERE created_at >= ?",
+                (since,),
+            ).fetchone()[0]
+
+    def count_active_users_since(self, since: datetime) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COUNT(*) FROM users WHERE last_active_at >= ?",
+                (since,),
+            ).fetchone()[0]
 
     def update_last_active(self, tg_id: int) -> None:
         with self.conn:
@@ -261,3 +358,104 @@ class UserDB:
                 "UPDATE users SET last_active_at = ? WHERE tg_id = ?",
                 (datetime.now().isoformat(), tg_id),
             )
+
+
+class StatsDB:
+    def __init__(self, path: str = "data/database.db"):
+        self.path = path
+        self.conn = sqlite3.connect(self.path)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA foreign_keys = ON")
+
+    def upsert_daily_stats(
+        self,
+        date: str,
+        new_users: int = 0,
+        active_users: int = 0,
+        new_resources: int = 0,
+        banned_users: int = 0,
+        total_users: int = 0,
+        total_resources: int = 0,
+    ) -> None:
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO daily_stats (
+                    date, new_users, active_users, new_resources,
+                    banned_users, total_users, total_resources
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(date) DO UPDATE SET
+                    new_users = new_users + excluded.new_users,
+                    active_users = excluded.active_users,
+                    new_resources = new_resources + excluded.new_resources,
+                    banned_users = excluded.banned_users,
+                    total_users = excluded.total_users,
+                    total_resources = excluded.total_resources
+                """,
+                (
+                    date,
+                    new_users,
+                    active_users,
+                    new_resources,
+                    banned_users,
+                    total_users,
+                    total_resources,
+                ),
+            )
+
+    def get_stats_for_period(self, since: str, until: str) -> dict:
+        with self.conn:
+            row = self.conn.execute(
+                """
+                SELECT
+                    COALESCE(SUM(new_users), 0) as new_users,
+                    COALESCE(SUM(new_resources), 0) as new_resources,
+                    COALESCE(SUM(banned_users), 0) as banned_users,
+                    COALESCE(MAX(total_users), 0) as total_users,
+                    COALESCE(MAX(total_resources), 0) as total_resources
+                FROM daily_stats
+                WHERE date BETWEEN ? AND ?
+                """,
+                (since, until),
+            ).fetchone()
+        return dict(row)
+
+    def get_active_users_for_period(self, since: str, until: str) -> int:
+        with self.conn:
+            row = self.conn.execute(
+                """
+                SELECT COALESCE(MAX(active_users), 0)
+                FROM daily_stats
+                WHERE date BETWEEN ? AND ?
+                """,
+                (since, until),
+            ).fetchone()
+        return row[0] if row else 0
+
+    def get_total_new_users(self) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COALESCE(SUM(new_users), 0) FROM daily_stats"
+            ).fetchone()[0]
+
+    def get_total_new_resources(self) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COALESCE(SUM(new_resources), 0) FROM daily_stats"
+            ).fetchone()[0]
+
+    def get_total_banned_users(self) -> int:
+        with self.conn:
+            return self.conn.execute(
+                "SELECT COALESCE(SUM(banned_users), 0) FROM daily_stats"
+            ).fetchone()[0]
+
+    def close(self) -> None:
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
