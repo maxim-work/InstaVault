@@ -21,7 +21,7 @@ class User(BaseModel):
     @field_validator("tg_id")
     @classmethod
     def validate_tg_id(cls, v: int) -> int:
-        if v < 2_000_000:
+        if v < 2_000_000 and v != 0:
             raise InvalidParamError("tg_id", str(v), "tg_id должен быть >= 2 000 000")
         return v
 
