@@ -66,3 +66,21 @@ def start_db(path: str = "data/database.db") -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_resources_created_at ON resources(created_at)"
         )
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS daily_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date DATE NOT NULL,
+                new_users INTEGER NOT NULL DEFAULT 0,
+                active_users INTEGER NOT NULL DEFAULT 0,
+                new_resources INTEGER NOT NULL DEFAULT 0,
+                banned_users INTEGER NOT NULL DEFAULT 0,
+                total_users INTEGER NOT NULL DEFAULT 0,
+                total_resources INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(date)
+            )
+        """)
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_stats(date)"
+        )
