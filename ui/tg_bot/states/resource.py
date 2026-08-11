@@ -1,7 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class ResourceState(StatesGroup):
+class ResourceFormState(StatesGroup):
     waiting_for_link = State()
     waiting_for_type = State()
     waiting_for_format = State()
@@ -10,6 +10,12 @@ class ResourceState(StatesGroup):
     waiting_for_notes = State()
     waiting_for_rating = State()
     waiting_for_date = State()
+
+
+class SearchState(StatesGroup):
     waiting_for_search = State()
-    waiting_for_import_data = State()
-    waiting_for_import_urls = State()
+
+
+class ImportState(StatesGroup):
+    waiting_for_data = State()
+    waiting_for_urls = State()
