@@ -45,45 +45,54 @@ def _build_paginated_keyboard(
     total_pages: int,
     get_text: Callable,
     get_callback: Callable,
-    compact_threshold: int = 2,
+    compact_threshold: int = 3,
 ) -> InlineKeyboardMarkup:
 
     builder = InlineKeyboardBuilder()
 
-    nav = []
-    if page > 1:
-        nav.append(
-            InlineKeyboardButton(
-                text="◀ Назад",
-                callback_data=get_callback("nav", page - 1),
-            )
-        )
-    if page < total_pages:
-        nav.append(
-            InlineKeyboardButton(
-                text="Вперёд ▶",
-                callback_data=get_callback("nav", page + 1),
-            )
-        )
-
     compact = len(items) <= compact_threshold
 
-    if compact and nav:
-        for btn in nav:
-            builder.button(text=btn.text, callback_data=btn.callback_data)
+    nav_buttons = []
+    if page > 1:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="◀ Назад", callback_data=get_callback("nav", page - 1)
+            )
+        )
 
+    item_buttons = []
     for i, item in enumerate(items):
-        builder.button(
-            text=get_text(i, item),
-            callback_data=get_callback(i, item),
+        item_buttons.append(
+            InlineKeyboardButton(
+                text=get_text(i, item), callback_data=get_callback(i, item)
+            )
+        )
+
+    if page < total_pages:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="Вперёд ▶", callback_data=get_callback("nav", page + 1)
+            )
         )
 
     if compact:
-        builder.adjust(len(nav) + len(items))
+        all_buttons = []
+        if page > 1:
+            all_buttons.extend(nav_buttons[:1])
+        all_buttons.extend(item_buttons)
+        if page < total_pages:
+            all_buttons.extend(nav_buttons[-1:])
+
+        for btn in all_buttons:
+            builder.button(text=btn.text, callback_data=btn.callback_data)
+        builder.adjust(len(all_buttons))
     else:
+        for btn in item_buttons:
+            builder.button(text=btn.text, callback_data=btn.callback_data)
         builder.adjust(3)
-        if nav:
-            builder.row(*nav)
+
+        if nav_buttons:
+            builder.row(*nav_buttons)
 
     return builder.as_markup()
 

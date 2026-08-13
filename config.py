@@ -17,6 +17,7 @@ ADMIN_IDS = [
     int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()
 ]
 RESOURCES_PER_PAGE = 5
+USERS_PER_PAGE = 5
 EXIT_TEXTS = {
     "/start",
     "/add",

@@ -2,7 +2,7 @@ from aiogram.types.reply_keyboard_markup import ReplyKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
-def get_user_start_keyboard() -> ReplyKeyboardMarkup:
+def create_user_start_keyboard() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     builder.button(text="Добавить ресурс")
     builder.button(text="Поиск")
@@ -16,7 +16,7 @@ def get_user_start_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
-def get_admin_start_keyboard() -> ReplyKeyboardMarkup:
+def create_admin_start_keyboard() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     builder.button(text="Добавить ресурс")
     builder.button(text="Поиск")
