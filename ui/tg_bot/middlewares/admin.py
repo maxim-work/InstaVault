@@ -1,8 +1,7 @@
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message, Update
+from aiogram.types import CallbackQuery, Message
 
 from config import ADMIN_IDS
-from ui.tg_bot.middlewares.utils import get_real_event
 
 
 class AdminMiddleware(BaseMiddleware):
@@ -10,15 +9,11 @@ class AdminMiddleware(BaseMiddleware):
         super().__init__()
 
     async def __call__(self, handler, event, data):
-        if not isinstance(event, Update):
+        if isinstance(event, (Message, CallbackQuery)) and event.from_user:
+            if event.from_user.id not in ADMIN_IDS:
+                if isinstance(event, CallbackQuery):
+                    await event.answer("У вас нет доступа", show_alert=True)
+                elif isinstance(event, Message):
+                    await event.answer("У вас нет доступа")
+                return
             return await handler(event, data)
-        real_event = get_real_event(event)
-        if isinstance(real_event, (Message, CallbackQuery)) and real_event.from_user:
-            if real_event.from_user.id not in ADMIN_IDS:
-                if isinstance(real_event, CallbackQuery):
-                    await real_event.answer(
-                        "У вас нет доступа к этой функции", show_alert=True
-                    )
-                elif isinstance(real_event, Message):
-                    await real_event.answer("У вас нет доступа к этой функции")
-        return await handler(event, data)

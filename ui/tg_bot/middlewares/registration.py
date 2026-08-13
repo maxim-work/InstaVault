@@ -16,7 +16,7 @@ class RegistrationMiddleware(BaseMiddleware):
         data["user_db"] = self.user_db
         real_event = get_real_event(event)
         if isinstance(real_event, (Message, CallbackQuery)) and real_event.from_user:
-            if self.user_db.get(real_event.from_user.id) is None:
+            if self.user_db.get_user(real_event.from_user.id) is None:
                 user = self.user_service.create_user(
                     tg_id=real_event.from_user.id,
                     first_name=real_event.from_user.first_name,
