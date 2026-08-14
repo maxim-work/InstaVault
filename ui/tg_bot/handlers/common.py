@@ -1,25 +1,67 @@
-from aiogram import F, Router, types
+from aiogram import F, Bot, Router, types
 from aiogram.filters.command import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 
-from config import USER_COMMANDS
-from ui.tg_bot.keyboards.reply import get_user_start_keyboard
+from config import ADMIN_COMMANDS, USER_COMMANDS, ADMIN_IDS
+from ui.tg_bot.keyboards.reply import (
+    create_user_start_keyboard,
+    create_admin_start_keyboard,
+)
+from ui.tg_bot.utils.transition import transition_to_message
 
 common_router = Router()
 
 
 @common_router.message(CommandStart())
-async def cmd_start(message: types.Message) -> None:
+async def cmd_start(message: types.Message, state: FSMContext, bot: Bot) -> None:
     if message.from_user is None:
         return
+
     user = message.from_user
     name = user.full_name or user.first_name
-    await message.answer(f"Привет, {name}!", reply_markup=get_user_start_keyboard())
+
+    if user.id in ADMIN_IDS:
+        await transition_to_message(
+            message=message,
+            state=state,
+            bot=bot,
+            text=f"Привет админ {name}",
+            reply_markup=create_admin_start_keyboard(),
+            state_clear=True,
+        )
+    else:
+        await transition_to_message(
+            message=message,
+            state=state,
+            bot=bot,
+            text=f"Привет, {name}!",
+            reply_markup=create_user_start_keyboard(),
+            state_clear=True,
+        )
 
 
 @common_router.message(Command("help"))
 @common_router.message(F.text == "Помощь")
-async def cmd_help(message: types.Message) -> None:
-    await message.answer(f"Вот наши команды: {USER_COMMANDS}!")
+async def cmd_help(message: types.Message, state: FSMContext, bot: Bot) -> None:
+    if message.from_user is None:
+        return
+
+    if message.from_user.id in ADMIN_IDS:
+        await transition_to_message(
+            message=message,
+            state=state,
+            bot=bot,
+            text=f"Вот наши команды: {ADMIN_COMMANDS}!",
+            state_clear=True,
+        )
+    else:
+        await transition_to_message(
+            message=message,
+            state=state,
+            bot=bot,
+            text=f"Вот наши команды: {USER_COMMANDS}!",
+            state_clear=True,
+        )
 
 
 @common_router.message(~F.text.startswith("/"))
