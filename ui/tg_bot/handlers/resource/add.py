@@ -17,18 +17,22 @@ from ui.tg_bot.callbacks.resource import (
     pack_callback_data_list,
 )
 from ui.tg_bot.keyboards.resource import create_kb_tags, create_kb_type
-from ui.tg_bot.states.resource import ResourceState
+from ui.tg_bot.states.resource import ResourceFormState
 from ui.tg_bot.utils.error_handler import handle_resource_error
 from ui.tg_bot.utils.fsm import exit_fsm
 from ui.tg_bot.utils.message import (
     auto_delete,
-    cleanup_previous_message,
     get_editable_message,
-    safe_delete_many,
     with_action_label,
 )
+from ui.tg_bot.utils.transition import transition_callback, transition_to_message
 
-from .form import _show_edit_menu, _show_save_summary, handle_form_actions
+from .form import (
+    show_edit_menu,
+    show_save_summary,
+    handle_form_actions,
+    show_save_summary_direct,
+)
 
 add_router = Router()
 
@@ -36,42 +40,39 @@ add_router = Router()
 @add_router.message(Command("add"))
 @add_router.message(F.text == "Добавить ресурс")
 async def cmd_add(message: types.Message, state: FSMContext, bot: Bot) -> None:
-    await cleanup_previous_message(message, state, bot)
-    await state.clear()
-    await state.set_state(ResourceState.waiting_for_link)
-    await message.delete()
-    prompt_msg = await message.answer(
-        with_action_label(
+    await transition_to_message(
+        message=message,
+        state=state,
+        bot=bot,
+        text=with_action_label(
             "add", "Пришлите ссылку на статью, видео или другой материал"
         ),
+        state_clear=True,
     )
-    await state.update_data(prompt_msg_id=prompt_msg.message_id)
+    await state.set_state(ResourceFormState.waiting_for_link)
 
 
-@add_router.message(ResourceState.waiting_for_link, F.text)
+@add_router.message(ResourceFormState.waiting_for_link, F.text)
 async def process_link(message: types.Message, state: FSMContext, bot: Bot):
     if await exit_fsm(message, state):
         return
-    data = await state.get_data()
-    prompt_msg_id = data.get("prompt_msg_id")
-    await safe_delete_many(
-        bot,
-        message.chat.id,
-        *([prompt_msg_id] if prompt_msg_id else []),
-        message.message_id,
-    )
+
     link = message.text
     if link is None:
         return
+
     if not Resource._is_valid_url(link):
-        error_msg = await message.answer(
-            with_action_label("error_add", f"Некорректная ссылка: {link}")
-        )
-        await state.update_data(error_msg_id=error_msg.message_id)
-        asyncio.create_task(
-            auto_delete(bot, message.chat.id, error_msg.message_id, delay=5)
+        await transition_to_message(
+            message=message,
+            state=state,
+            bot=bot,
+            text=with_action_label(
+                "error_add",
+                f"Некорректная ссылка: {link}\nПришлите ссылку на статью, видео или другой материал",
+            ),
         )
         return
+
     title = ResourceService.get_info_for_url(
         link,
         proxy=PROXY_URL,
@@ -79,20 +80,30 @@ async def process_link(message: types.Message, state: FSMContext, bot: Bot):
     )["title"]
     await state.update_data(title=title)
     await state.update_data(link=link)
-    await state.set_state(ResourceState.waiting_for_type)
-    await message.answer(
-        with_action_label("add", "Выберите тип:", title),
+    await state.set_state(ResourceFormState.waiting_for_type)
+
+    await transition_to_message(
+        message=message,
+        state=state,
+        bot=bot,
+        text=with_action_label("add", "Выберите тип:", title),
         reply_markup=create_kb_type(list(ResourceType), get_callback_data),
     )
 
 
-@add_router.callback_query(ResourceState.waiting_for_type, ResourceCallback.filter())
+@add_router.callback_query(
+    ResourceFormState.waiting_for_type, ResourceCallback.filter()
+)
 async def process_type(
-    callback: types.CallbackQuery, callback_data: ResourceCallback, state: FSMContext
+    callback: types.CallbackQuery,
+    callback_data: ResourceCallback,
+    state: FSMContext,
+    bot: Bot,
 ):
     message = get_editable_message(callback)
     if message is None:
         return
+
     data = await state.get_data()
     is_edit = data.get("edit_target") == "change_type"
 
@@ -104,17 +115,22 @@ async def process_type(
             resource, resource_type=ResourceType.from_code(callback_data.action)
         )
         await state.update_data(resource=resource, edit_target=None)
-        await state.set_state(ResourceState.waiting_for_save)
-        await _show_save_summary(callback, state)
+        await state.set_state(ResourceFormState.waiting_for_save)
+        await show_save_summary(callback, state)
     else:
-        await state.set_state(ResourceState.waiting_for_format)
-        await message.edit_text(
-            with_action_label("add", "Выберите формат", data["title"]),
+        await state.set_state(ResourceFormState.waiting_for_format)
+        await transition_callback(
+            callback=callback,
+            state=state,
+            bot=bot,
+            text=with_action_label("add", "Выберите формат", data["title"]),
             reply_markup=create_kb_type(list(ResourceKind), get_callback_data),
         )
 
 
-@add_router.callback_query(ResourceState.waiting_for_format, ResourceCallback.filter())
+@add_router.callback_query(
+    ResourceFormState.waiting_for_format, ResourceCallback.filter()
+)
 async def process_format(
     callback: types.CallbackQuery,
     callback_data: ResourceCallback,
@@ -130,8 +146,8 @@ async def process_format(
             resource, kind=ResourceKind.from_code(callback_data.action)
         )
         await state.update_data(resource=resource, edit_target=None)
-        await state.set_state(ResourceState.waiting_for_save)
-        await _show_save_summary(callback, state)
+        await state.set_state(ResourceFormState.waiting_for_save)
+        await show_save_summary(callback, state)
         return
     else:
         await state.update_data(resource_format=callback_data.action)
@@ -156,11 +172,11 @@ async def process_format(
                 return
             raise
         await state.update_data(resource=resource)
-        await state.set_state(ResourceState.waiting_for_save)
-        await _show_save_summary(callback, state)
+        await state.set_state(ResourceFormState.waiting_for_save)
+        await show_save_summary(callback, state)
 
 
-@add_router.message(ResourceState.waiting_for_new_tags)
+@add_router.message(ResourceFormState.waiting_for_new_tags)
 async def process_new_tags(message: types.Message, state: FSMContext, bot: Bot):
     if message.text is None:
         return
@@ -168,13 +184,6 @@ async def process_new_tags(message: types.Message, state: FSMContext, bot: Bot):
         return
     new_tags = [t.strip() for t in message.text.split(",") if t.strip()]
     data = await state.get_data()
-    prompt_msg_id = data.get("prompt_msg_id")
-    await safe_delete_many(
-        bot,
-        message.chat.id,
-        *([prompt_msg_id] if prompt_msg_id else []),
-        message.message_id,
-    )
 
     resource = data["resource"]
     old_tags = resource.tags.copy()
@@ -184,7 +193,7 @@ async def process_new_tags(message: types.Message, state: FSMContext, bot: Bot):
         old_tags=old_tags,
         edit_target=None,
     )
-    await state.set_state(ResourceState.waiting_for_save)
+    await state.set_state(ResourceFormState.waiting_for_save)
 
     msg = (
         f"{hbold('Новые тэги:')}\n\n"
@@ -193,8 +202,11 @@ async def process_new_tags(message: types.Message, state: FSMContext, bot: Bot):
         f"{hbold('Новые тэги:')} {', '.join(new_tags) if new_tags else 'удалены'}\n\n"
         "Что делаем?"
     )
-    await message.answer(
-        msg,
+    await transition_to_message(
+        message=message,
+        state=state,
+        bot=bot,
+        text=msg,
         reply_markup=create_kb_tags(
             ["Применить новые", "Изменить ещё", "Оставить старые", "Отмена"],
             pack_callback_data_list(
@@ -204,13 +216,16 @@ async def process_new_tags(message: types.Message, state: FSMContext, bot: Bot):
     )
 
 
-@add_router.callback_query(ResourceState.waiting_for_save, ResourceCallback.filter())
+@add_router.callback_query(
+    ResourceFormState.waiting_for_save, ResourceCallback.filter()
+)
 async def process_save_or_edit(
     callback: types.CallbackQuery,
     callback_data: ResourceCallback,
     state: FSMContext,
     resource_db: ResourceDB,
     logger: logging.Logger,
+    bot: Bot,
 ):
     message = get_editable_message(callback)
     if message is None:
@@ -229,7 +244,7 @@ async def process_save_or_edit(
             return
 
         await state.update_data(resource=resource, edit_target=None)
-        await _show_save_summary(callback, state)
+        await show_save_summary(callback, state)
         return
 
     if callback_data.action.startswith("set_rating_"):
@@ -238,7 +253,7 @@ async def process_save_or_edit(
         resource = data["resource"]
         resource.my_rating = rating if rating > 0 else None
         await state.update_data(resource=resource)
-        await _show_edit_menu(callback, state, message)
+        await show_edit_menu(state, message, bot)
 
     await handle_form_actions(
         callback=callback,
@@ -247,10 +262,11 @@ async def process_save_or_edit(
         resource_db=resource_db,
         message=message,
         logger=logger,
+        bot=bot,
     )
 
 
-@add_router.message(ResourceState.waiting_for_notes)
+@add_router.message(ResourceFormState.waiting_for_notes)
 async def process_notes(message: types.Message, state: FSMContext, bot: Bot):
     if message.text is None:
         return
@@ -266,13 +282,10 @@ async def process_notes(message: types.Message, state: FSMContext, bot: Bot):
     else:
         resource.my_notes = text
 
-    await message.delete()
-    await state.update_data(resource=resource, edit_target=None)
-    await state.set_state(ResourceState.waiting_for_save)
-    await _show_save_summary_direct(message, state)
+    await _finish_field_edit(message, state, bot, resource)
 
 
-@add_router.message(ResourceState.waiting_for_rating)
+@add_router.message(ResourceFormState.waiting_for_rating)
 async def process_rating(message: types.Message, state: FSMContext, bot: Bot):
     if message.text is None:
         return
@@ -284,6 +297,7 @@ async def process_rating(message: types.Message, state: FSMContext, bot: Bot):
     text = message.text.strip()
 
     if not text.isdigit() or not (1 <= int(text) <= 5):
+        await message.delete()
         error_msg = await message.answer("Введите число от 1 до 5.")
         await state.update_data(error_msg_id=error_msg.message_id)
         asyncio.create_task(
@@ -292,13 +306,10 @@ async def process_rating(message: types.Message, state: FSMContext, bot: Bot):
         return
 
     resource.my_rating = int(text)
-    await message.delete()
-    await state.update_data(resource=resource, edit_target=None)
-    await state.set_state(ResourceState.waiting_for_save)
-    await _show_save_summary_direct(message, state)
+    await _finish_field_edit(message, state, bot, resource)
 
 
-@add_router.message(ResourceState.waiting_for_date)
+@add_router.message(ResourceFormState.waiting_for_date)
 async def process_date(message: types.Message, state: FSMContext, bot: Bot):
     if message.text is None:
         return
@@ -315,52 +326,20 @@ async def process_date(message: types.Message, state: FSMContext, bot: Bot):
         try:
             resource.completed_at = datetime.fromisoformat(text)
         except ValueError:
+            await message.delete()
             error_msg = await message.answer(
                 "Неверный формат. Используйте ГГГГ-ММ-ДД или '-' для сброса."
             )
             await state.update_data(error_msg_id=error_msg.message_id)
             asyncio.create_task(
-                auto_delete(bot, message.chat.id, error_msg.message_id, delay=4)
+                auto_delete(bot, message.chat.id, error_msg.message_id, delay=3)
             )
             return
 
-    await message.delete()
+    await _finish_field_edit(message, state, bot, resource)
+
+
+async def _finish_field_edit(message, state, bot, resource):
     await state.update_data(resource=resource, edit_target=None)
-    await state.set_state(ResourceState.waiting_for_save)
-    await _show_save_summary_direct(message, state)
-
-
-async def _show_save_summary_direct(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    resource = data["resource"]
-    is_edit = data.get("edit_mode", False)
-
-    if is_edit:
-        msg = (
-            f"Проверьте изменения перед сохранением\n\n"
-            f"{hbold('Название:')} {resource.title}\n"
-            f"{hbold('Тип:')} {resource.resource_type.label}\n"
-            f"{hbold('Формат:')} {resource.kind.label}\n"
-            f"{hbold('Статус:')} {resource.status.label}\n"
-            f"{hbold('Тэги:')} {', '.join(resource.tags) if resource.tags else 'не указаны'}\n"
-            f"{hbold('Заметки:')} {resource.my_notes or 'нет'}\n"
-            f"{hbold('Рейтинг:')} {resource.my_rating or '—'}/5\n"
-            f"{hbold('Дата завершения:')} {resource.completed_at or 'не указана'}"
-        )
-    else:
-        msg = (
-            f"Проверьте данные перед сохранением\n\n"
-            f"{hbold('Ссылка:')} {resource.url}\n"
-            f"{hbold('Название:')} {resource.title}\n"
-            f"{hbold('Тип:')} {resource.resource_type.label}\n"
-            f"{hbold('Формат:')} {resource.kind.label}\n"
-            f"{hbold('Тэги:')} {', '.join(resource.tags) if resource.tags else 'не указаны'}"
-        )
-
-    await message.answer(
-        msg,
-        reply_markup=create_kb_tags(
-            ["Сохранить", "Изменить", "Отмена"],
-            pack_callback_data_list(["save", "edit", "cancel"]),
-        ),
-    )
+    await state.set_state(ResourceFormState.waiting_for_save)
+    await show_save_summary_direct(message, state, bot)
