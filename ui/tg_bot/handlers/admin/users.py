@@ -54,33 +54,13 @@ async def handle_pagination(
 
 
 @admin_router.callback_query(ModerationCallback.filter(F.action == "view"))
-async def view_user(
+async def cmd_view_user(
     callback: types.CallbackQuery,
     callback_data: ModerationCallback,
     state: FSMContext,
     user_db,
 ):
-    message = get_editable_message(callback)
-    if message is None:
-        return
-
-    user = user_db.get_user(callback_data.tg_id)
-
-    data = await state.get_data()
-    search_results = data.get("search_results")
-    is_search = search_results is not None
-
-    await message.edit_text(
-        render_view_user(user),
-        reply_markup=create_keyboard_view_user(
-            page=callback_data.page or 1,
-            tg_id=user.tg_id,
-            is_active=user.is_active,
-            search=is_search,
-        ),
-        parse_mode="HTML",
-    )
-    await callback.answer()
+    await view_user(callback, callback_data, state, user_db)
 
 
 @admin_router.callback_query(ModerationCallback.filter(F.action == "confirm_delete"))
@@ -303,3 +283,32 @@ async def show_users_page(
             reply_markup=markup,
             parse_mode="HTML",
         )
+
+
+async def view_user(
+    callback: types.CallbackQuery,
+    callback_data: ModerationCallback,
+    state: FSMContext,
+    user_db,
+):
+    message = get_editable_message(callback)
+    if message is None:
+        return
+
+    user = user_db.get_user(callback_data.tg_id)
+
+    data = await state.get_data()
+    search_results = data.get("search_results")
+    is_search = search_results is not None
+
+    await message.edit_text(
+        render_view_user(user),
+        reply_markup=create_keyboard_view_user(
+            page=callback_data.page or 1,
+            tg_id=user.tg_id,
+            is_active=user.is_active,
+            search=is_search,
+        ),
+        parse_mode="HTML",
+    )
+    await callback.answer()

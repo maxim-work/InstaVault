@@ -4,7 +4,8 @@ from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from config import ADMIN_IDS
-from ui.tg_bot.callbacks.admin import AdminCallback
+from ui.tg_bot.callbacks.admin import AdminCallback, ModerationCallback
+from ui.tg_bot.handlers.admin.users import view_user
 from ui.tg_bot.keyboards.admin import (
     create_back_to_panel_keyboard,
     create_confirm_keyboard,
@@ -24,20 +25,37 @@ admin_router.callback_query.middleware(AdminMiddleware())
 @admin_router.callback_query(AdminCallback.filter(F.option == "3"))
 async def get_sending_message(
     callback: types.CallbackQuery,
+    callback_data: AdminCallback,
     state: FSMContext,
     bot: Bot,
+    user_db,
 ):
     message = get_editable_message(callback)
     if message is None:
         return
 
+    data = await state.get_data()
+    search_results = data.get("search_results")
+    user = None
+    page = None
+
+    if callback_data.tg_id is not None:
+        user = user_db.get_user(callback_data.tg_id)
+        page = callback_data.page or 1
+        msg = f"Введите сообщение которое мы отправим {user.full_name}:"
+    else:
+        msg = "Введите сообщение которое мы отправим всем пользователям кроме админов:"
+
     await transition_callback(
         callback=callback,
         state=state,
         bot=bot,
-        text="Введите сообщение которое мы отправим всем пользователям кроме админов:",
+        text=msg,
         state_clear=True,
     )
+    if user:
+        await state.update_data(user=user, page=page, search_results=search_results)
+
     await state.set_state(NewsletterState.waiting_for_message)
     await callback.answer()
 
@@ -51,13 +69,21 @@ async def confirm_sending_message(
     if message.text is None:
         return
 
+    data = await state.get_data()
+    user = data.get("user")
+
     await state.update_data(message_text=message.text)
+
+    if user:
+        msg = f"Отправить это сообщение {user.full_name}?\n{message.text}"
+    else:
+        msg = f"Отправить это сообщение всем пользователям?\n{message.text}"
 
     await transition_to_message(
         message=message,
         state=state,
         bot=bot,
-        text=f"Отправить это сообщение всем пользователям?\n{message.text}",
+        text=msg,
         reply_markup=create_confirm_keyboard(),
     )
     await state.set_state(NewsletterState.waiting_for_confirm)
@@ -79,46 +105,82 @@ async def sending_message(
         return
 
     data = await state.get_data()
+    user = data.get("user")
+    page = data.get("page")
 
     if callback_data.option == "no":
         await callback.answer("Отправка отменена", show_alert=True)
-        await show_admin_panel(callback, state, bot)
+        if user and page:
+            call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
+            await view_user(callback, call_data, state, user_db)
+        else:
+            await show_admin_panel(callback, state, bot)
         return
 
     message_text = data.get("message_text")
+
     if message_text is None:
         await callback.answer("Сообщение не найдено", show_alert=True)
-        await show_admin_panel(callback, state, bot)
+        if user and page:
+            call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
+            await view_user(callback, call_data, state, user_db)
+        else:
+            await show_admin_panel(callback, state, bot)
         return
+
+    if user is not None and page is not None:
+        if callback.from_user.id == user.tg_id:
+            await callback.answer("Самому себе нельзя отправлять!", show_alert=True)
+            call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
+            await view_user(callback, call_data, state, user_db)
+            return
 
     await message.delete()
 
-    tg_ids = user_db.get_all_tg_ids_except(ADMIN_IDS)
-    total = len(tg_ids)
-    sent = 0
-    failed = 0
-
-    status_msg = await bot.send_message(
-        chat_id=callback.from_user.id,
-        text=f"Отправка: 0/{total}",
-    )
-
-    for tg_id in tg_ids:
+    if user is not None and page is not None:
         try:
-            await bot.send_message(chat_id=tg_id, text=message_text)
-            sent += 1
+            await bot.send_message(chat_id=user.tg_id, text=message_text)
+            msg = f"Сообщение: {message_text}, доставлено {user.full_name}!"
         except Exception:
-            failed += 1
-
-        if sent % 10 == 0 or sent + failed == total:
-            await status_msg.edit_text(
-                f"Отправка: {sent}/{total}\nУспешно: {sent}\nОшибок: {failed}"
+            msg = (
+                f"При отправке сообщения({message_text}) "
+                f"пользователю({user.full_name}) произошла ошибка."
             )
-        await asyncio.sleep(0.05)
 
-    await status_msg.edit_text(
-        f"Отправка завершена\nУспешно: {sent}\nОшибок: {failed}",
-        reply_markup=create_back_to_panel_keyboard(),
-    )
+        await bot.send_message(
+            chat_id=callback.from_user.id,
+            text=msg,
+        )
+
+    else:
+        exclude_ids = [*ADMIN_IDS, callback.from_user.id]
+        tg_ids = user_db.get_all_tg_ids_except(exclude_ids)
+        total = len(tg_ids)
+        sent = 0
+        failed = 0
+
+        status_msg = await bot.send_message(
+            chat_id=callback.from_user.id,
+            text=f"Отправка: 0/{total}",
+        )
+
+        for tg_id in tg_ids:
+            try:
+                await bot.send_message(chat_id=tg_id, text=message_text)
+                sent += 1
+            except Exception:
+                failed += 1
+
+            if sent % 10 == 0 or sent + failed == total:
+                await status_msg.edit_text(
+                    f"Отправка: {sent}/{total}\nУспешно: {sent}\nОшибок: {failed}"
+                )
+            await asyncio.sleep(0.05)
+
+        await status_msg.edit_text(
+            f"Отправка завершена\nУспешно: {sent}\nОшибок: {failed}",
+            reply_markup=create_back_to_panel_keyboard(),
+        )
+
     await state.clear()
     await callback.answer()

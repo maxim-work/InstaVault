@@ -83,6 +83,10 @@ def create_keyboard_view_user(page, is_active, tg_id, search: bool = False):
         ).pack(),
     )
     builder.button(
+        text="Написать",
+        callback_data=AdminCallback(option="3", tg_id=tg_id, page=page).pack(),
+    )
+    builder.button(
         text="Удалить",
         callback_data=ModerationCallback(
             action="confirm_delete", tg_id=tg_id, page=page
@@ -96,7 +100,8 @@ def create_keyboard_view_user(page, is_active, tg_id, search: bool = False):
         builder.button(
             text="Назад", callback_data=AdminCallback(action="page", page=page).pack()
         )
-    builder.adjust(1, 2)
+
+    builder.adjust(2, 2)
     return builder.as_markup()
 
 
