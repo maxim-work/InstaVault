@@ -37,3 +37,8 @@ EXIT_TEXTS: Final[set[str]] = {
     "/settings",
     "Ещё",
 }
+
+MESSAGES_PER_SECOND = 20
+MESSAGES_PER_MINUTE = 600
+MAX_RETRIES = 3
+RETRY_DELAY = 2
