@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
-from data.service_db import ResourceDB
+from data.db.resources import ResourceDB
 from data_io.import_data import parse_data
 from ui.tg_bot.callbacks.resource import pack_callback_data_list
 from ui.tg_bot.keyboards.resource import create_kb_tags

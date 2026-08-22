@@ -10,7 +10,7 @@ from aiogram.utils.markdown import hbold
 from config import PROXY_URL, YOUTUBE_API_KEY
 from core.models.resource import Resource, ResourceKind, ResourceStatus, ResourceType
 from core.service import ResourceService
-from data.service_db import ResourceDB
+from data.db.resources import ResourceDB
 from ui.tg_bot.callbacks.resource import (
     ResourceCallback,
     get_callback_data,

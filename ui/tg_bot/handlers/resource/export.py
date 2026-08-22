@@ -4,7 +4,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from data.service_db import ResourceDB
+from data.db.resources import ResourceDB
 from data_io.export_data import write_data_file, write_urls_file
 from ui.tg_bot.callbacks.resource import SettingsCallback
 from ui.tg_bot.utils.message import get_editable_message

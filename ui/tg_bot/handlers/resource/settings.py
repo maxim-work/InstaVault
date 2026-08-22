@@ -6,7 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.markdown import hbold
 
-from data.service_db import ResourceDB, UserDB
+from data.db.resources import ResourceDB
+from data.db.users import UserDB
 from data_io.export_data import write_data_file, write_urls_file
 from ui.tg_bot.callbacks.resource import SettingsCallback
 from ui.tg_bot.keyboards.resource import (

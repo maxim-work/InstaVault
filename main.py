@@ -7,7 +7,9 @@ if __name__ == "__main__":
 
     mode = sys.argv[1]
 
-    from data.service_db import ResourceDB, UserDB, StatsDB
+    from data.db.resources import ResourceDB
+    from data.db.users import UserDB
+    from data.db.stats import StatsDB
     from data.utils import start_db
 
     start_db()

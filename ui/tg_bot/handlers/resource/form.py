@@ -7,7 +7,7 @@ from aiogram.utils.markdown import hbold
 
 from core.models.resource import ResourceKind, ResourceStatus, ResourceType
 from data.exceptions import DuplicateResourceError
-from data.service_db import ResourceDB
+from data.db.resources import ResourceDB
 from ui.tg_bot.callbacks.resource import (
     ResourceCallback,
     get_callback_data,
