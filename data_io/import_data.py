@@ -1,6 +1,6 @@
 import json
 
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from core.models.resource import Resource
 
@@ -10,7 +10,8 @@ def parse_data(filepath: str) -> list[Resource]:
         data = json.load(f)
 
     adapter = TypeAdapter(list[Resource])
+
     try:
         return adapter.validate_python(data)
-    except Exception as e:
+    except ValidationError as e:
         raise ValueError(f"Ошибка в JSON: {e}") from e

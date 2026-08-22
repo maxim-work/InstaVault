@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -9,13 +8,13 @@ from core.exceptions import InvalidParamError
 class User(BaseModel):
     model_config = {"frozen": False}
 
-    id: Optional[int] = None
+    id: int | None = None
     tg_id: int
-    username: Optional[str] = None
+    username: str | None = None
     first_name: str
-    last_name: Optional[str] = None
+    last_name: str | None = None
     is_active: bool = True
-    last_active_at: Optional[datetime] = None
+    last_active_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.now)
 
     @field_validator("tg_id")
@@ -42,7 +41,12 @@ class User(BaseModel):
     def is_inactive(self) -> bool:
         return not self.is_active
 
-    def update(self, username=None, first_name=None, last_name=None) -> None:
+    def update(
+        self,
+        username: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+    ) -> None:
         if username is not None:
             self.username = username
         if first_name is not None:
@@ -72,4 +76,7 @@ class User(BaseModel):
         return f"{self.full_name} @{self.username or 'отсутствует'}"
 
     def __repr__(self) -> str:
-        return f"{self.full_name} is_active={self.is_active} last_active_at={self.last_active_at}"
+        return (
+            f"{self.full_name} is_active={self.is_active} "
+            f"last_active_at={self.last_active_at}"
+        )

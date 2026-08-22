@@ -6,19 +6,26 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
 from config import RESOURCES_PER_PAGE
+from core.models.resource import Resource
+from data.db.resources import ResourceDB
 from ui.tg_bot.callbacks.resource import ResourceCallback
+from ui.tg_bot.handlers.resource.form import show_save_summary
 from ui.tg_bot.keyboards.resource import create_list_keyboard
 from ui.tg_bot.states.resource import ResourceFormState
 from ui.tg_bot.utils.message import get_editable_message
 from ui.tg_bot.utils.transition import transition_to_message
-from ui.tg_bot.handlers.resource.form import show_save_summary
 
 list_router = Router()
 
 
 @list_router.message(Command("list"))
 @list_router.message(F.text == "Мои ресурсы")
-async def cmd_list(message: Message, state: FSMContext, resource_db, bot: Bot):
+async def cmd_list(
+    message: Message,
+    state: FSMContext,
+    resource_db: ResourceDB,
+    bot: Bot,
+) -> None:
     if message.from_user is None:
         return
 
@@ -53,8 +60,8 @@ async def cmd_list(message: Message, state: FSMContext, resource_db, bot: Bot):
 async def handle_pagination(
     callback: CallbackQuery,
     callback_data: ResourceCallback,
-    resource_db,
-):
+    resource_db: ResourceDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -78,8 +85,8 @@ async def handle_pagination(
 async def handle_view_resource(
     callback: CallbackQuery,
     callback_data: ResourceCallback,
-    resource_db,
-):
+    resource_db: ResourceDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -115,7 +122,8 @@ async def handle_view_resource(
     builder.adjust(2, 1)
 
     await message.edit_text(
-        _format_resource_detail(r), reply_markup=builder.as_markup()
+        _format_resource_detail(r),
+        reply_markup=builder.as_markup(),
     )
     await callback.answer()
 
@@ -125,8 +133,8 @@ async def handle_edit_resource(
     callback: CallbackQuery,
     callback_data: ResourceCallback,
     state: FSMContext,
-    resource_db,
-):
+    resource_db: ResourceDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -157,8 +165,8 @@ async def handle_edit_resource(
 async def handle_confirm_delete(
     callback: CallbackQuery,
     callback_data: ResourceCallback,
-    resource_db,
-):
+    resource_db: ResourceDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -202,8 +210,8 @@ async def handle_confirm_delete(
 async def handle_delete_resource(
     callback: CallbackQuery,
     callback_data: ResourceCallback,
-    resource_db,
-):
+    resource_db: ResourceDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -242,16 +250,23 @@ async def handle_delete_resource(
     await callback.answer()
 
 
-def _render_resource_list(resources: list, page: int, total_pages: int) -> str:
+def _render_resource_list(
+    resources: list[Resource],
+    page: int,
+    total_pages: int,
+) -> str:
     lines = [f"{hbold('Ваши ресурсы:')}"]
+
     for i, r in enumerate(resources, 1):
         lines.append(f"{i}. {r.title} — {r.resource_type.label}")
+
     if total_pages > 1:
         lines.append(f"\nСтраница {page}/{total_pages}")
+
     return "\n".join(lines)
 
 
-def _format_resource_detail(r) -> str:
+def _format_resource_detail(r: Resource) -> str:
     return (
         f"{hbold(r.title)}\n\n"
         f"{hbold('Ссылка:')} {r.url}\n"

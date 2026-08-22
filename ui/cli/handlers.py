@@ -1,7 +1,10 @@
 import re
+from collections.abc import Callable
 from datetime import datetime
+from typing import TypeVar
 
 from config import YOUTUBE_API_KEY
+from core.enum import BaseEnum
 from core.exceptions import (
     APIResponseError,
     InvalidParamError,
@@ -11,50 +14,62 @@ from core.exceptions import (
     ProxyRequestError,
     ResourceNotFoundError,
 )
-from core.models.resource import ResourceKind, ResourceStatus, ResourceType
+from core.models.resource import Resource, ResourceKind, ResourceStatus, ResourceType
 from core.service import ResourceService
-from data.exceptions import (
-    DuplicateResourceError,
-    EmptyDatabaseError,
-)
+from data.db.resources import ResourceDB
+from data.exceptions import DuplicateResourceError, EmptyDatabaseError
 from data.filter import InvalidFilterError, ResourceFilter
+
+T = TypeVar("T", bound=BaseEnum)
 
 
 def clean_tags(tags: list[str]) -> list[str]:
-    cleaned = []
+    cleaned: list[str] = []
+
     for tag in tags:
-        tag = re.sub(r"[^\w\s\-]", "", tag)
-        tag = tag.strip()
+        tag = re.sub(r"[^\w\s\-]", "", tag).strip()
         if tag:
             cleaned.append(tag)
+
     return cleaned
 
 
-def _choose_enum(clear, pause, title: str, enum_cls, default=None):
+def _choose_enum(
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+    title: str,
+    enum_cls: type[T],
+    default: T | None = None,
+) -> T | None:
     while True:
         clear()
         print(f"=== {title} ===\n")
         items = list(enum_cls)
+
         for i, item in enumerate(items, 1):
             print(f"  {i}. {item.label}")
 
-        if default is not None:
-            prompt = f"Номер (Enter={default.label}): "
-        else:
-            prompt = "Номер: "
-
+        prompt = f"Номер (Enter={default.label}): " if default else "Номер: "
         choice = input(prompt).strip()
+
         if not choice:
             return default
+
         if choice.isdigit():
             idx = int(choice)
             if 1 <= idx <= len(items):
                 return items[idx - 1]
+
         print(f"ERROR: Введите число от 1 до {len(items)}", flush=True)
         pause()
 
 
-def _choose_tags(clear, title, pause, existing_tags: list[str] | None) -> list[str]:
+def _choose_tags(
+    clear: Callable[[], None],
+    title: str,
+    pause: Callable[[], None],
+    existing_tags: list[str] | None,
+) -> list[str]:
     clear()
     print("=== Тэги ===\n")
     print(f"Title: {title}\n")
@@ -71,7 +86,8 @@ def _choose_tags(clear, title, pause, existing_tags: list[str] | None) -> list[s
                 if tags_input
                 else []
             )
-        elif choice == "":
+
+        if choice == "":
             tags_input = input("Дополнить: ").strip()
             extra = (
                 [t.strip() for t in tags_input.split(",") if t.strip()]
@@ -79,18 +95,18 @@ def _choose_tags(clear, title, pause, existing_tags: list[str] | None) -> list[s
                 else []
             )
             return existing_tags + extra
-        else:
-            return existing_tags
-    else:
-        tags_input = input("Тэги через запятую: ").strip()
-        return (
-            [t.strip() for t in tags_input.split(",") if t.strip()]
-            if tags_input
-            else []
-        )
+
+        return existing_tags
+
+    tags_input = input("Тэги через запятую: ").strip()
+    return [t.strip() for t in tags_input.split(",") if t.strip()] if tags_input else []
 
 
-def add_video_cli(db, clear, pause):
+def add_video_cli(
+    db: ResourceDB,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
     clear()
     print("=== Добавление ресурса ===\n")
 
@@ -103,7 +119,7 @@ def add_video_cli(db, clear, pause):
     resource_type = _choose_enum(
         clear, pause, "Тип ресурса", ResourceType, ResourceType.OTHER
     )
-    kind = _choose_enum(clear, pause, "Формат ресурса", ResourceKind, None)
+    kind = _choose_enum(clear, pause, "Формат ресурса", ResourceKind)
 
     clear()
     print("=== Добавление ресурса ===\n")
@@ -116,44 +132,22 @@ def add_video_cli(db, clear, pause):
         resource = ResourceService.create_resource(
             tg_id=1,
             url=url,
-            resource_type=resource_type,
+            resource_type=resource_type or ResourceType.OTHER,
             kind=kind,
             proxy=proxy,
             youtube_api_key=YOUTUBE_API_KEY,
         )
-    except InvalidUrlParamError as e:
+    except (
+        InvalidUrlParamError,
+        InvalidParamError,
+        InvalidRatingError,
+        ResourceNotFoundError,
+        ProxyRequestError,
+        APIResponseError,
+        NetworkError,
+    ) as e:
         clear()
         print(f"ERROR: {e}")
-        pause()
-        return
-    except InvalidParamError as e:
-        clear()
-        print(f"ERROR: Некорректный параметр «{e.param}»: {e}")
-        pause()
-        return
-    except InvalidRatingError as e:
-        clear()
-        print(f"ERROR: {e}")
-        pause()
-        return
-    except ResourceNotFoundError as e:
-        clear()
-        print(f"ERROR: Ресурс не найден: {e}")
-        pause()
-        return
-    except ProxyRequestError as e:
-        clear()
-        print(f"ERROR: Проблема с прокси ({e.proxy}): {e.original_error}")
-        pause()
-        return
-    except APIResponseError as e:
-        clear()
-        print(f"ERROR: Ошибка API (код {e.code})")
-        pause()
-        return
-    except NetworkError as e:
-        clear()
-        print(f"ERROR: Сетевая ошибка: {e}")
         pause()
         return
 
@@ -182,46 +176,13 @@ def add_video_cli(db, clear, pause):
     pause()
 
 
-def search_cli(db, clear, pause):
-    while True:
-        clear()
-        print("=== Поиск ===\n")
-        print("Тип ресурса:")
-        types_list = list(ResourceType)
-        print("  0. Любой")
-        for i, rt in enumerate(types_list, 1):
-            print(f"  {i}. {rt.label}")
-        choice = input("Номер типа (Enter=0): ").strip()
-        if not choice or choice == "0":
-            resource_type = None
-            break
-        if choice.isdigit():
-            idx = int(choice)
-            if 1 <= idx <= len(types_list):
-                resource_type = types_list[idx - 1]
-                break
-        print(f"ERROR: Введите число от 0 до {len(types_list)}", flush=True)
-        pause()
-
-    while True:
-        clear()
-        print("=== Поиск ===\n")
-        print("Статус:")
-        status_list = list(ResourceStatus)
-        print("  0. Любой")
-        for i, st in enumerate(status_list, 1):
-            print(f"  {i}. {st.label}")
-        choice = input("Номер статуса (Enter=0): ").strip()
-        if not choice or choice == "0":
-            status = None
-            break
-        if choice.isdigit():
-            idx = int(choice)
-            if 1 <= idx <= len(status_list):
-                status = status_list[idx - 1]
-                break
-        print(f"ERROR: Введите число от 1 до {len(status_list)}", flush=True)
-        pause()
+def search_cli(
+    db: ResourceDB,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
+    resource_type = _pick_enum(clear, pause, "Тип ресурса", ResourceType)
+    status = _pick_enum(clear, pause, "Статус", ResourceStatus)
 
     clear()
     print("=== Поиск ===\n")
@@ -237,6 +198,7 @@ def search_cli(db, clear, pause):
     uncompleted_only = True
     recently_completed = False
     long_ago_completed = False
+
     while True:
         clear()
         print("=== Поиск ===\n")
@@ -246,19 +208,21 @@ def search_cli(db, clear, pause):
         print("  2. Недавно просмотренные")
         print("  3. Давно просмотренные")
         choice = input("Выбор (Enter=1): ").strip()
+
         if not choice or choice == "1":
             break
-        elif choice == "0":
+        if choice == "0":
             uncompleted_only = False
             break
-        elif choice == "2":
+        if choice == "2":
             uncompleted_only = False
             recently_completed = True
             break
-        elif choice == "3":
+        if choice == "3":
             uncompleted_only = False
             long_ago_completed = True
             break
+
         print("ERROR: Введите 0-3", flush=True)
         pause()
 
@@ -292,7 +256,7 @@ def search_cli(db, clear, pause):
         return
 
     try:
-        results = db.search(f)
+        results = db.search(0, f)
     except EmptyDatabaseError:
         clear()
         print("База пуста")
@@ -300,54 +264,84 @@ def search_cli(db, clear, pause):
         return
 
     clear()
-    if results:
-        page = 0
-        per_page = 1
-        total_pages = (len(results) + per_page - 1) // per_page
 
-        while True:
-            clear()
-            start = page * per_page
-            end = min(start + per_page, len(results))
-
-            print(
-                f"=== Результаты ({len(results)}) стр. {page + 1}/{total_pages} ===\n"
-            )
-
-            for i in range(start, end):
-                resource, score = results[i]
-                print(f"{i + 1:2d}. {resource.title}")
-                print(f"    url: {resource.url}")
-                print(f"    id: {resource.id}")
-                print(
-                    f"    {resource.resource_type.label} | {resource.duration_display} | Рейтинг: {resource.rating:.1f}"
-                )
-                if resource.tags:
-                    print(f"    Тэги: {', '.join(resource.tags)}")
-                print()
-
-            print("─" * 40)
-            nav = []
-            if page > 0:
-                nav.append("p — назад")
-            if page < total_pages - 1:
-                nav.append("n — вперёд")
-            nav.append("q — выход")
-            print(" | ".join(nav))
-
-            cmd = input(": ").strip().lower()
-            if cmd == "n" and page < total_pages - 1:
-                page += 1
-            elif cmd == "p" and page > 0:
-                page -= 1
-            elif cmd == "q":
-                break
-    else:
+    if not results:
         print("Ничего не найдено")
+        pause()
+        return
+
+    page = 0
+    total_pages = len(results)
+
+    while True:
+        clear()
+        resource, score = results[page]
+
+        print(f"=== Результаты ({len(results)}) стр. {page + 1}/{total_pages} ===\n")
+        print(f"{page + 1:2d}. {resource.title}")
+        print(f"    url: {resource.url}")
+        print(f"    id: {resource.id}")
+        print(
+            f"    {resource.resource_type.label} | {resource.duration_display} | Рейтинг: {resource.score:.1f}"
+        )
+
+        if resource.tags:
+            print(f"    Тэги: {', '.join(resource.tags)}")
+
+        print()
+
+        nav = []
+        if page > 0:
+            nav.append("p — назад")
+        if page < total_pages - 1:
+            nav.append("n — вперёд")
+        nav.append("q — выход")
+        print(" | ".join(nav))
+
+        cmd = input(": ").strip().lower()
+
+        if cmd == "n" and page < total_pages - 1:
+            page += 1
+        elif cmd == "p" and page > 0:
+            page -= 1
+        elif cmd == "q":
+            break
+
+
+def _pick_enum(
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+    title: str,
+    enum_cls: type[T],
+) -> T | None:
+    while True:
+        clear()
+        print(f"=== {title} ===\n")
+        items = list(enum_cls)
+        print("  0. Любой")
+
+        for i, item in enumerate(items, 1):
+            print(f"  {i}. {item.label}")
+
+        choice = input("Номер (Enter=0): ").strip()
+
+        if not choice or choice == "0":
+            return None
+
+        if choice.isdigit():
+            idx = int(choice)
+            if 1 <= idx <= len(items):
+                return items[idx - 1]
+
+        print(f"ERROR: Введите число от 0 до {len(items)}", flush=True)
         pause()
 
 
-def show_all_videos(db, clear, pause):
+def show_all_videos(
+    db: ResourceDB,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
     clear()
 
     f = ResourceFilter(
@@ -368,7 +362,7 @@ def show_all_videos(db, clear, pause):
     )
 
     try:
-        results = db.search(f)
+        results = db.search(0, f)
     except EmptyDatabaseError:
         clear()
         print("=== Все ресурсы ===\n")
@@ -387,7 +381,7 @@ def show_all_videos(db, clear, pause):
 
     while True:
         clear()
-        resource, score = results[idx]
+        resource, _ = results[idx]
 
         print(f"{'─' * 50}")
         print(f"#{idx + 1} из {total} (ID: {resource.id})")
@@ -402,19 +396,16 @@ def show_all_videos(db, clear, pause):
         print(f"External ID: {resource.external_id}")
         print(f"Тэги: {', '.join(resource.tags) if resource.tags else 'нет'}")
         print(f"Заметки: {resource.my_notes or 'нет'}")
-        print(
-            f"Мой рейтинг: {resource.my_rating}/5"
-            if resource.my_rating
-            else "Мой рейтинг: —"
-        )
+        print(f"Мой рейтинг: {resource.my_rating or '—'}/5")
         print(f"Вовлеченность: {resource.engagement}, Просмотров: {resource.views}")
-        print(f"Рейтинг: {resource.rating:.1f}")
+        print(f"Рейтинг: {resource.score:.1f}")
         print(f"Длительность: {resource.duration_display}")
         print(f"Опубликовано: {resource.published_at or 'неизвестно'}")
         print(f"Завершено: {resource.completed_at or 'нет'}")
         print(f"Добавлено: {resource.created_at}")
 
         print(f"\n{'─' * 50}")
+
         nav_parts = []
         if idx > 0:
             nav_parts.append("p — назад")
@@ -424,6 +415,7 @@ def show_all_videos(db, clear, pause):
         print(" | ".join(nav_parts))
 
         cmd = input(": ").strip().lower()
+
         if cmd == "n" and idx < total - 1:
             idx += 1
         elif cmd == "p" and idx > 0:
@@ -434,24 +426,28 @@ def show_all_videos(db, clear, pause):
     clear()
 
 
-def edit_video_cli(db, clear, pause):
+def edit_video_cli(
+    db: ResourceDB,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
     clear()
     print("=== Редактирование ===\n")
 
     id_input = input("ID ресурса (Enter — найти поиском): ").strip()
 
-    if id_input and id_input.isdigit():
-        try:
-            resource = db.get(int(id_input))
-        except ResourceNotFoundError as e:
+    if id_input.isdigit():
+        resource = db.get_resource(int(id_input), 1)
+        if resource is None:
             clear()
-            print(f"ERROR: {e}")
+            print("ERROR: Ресурс не найден")
             pause()
             return
     else:
         clear()
         print("=== Редактирование ===\n")
         keywords = input("Ключевые слова для поиска: ").strip()
+
         if not keywords:
             clear()
             print("=== Редактирование ===\n")
@@ -460,8 +456,9 @@ def edit_video_cli(db, clear, pause):
             return
 
         f = ResourceFilter(tg_id=1, keywords=keywords, limit=10)
+
         try:
-            results = db.search(f)
+            results = db.search(0, f)
         except EmptyDatabaseError:
             clear()
             print("База пуста")
@@ -478,12 +475,16 @@ def edit_video_cli(db, clear, pause):
         while True:
             clear()
             print(f"=== Найдено ({len(results)}) ===\n")
-            for i, (r, score) in enumerate(results, 1):
-                print(f"{i}. [{score}] {r.title}")
+
+            for i, (r, _) in enumerate(results, 1):
+                print(f"{i}. {r.title}")
+
             choice = input("\nНомер: ").strip()
+
             if choice.isdigit() and 1 <= int(choice) <= len(results):
                 resource = results[int(choice) - 1][0]
                 break
+
             print(f"ERROR: Введите число от 1 до {len(results)}", flush=True)
             pause()
 
@@ -491,24 +492,30 @@ def edit_video_cli(db, clear, pause):
         clear()
         print(f"=== Редактирование: {resource.title} ===\n")
         print(f"1. Тип: {resource.resource_type.label}")
-        print(f"2. Формат:  {resource.kind.label if resource.kind else '—'}")
+        print(f"2. Формат: {resource.kind.label}")
         print(f"3. Статус: {resource.status.label}")
         print(f"4. Тэги: {', '.join(resource.tags) if resource.tags else 'нет'}")
         print(f"5. Заметки: {resource.my_notes or 'нет'}")
         print(f"6. Мой рейтинг: {resource.my_rating or '—'}/5")
         print(f"7. Дата завершения: {resource.completed_at or 'нет'}")
         print("0. Сохранить и выйти")
+
         choice = input("\nЧто меняем: ").strip()
 
         if choice == "1":
-            resource.update_type(_choose_enum(clear, pause, "Тип", ResourceType))
+            new_type = _choose_enum(clear, pause, "Тип", ResourceType)
+            if new_type is not None:
+                resource.resource_type = new_type
 
         elif choice == "2":
-            resource.kind = _choose_enum(clear, pause, "Формат", ResourceKind)
+            new_kind = _choose_enum(clear, pause, "Формат", ResourceKind)
+            if new_kind is not None:
+                resource.kind = new_kind
 
         elif choice == "3":
             new_status = _choose_enum(clear, pause, "Статус", ResourceStatus)
-            resource.update_status(new_status)
+            if new_status is not None:
+                resource.update_status(new_status)
 
         elif choice == "4":
             resource.tags = clean_tags(
@@ -516,59 +523,13 @@ def edit_video_cli(db, clear, pause):
             )
 
         elif choice == "5":
-            clear()
-            print("=== Заметка ===\n")
-            if resource.my_notes:
-                print(f"Текущая:\n{resource.my_notes}\n")
-                print("1. Исправить")
-                print("2. Новая")
-                print("3. Удалить")
-                print("0. Оставить")
-                action = input("\n: ").strip()
-                if action == "1":
-                    clear()
-                    print("=== Заметка ===\n")
-                    print(f"Текущая:\n{resource.my_notes}\n")
-                    new_notes = input("Исправленная: ").strip()
-                    if new_notes:
-                        resource.update_my_notes(new_notes)
-                elif action == "2":
-                    clear()
-                    resource.update_my_notes(input("Новая заметка: ").strip())
-                elif action == "3":
-                    resource.update_my_notes("")
-            else:
-                resource.update_my_notes(input("Новая заметка: ").strip())
-            pause()
+            _edit_notes(resource, clear, pause)
 
         elif choice == "6":
-            while True:
-                clear()
-                print("=== Мой рейтинг ===\n")
-                r = input("Рейтинг (1-5): ").strip()
-                if r.isdigit() and 1 <= int(r) <= 5:
-                    try:
-                        resource.update_my_rating(int(r))
-                    except InvalidRatingError as e:
-                        print(f"ERROR: {e}")
-                        pause()
-                        continue
-                    break
-                print("ERROR: Введите 1-5")
-                pause()
+            _edit_rating(resource, clear, pause)
 
         elif choice == "7":
-            clear()
-            print("=== Дата завершения ===\n")
-            d = input("Дата (YYYY-MM-DD HH:MM, Enter — сейчас): ").strip()
-            if d:
-                try:
-                    resource.completed_at = datetime.fromisoformat(d)
-                except ValueError:
-                    print("ERROR: Неверный формат", flush=True)
-                    pause()
-            else:
-                resource.completed_at = datetime.now()
+            _edit_date(resource, clear, pause)
 
         elif choice == "0":
             db.update(resource)
@@ -581,3 +542,80 @@ def edit_video_cli(db, clear, pause):
         else:
             print("ERROR: Неверный выбор")
             pause()
+
+
+def _edit_notes(
+    resource: Resource,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
+    clear()
+    print("=== Заметка ===\n")
+
+    if resource.my_notes:
+        print(f"Текущая:\n{resource.my_notes}\n")
+        print("1. Исправить")
+        print("2. Новая")
+        print("3. Удалить")
+        print("0. Оставить")
+        action = input("\n: ").strip()
+
+        if action == "1":
+            clear()
+            print("=== Заметка ===\n")
+            print(f"Текущая:\n{resource.my_notes}\n")
+            new_notes = input("Исправленная: ").strip()
+            if new_notes:
+                resource.my_notes = new_notes
+        elif action == "2":
+            clear()
+            resource.my_notes = input("Новая заметка: ").strip()
+        elif action == "3":
+            resource.my_notes = None
+    else:
+        resource.my_notes = input("Новая заметка: ").strip()
+
+    pause()
+
+
+def _edit_rating(
+    resource: Resource,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
+    while True:
+        clear()
+        print("=== Мой рейтинг ===\n")
+        r = input("Рейтинг (1-5): ").strip()
+
+        if r.isdigit() and 1 <= int(r) <= 5:
+            try:
+                resource.update_my_rating(int(r))
+                break
+            except InvalidRatingError as e:
+                print(f"ERROR: {e}")
+                pause()
+                continue
+
+        print("ERROR: Введите 1-5")
+        pause()
+
+
+def _edit_date(
+    resource: Resource,
+    clear: Callable[[], None],
+    pause: Callable[[], None],
+) -> None:
+    clear()
+    print("=== Дата завершения ===\n")
+
+    d = input("Дата (YYYY-MM-DD HH:MM, Enter — сейчас): ").strip()
+
+    if d:
+        try:
+            resource.completed_at = datetime.fromisoformat(d)
+        except ValueError:
+            print("ERROR: Неверный формат", flush=True)
+            pause()
+    else:
+        resource.completed_at = datetime.now()

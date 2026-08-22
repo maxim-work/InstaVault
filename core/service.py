@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any
 
 from core.exceptions import (
     InvalidParamError,
@@ -14,14 +14,8 @@ from core.models.resource import (
     ResourceType,
 )
 from core.models.user import User
-from core.parse_info import (
-    fetch_page_info,
-    fetch_youtube_video_info,
-)
-from core.utils import (
-    detect_platform,
-    extract_external_id,
-)
+from core.parse_info import fetch_page_info, fetch_youtube_video_info
+from core.utils import detect_platform, extract_external_id
 
 
 class ResourceService:
@@ -30,10 +24,10 @@ class ResourceService:
         url: str,
         tg_id: int,
         resource_type: ResourceType = ResourceType.OTHER,
-        kind: Optional[ResourceKind] = None,
-        user_tags: Optional[list[str]] = None,
-        youtube_api_key: Optional[str] = None,
-        proxy: Optional[str] = None,
+        kind: ResourceKind | None = None,
+        user_tags: list[str] | None = None,
+        youtube_api_key: str | None = None,
+        proxy: str | None = None,
         proxy_type: str = "socks5",
     ) -> Resource:
         info = ResourceService.get_info_for_url(url, youtube_api_key, proxy, proxy_type)
@@ -56,12 +50,12 @@ class ResourceService:
     @staticmethod
     def edit_resource(
         resource: Resource,
-        resource_type: Optional[ResourceType] = None,
-        kind: Optional[ResourceKind] = None,
-        status: Optional[ResourceStatus] = None,
-        my_notes: Optional[str] = None,
-        my_rating: Optional[int] = None,
-        completed_at: Optional[datetime] = None,
+        resource_type: ResourceType | None = None,
+        kind: ResourceKind | None = None,
+        status: ResourceStatus | None = None,
+        my_notes: str | None = None,
+        my_rating: int | None = None,
+        completed_at: datetime | None = None,
     ) -> Resource:
         if resource_type is not None:
             resource.resource_type = resource_type
@@ -80,10 +74,10 @@ class ResourceService:
     @staticmethod
     def get_info_for_url(
         url: str,
-        youtube_api_key: Optional[str] = None,
-        proxy: Optional[str] = None,
+        youtube_api_key: str | None = None,
+        proxy: str | None = None,
         proxy_type: str = "socks5",
-    ):
+    ) -> dict[str, Any]:
         info = None
         external_id = None
 
@@ -99,7 +93,9 @@ class ResourceService:
 
             if not external_id:
                 raise InvalidUrlParamError(
-                    "external_id", url, f"Не смогли выделить external id из url({url})"
+                    "external_id",
+                    url,
+                    f"Не смогли выделить external id из url({url})",
                 )
 
         if platform == "youtube" and external_id is not None:
@@ -150,8 +146,8 @@ class UserService:
     def create_user(
         tg_id: int,
         first_name: str,
-        username: Optional[str] = None,
-        last_name: Optional[str] = None,
+        username: str | None = None,
+        last_name: str | None = None,
     ) -> User:
         if tg_id < 2000000:
             raise InvalidParamError(
@@ -170,5 +166,10 @@ class UserService:
         )
 
     @staticmethod
-    def update_user(user: User, username=None, first_name=None, last_name=None):
+    def update_user(
+        user: User,
+        username: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+    ) -> None:
         user.update(username, first_name, last_name)

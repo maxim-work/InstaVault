@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 from math import log10
-from typing import Optional
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, ValidationInfo, field_serializer, field_validator
@@ -35,24 +34,24 @@ _PLATFORM_RATING_PARAMS = {
 class Resource(BaseModel):
     model_config = {"frozen": False}
 
-    id: Optional[int] = None
-    tg_id: Optional[int] = None
+    id: int | None = None
+    tg_id: int | None = None
     title: str
     url: str
-    description: Optional[str] = None
+    description: str | None = None
     resource_type: ResourceType = ResourceType.OTHER
     platform: ResourcePlatform = ResourcePlatform.OTHER
     kind: ResourceKind = ResourceKind.OTHER
-    external_id: Optional[str] = None
+    external_id: str | None = None
     status: ResourceStatus = ResourceStatus.TO_TEACH
     tags: list[str] = Field(default_factory=list)
-    my_notes: Optional[str] = None
-    my_rating: Optional[int] = None
-    engagement: Optional[int] = None
-    views: Optional[int] = None
-    duration: Optional[int] = None
-    published_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    my_notes: str | None = None
+    my_rating: int | None = None
+    engagement: int | None = None
+    views: int | None = None
+    duration: int | None = None
+    published_at: datetime | None = None
+    completed_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.now)
 
     @field_validator("title")
@@ -147,14 +146,14 @@ class Resource(BaseModel):
 
     @field_validator("my_rating")
     @classmethod
-    def validate_my_rating(cls, v: Optional[int]) -> Optional[int]:
+    def validate_my_rating(cls, v: int | None) -> int | None:
         if v is not None and not 1 <= v <= RATING_CONFIG.max_personal_rating:
             raise InvalidRatingError(v, RATING_CONFIG.max_personal_rating)
         return v
 
     @field_validator("duration", "views", "engagement")
     @classmethod
-    def validate_positive(cls, v: Optional[int], info: ValidationInfo) -> Optional[int]:
+    def validate_positive(cls, v: int | None, info: ValidationInfo) -> int | None:
         if v is not None and v < 0:
             field_name = info.field_name or "поле"
             raise InvalidParamError(
@@ -163,7 +162,7 @@ class Resource(BaseModel):
         return v
 
     @field_serializer("resource_type", "platform", "kind", "status")
-    def serialize_enum(self, value):
+    def serialize_enum(self, value) -> str:
         return value.code
 
     @field_serializer("tags")
@@ -174,20 +173,20 @@ class Resource(BaseModel):
     def from_url(cls, url: str, title: str = "") -> "Resource":
         return cls(url=url, title=title)
 
-    def update_my_rating(self, rating: int):
+    def update_my_rating(self, rating: int) -> None:
         if not 1 <= rating <= RATING_CONFIG.max_personal_rating:
             raise InvalidRatingError(rating, RATING_CONFIG.max_personal_rating)
         self.my_rating = rating
 
     def update_stats(
-        self, views: Optional[int] = None, engagement: Optional[int] = None
-    ):
+        self, views: int | None = None, engagement: int | None = None
+    ) -> None:
         if views is not None:
             self.views = views
         if engagement is not None:
             self.engagement = engagement
 
-    def update_status(self, status: ResourceStatus):
+    def update_status(self, status: ResourceStatus) -> None:
         if status == ResourceStatus.TO_TEACH:
             self.reset()
         elif status == ResourceStatus.TEACHED:
@@ -195,21 +194,21 @@ class Resource(BaseModel):
         else:
             self.status = status
 
-    def complete(self, rating: Optional[int] = None):
+    def complete(self, rating: int | None = None) -> None:
         self.status = ResourceStatus.TEACHED
         self.completed_at = datetime.now()
         if rating is not None:
             self.update_my_rating(rating)
 
-    def master(self):
+    def master(self) -> None:
         self.status = ResourceStatus.MASTERED
         if not self.completed_at:
             self.completed_at = datetime.now()
 
-    def archive(self):
+    def archive(self) -> None:
         self.status = ResourceStatus.ARCHIVED
 
-    def reset(self, reset_rating: bool = True):
+    def reset(self, reset_rating: bool = True) -> None:
         self.status = ResourceStatus.TO_TEACH
         self.completed_at = None
         if reset_rating:

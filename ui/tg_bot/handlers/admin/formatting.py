@@ -1,7 +1,13 @@
 from datetime import datetime
 
+from core.models.user import User
 
-def render_page_users(users, page, total_pages) -> str:
+
+def render_page_users(
+    users: list[User],
+    page: int,
+    total_pages: int,
+) -> str:
     text = []
 
     text.append("👥 <b>СПИСОК ПОЛЬЗОВАТЕЛЕЙ</b>")
@@ -24,7 +30,7 @@ def render_page_users(users, page, total_pages) -> str:
     return "\n".join(text)
 
 
-def render_view_user(user) -> str:
+def render_view_user(user: User) -> str:
     status = "🟢 Активен" if user.is_active else "🔴 Забанен"
     username = f"@{user.username}" if user.username else "<i>отсутствует</i>"
     last_name = user.last_name or "<i>не указана</i>"
@@ -44,9 +50,10 @@ def render_view_user(user) -> str:
     return "\n".join(text)
 
 
-def _format_datetime(dt):
+def _format_datetime(dt: datetime | str | None) -> str:
     if dt is None:
         return "<i>неизвестно</i>"
+
     try:
         if isinstance(dt, str):
             dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")

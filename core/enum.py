@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from core.exceptions import UnknownClassCodeError
 
@@ -16,7 +16,7 @@ class BaseEnum(Enum):
         return self._value_[1]
 
     @classmethod
-    def from_code(cls: Type[T], code: str) -> T:
+    def from_code(cls: type[T], code: str) -> T:
         if code == "others":
             code = "other"
         for item in cls:

@@ -1,6 +1,7 @@
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
 from aiogram import Bot
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.types.reply_keyboard_markup import ReplyKeyboardMarkup
 
 from ui.tg_bot.utils.message import get_editable_message, safe_delete_many
 
@@ -10,7 +11,7 @@ async def transition_to_message(
     state: FSMContext,
     bot: Bot,
     text: str,
-    reply_markup=None,
+    reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup | None = None,
     parse_mode: str | None = None,
     disable_web_page_preview: bool = False,
     state_clear: bool = False,
@@ -21,7 +22,7 @@ async def transition_to_message(
     await safe_delete_many(
         bot,
         message.chat.id,
-        *([prompt_msg_id] if prompt_msg_id else []),
+        *([prompt_msg_id] if prompt_msg_id is not None else []),
         message.message_id,
     )
 
@@ -43,7 +44,7 @@ async def transition_callback(
     state: FSMContext,
     bot: Bot,
     text: str,
-    reply_markup=None,
+    reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup | None = None,
     parse_mode: str | None = None,
     disable_web_page_preview: bool = False,
     state_clear: bool = False,
@@ -58,9 +59,10 @@ async def transition_callback(
     await safe_delete_many(
         bot,
         message.chat.id,
-        *([prompt_msg_id] if prompt_msg_id else []),
+        *([prompt_msg_id] if prompt_msg_id is not None else []),
         message.message_id,
     )
+
     if state_clear:
         await state.clear()
 

@@ -1,10 +1,14 @@
 import asyncio
 
-from aiogram import Bot, F, Router, types
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
 from config import ADMIN_IDS
+from core.models.user import User
+from data.db.users import UserDB
 from ui.tg_bot.callbacks.admin import AdminCallback, ModerationCallback
+from ui.tg_bot.handlers.admin.panel import show_admin_panel
 from ui.tg_bot.handlers.admin.users import view_user
 from ui.tg_bot.keyboards.admin import (
     create_back_to_panel_keyboard,
@@ -15,8 +19,6 @@ from ui.tg_bot.states.admin import NewsletterState
 from ui.tg_bot.utils.message import get_editable_message
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
 
-from ui.tg_bot.handlers.admin.panel import show_admin_panel
-
 admin_router = Router()
 admin_router.message.middleware(AdminMiddleware())
 admin_router.callback_query.middleware(AdminMiddleware())
@@ -24,23 +26,26 @@ admin_router.callback_query.middleware(AdminMiddleware())
 
 @admin_router.callback_query(AdminCallback.filter(F.option == "3"))
 async def get_sending_message(
-    callback: types.CallbackQuery,
+    callback: CallbackQuery,
     callback_data: AdminCallback,
     state: FSMContext,
     bot: Bot,
-    user_db,
-):
+    user_db: UserDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
 
     data = await state.get_data()
     search_results = data.get("search_results")
-    user = None
-    page = None
+    user: User | None = None
+    page: int | None = None
 
     if callback_data.tg_id is not None:
         user = user_db.get_user(callback_data.tg_id)
+        if user is None:
+            await callback.answer("Пользователь не найден", show_alert=True)
+            return
         page = callback_data.page or 1
         msg = f"Введите сообщение которое мы отправим {user.full_name}:"
     else:
@@ -53,7 +58,8 @@ async def get_sending_message(
         text=msg,
         state_clear=True,
     )
-    if user:
+
+    if user is not None:
         await state.update_data(user=user, page=page, search_results=search_results)
 
     await state.set_state(NewsletterState.waiting_for_message)
@@ -62,10 +68,10 @@ async def get_sending_message(
 
 @admin_router.message(NewsletterState.waiting_for_message)
 async def confirm_sending_message(
-    message: types.Message,
+    message: Message,
     state: FSMContext,
     bot: Bot,
-):
+) -> None:
     if message.text is None:
         return
 
@@ -94,12 +100,12 @@ async def confirm_sending_message(
     AdminCallback.filter(),
 )
 async def sending_message(
-    callback: types.CallbackQuery,
+    callback: CallbackQuery,
     callback_data: AdminCallback,
     state: FSMContext,
     bot: Bot,
-    user_db,
-):
+    user_db: UserDB,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -110,7 +116,7 @@ async def sending_message(
 
     if callback_data.option == "no":
         await callback.answer("Отправка отменена", show_alert=True)
-        if user and page:
+        if user is not None and page is not None:
             call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
             await view_user(callback, call_data, state, user_db)
         else:
@@ -121,7 +127,7 @@ async def sending_message(
 
     if message_text is None:
         await callback.answer("Сообщение не найдено", show_alert=True)
-        if user and page:
+        if user is not None and page is not None:
             call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
             await view_user(callback, call_data, state, user_db)
         else:
@@ -151,7 +157,6 @@ async def sending_message(
             chat_id=callback.from_user.id,
             text=msg,
         )
-
     else:
         exclude_ids = [*ADMIN_IDS, callback.from_user.id]
         tg_ids = user_db.get_all_tg_ids_except(exclude_ids)

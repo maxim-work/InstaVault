@@ -23,23 +23,13 @@ from ui.tg_bot.utils.transition import transition_callback, transition_to_messag
 settings_router = Router()
 
 
-async def _build_settings_menu(message, state, bot):
-    if message.from_user is None:
-        return
-
-    await transition_to_message(
-        message=message,
-        state=state,
-        bot=bot,
-        text=hbold("Дополнительные действия"),
-        reply_markup=create_settings_menu(),
-        state_clear=True,
-    )
-
-
 @settings_router.message(Command("settings"))
 @settings_router.message(F.text == "Ещё")
-async def cmd_settings(message, state, bot):
+async def cmd_settings(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     await _build_settings_menu(message, state, bot)
 
 
@@ -51,7 +41,7 @@ async def settings_callback(
     resource_db: ResourceDB,
     user_db: UserDB,
     bot: Bot,
-):
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -177,13 +167,31 @@ async def settings_callback(
         )
 
 
+async def _build_settings_menu(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
+    if message.from_user is None:
+        return
+
+    await transition_to_message(
+        message=message,
+        state=state,
+        bot=bot,
+        text=hbold("Дополнительные действия"),
+        reply_markup=create_settings_menu(),
+        state_clear=True,
+    )
+
+
 async def _export(
     callback: CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
     bot: Bot,
     mode: str,
-):
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -207,11 +215,11 @@ async def _export(
 
     await state.clear()
 
-    await message.answer_document(
+    prompt_msg = await message.answer_document(
         document=types.FSInputFile(filepath, filename=filename),
         caption=caption,
     )
 
-    await state.update_data(prompt_msg_id=message.message_id)
+    await state.update_data(prompt_msg_id=prompt_msg.message_id)
     os.remove(filepath)
     await callback.answer()

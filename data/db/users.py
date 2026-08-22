@@ -1,6 +1,5 @@
 import sqlite3
 from datetime import datetime
-from typing import Optional
 
 from core.models.user import User
 from data.db.base import BaseDB
@@ -55,7 +54,8 @@ class UserDB(BaseDB):
     def is_active(self, tg_id: int) -> bool:
         with self.conn:
             row = self.conn.execute(
-                "SELECT is_active FROM users WHERE tg_id = ?", (tg_id,)
+                "SELECT is_active FROM users WHERE tg_id = ?",
+                (tg_id,),
             ).fetchone()
         return bool(row and row[0])
 
@@ -68,10 +68,11 @@ class UserDB(BaseDB):
             self.conn.execute("DELETE FROM users")
             self.conn.execute("DELETE FROM sqlite_sequence WHERE name='users'")
 
-    def get_user(self, tg_id: int) -> Optional[User]:
+    def get_user(self, tg_id: int) -> User | None:
         with self.conn:
             row = self.conn.execute(
-                "SELECT * FROM users WHERE tg_id = ?", (tg_id,)
+                "SELECT * FROM users WHERE tg_id = ?",
+                (tg_id,),
             ).fetchone()
         return User(**dict(row)) if row else None
 
@@ -103,7 +104,7 @@ class UserDB(BaseDB):
             ).fetchall()
         return [row["tg_id"] for row in rows]
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
+    def get_user_by_username(self, username: str) -> User | None:
         with self.conn:
             row = self.conn.execute(
                 "SELECT * FROM users WHERE username = ?",

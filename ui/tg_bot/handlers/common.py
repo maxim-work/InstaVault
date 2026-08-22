@@ -1,4 +1,5 @@
-from aiogram import F, Bot, Router, types
+from aiogram import F, Bot, Router
+from aiogram.types import Message
 from aiogram.filters.command import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 
@@ -13,7 +14,7 @@ common_router = Router()
 
 
 @common_router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext, bot: Bot) -> None:
+async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
     if message.from_user is None:
         return
 
@@ -42,7 +43,7 @@ async def cmd_start(message: types.Message, state: FSMContext, bot: Bot) -> None
 
 @common_router.message(Command("help"))
 @common_router.message(F.text == "Помощь")
-async def cmd_help(message: types.Message, state: FSMContext, bot: Bot) -> None:
+async def cmd_help(message: Message, state: FSMContext, bot: Bot) -> None:
     if message.from_user is None:
         return
 
@@ -65,10 +66,10 @@ async def cmd_help(message: types.Message, state: FSMContext, bot: Bot) -> None:
 
 
 @common_router.message(~F.text.startswith("/"))
-async def unknown_text(message: types.Message) -> None:
+async def unknown_text(message: Message) -> None:
     await message.answer("Я пока не умею разговаривать на свободные темы...")
 
 
 @common_router.message(F.text)
-async def unknown_command(message: types.Message) -> None:
+async def unknown_command(message: Message) -> None:
     await message.answer("Не знаю такой команды... Введите /help для списка команд.")

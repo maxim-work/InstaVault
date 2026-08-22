@@ -1,5 +1,4 @@
 import asyncio
-from typing import Optional
 
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
@@ -15,7 +14,7 @@ async def auto_delete(bot: Bot, chat_id: int, message_id: int, delay: int = 3) -
         pass
 
 
-async def safe_delete_many(bot: Bot, chat_id: int, *message_ids: int):
+async def safe_delete_many(bot: Bot, chat_id: int, *message_ids: int) -> None:
     for msg_id in message_ids:
         try:
             await bot.delete_message(chat_id=chat_id, message_id=msg_id)
@@ -23,7 +22,7 @@ async def safe_delete_many(bot: Bot, chat_id: int, *message_ids: int):
             pass
 
 
-ACTION_TEMPLATES = {
+ACTION_TEMPLATES: dict[str, tuple[str, str]] = {
     "add": ("➕", "Добавление ресурса"),
     "edit": ("✏️", "Редактирование ресурса"),
     "search": ("🔍", "Поиск ресурса"),
@@ -43,7 +42,7 @@ ACTION_TEMPLATES = {
 }
 
 
-def with_action_label(action: str, text: str, title: Optional[str] = None) -> str:
+def with_action_label(action: str, text: str, title: str | None = None) -> str:
     emoji, action_name = ACTION_TEMPLATES.get(action, ("⚙️", str(action)))
 
     label = f"{emoji} {action_name}"
@@ -54,9 +53,7 @@ def with_action_label(action: str, text: str, title: Optional[str] = None) -> st
 
 
 def get_editable_message(callback: CallbackQuery) -> Message | None:
-    if isinstance(callback.message, Message):
-        return callback.message
-    return None
+    return callback.message if isinstance(callback.message, Message) else None
 
 
 async def cleanup_previous_message(
@@ -64,7 +61,7 @@ async def cleanup_previous_message(
 ) -> None:
     data = await state.get_data()
     prompt_msg_id = data.get("prompt_msg_id")
-    if prompt_msg_id:
+    if prompt_msg_id is not None:
         try:
             await bot.delete_message(message.chat.id, prompt_msg_id)
         except Exception:

@@ -1,11 +1,12 @@
 import logging
 from pathlib import Path
 
-from aiogram import Bot, F, Router
+from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
+from core.models.resource import Resource
 from data.db.resources import ResourceDB
 from data_io.import_data import parse_data
 from ui.tg_bot.callbacks.resource import pack_callback_data_list
@@ -25,7 +26,7 @@ async def process_import_data(
     resource_db: ResourceDB,
     bot: Bot,
     logger: logging.Logger,
-):
+) -> None:
     if message.document is None or message.from_user is None:
         return
 
@@ -42,6 +43,7 @@ async def process_import_data(
 
     file = await bot.get_file(message.document.file_id)
     file_path = file.file_path
+
     if file_path is None:
         await transition_to_message(
             message=message,
@@ -81,6 +83,7 @@ async def process_import_data(
             return
 
         msg = f"Импортировано {count} из {total} ресурсов."
+
         if errors:
             msg += "\n\nОшибки:\n" + "\n".join(errors[-10:])
 
@@ -108,10 +111,10 @@ async def _start_next_resource(
     resource_db: ResourceDB,
     logger: logging.Logger,
     bot: Bot,
-):
+) -> None:
     data = await state.get_data()
-    resources = data["import_resources"]
-    index = data["import_index"]
+    resources: list[Resource] = data["import_resources"]
+    index: int = data["import_index"]
     total = len(resources)
 
     if message.from_user is None:
@@ -122,6 +125,7 @@ async def _start_next_resource(
     if index >= total:
         results = data["import_results"]
         msg = f"Импортировано {results['count']} из {total} ресурсов."
+
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
@@ -138,6 +142,7 @@ async def _start_next_resource(
     resource = resources[index]
 
     existing = resource_db.get_by_url(resource.url, tg_id)
+
     if existing is not None:
         results = data["import_results"]
         results["errors"].append(f"Дубликат: {resource.url}")
@@ -169,21 +174,22 @@ async def _start_next_resource(
 
 
 async def start_next_resource_from_callback(
-    callback,
+    callback: types.CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
     logger: logging.Logger,
     bot: Bot,
     index: int,
-):
+) -> None:
     data = await state.get_data()
-    resources = data["import_resources"]
+    resources: list[Resource] = data["import_resources"]
     total = len(resources)
     tg_id = callback.from_user.id
 
     if index >= total:
         results = data["import_results"]
         msg = f"Импортировано {results['count']} из {total} ресурсов."
+
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
@@ -200,6 +206,7 @@ async def start_next_resource_from_callback(
     resource = resources[index]
 
     existing = resource_db.get_by_url(resource.url, tg_id)
+
     if existing is not None:
         results = data["import_results"]
         results["errors"].append(f"Дубликат: {resource.url}")

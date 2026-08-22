@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Optional
+from collections.abc import Callable
+from typing import Any
 
 from aiogram.types import CallbackQuery, Message
 
@@ -14,13 +15,15 @@ from core.exceptions import (
 )
 from ui.tg_bot.utils.message import get_editable_message
 
-USER_ERRORS = {
+USER_ERRORS: dict[type[Exception], str | Callable[[Exception], str]] = {
     InvalidUrlParamError: "Некорректная ссылка.",
-    InvalidParamError: lambda e: f"Некорректный параметр: {e.param}",
+    InvalidParamError: lambda e: (
+        f"Некорректный параметр: {_format_invalid_param_error(e)}"
+    ),
     InvalidRatingError: "Некорректный рейтинг.",
 }
 
-SYSTEM_ERRORS = (
+SYSTEM_ERRORS: tuple[type[Exception], ...] = (
     ProxyRequestError,
     APIResponseError,
     NetworkError,
@@ -32,10 +35,10 @@ async def handle_resource_error(
     error: Exception,
     context: dict[str, Any],
     logger: logging.Logger,
-    with_action_label,
+    with_action_label: Callable[[str, str], str],
     action: str = "error_add",
-    callback: Optional[CallbackQuery] = None,
-    message: Optional[Message] = None,
+    callback: CallbackQuery | None = None,
+    message: Message | None = None,
 ) -> bool:
     if message is None and callback is not None:
         message = get_editable_message(callback)
@@ -43,7 +46,7 @@ async def handle_resource_error(
         return False
 
     if type(error) in USER_ERRORS:
-        handler = USER_ERRORS.get(type(error))
+        handler = USER_ERRORS[type(error)]
         msg = handler(error) if callable(handler) else handler
         await message.edit_text(with_action_label(action, msg))
         return True
@@ -68,3 +71,8 @@ async def handle_resource_error(
         with_action_label(action, "Ошибка сервиса. Мы уже работаем над этим.")
     )
     return True
+
+
+def _format_invalid_param_error(e: Exception) -> str:
+    assert isinstance(e, InvalidParamError)
+    return f"Некорректный параметр: {e.param}"

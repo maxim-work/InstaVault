@@ -9,15 +9,19 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 
 from config import BOT_TOKEN, PROXY_URL
+from core.service import UserService
+from data.db.resources import ResourceDB
+from data.db.stats import StatsDB
+from data.db.users import UserDB
 from ui.tg_bot.handlers.admin import admin_router
 from ui.tg_bot.handlers.common import common_router
 from ui.tg_bot.handlers.resource import resource_router
 from ui.tg_bot.middlewares.activity import ActivityMiddleware
+from ui.tg_bot.middlewares.append_db import DBMiddleware
+from ui.tg_bot.middlewares.check_user_ban import CheckUserBanMiddleware
 from ui.tg_bot.middlewares.logger import LoggerMiddleware
 from ui.tg_bot.middlewares.registration import RegistrationMiddleware
 from ui.tg_bot.middlewares.user_update import UserUpdateMiddleware
-from ui.tg_bot.middlewares.check_user_ban import CheckUserBanMiddleware
-from ui.tg_bot.middlewares.append_db import DBMiddleware
 
 os.makedirs("logs", exist_ok=True)
 
@@ -33,8 +37,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def main(user_db, resource_db, stats_db, user_service):
-    bot = None
+async def main(
+    user_db: UserDB,
+    resource_db: ResourceDB,
+    stats_db: StatsDB,
+    user_service: UserService,
+) -> None:
+    bot: Bot | None = None
+
     try:
         if not BOT_TOKEN:
             raise ValueError("BOT_TOKEN не указан!")
@@ -49,7 +59,8 @@ async def main(user_db, resource_db, stats_db, user_service):
             logging.info(f"Бот запущен через прокси: {PROXY_URL}")
         else:
             bot = Bot(
-                token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+                token=BOT_TOKEN,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             )
             logging.info("Бот запущен без прокси")
 
@@ -57,7 +68,7 @@ async def main(user_db, resource_db, stats_db, user_service):
         dp.update.middleware(RegistrationMiddleware(user_db, user_service))
         dp.update.middleware(CheckUserBanMiddleware(user_db))
         dp.update.middleware(UserUpdateMiddleware(user_db, user_service))
-        dp.update.middleware(ActivityMiddleware(user_db, resource_db))
+        dp.update.middleware(ActivityMiddleware(user_db))
         dp.update.middleware(LoggerMiddleware(logger))
         dp.update.middleware(DBMiddleware(user_db, resource_db, stats_db))
         dp.include_router(admin_router)
@@ -78,5 +89,10 @@ async def main(user_db, resource_db, stats_db, user_service):
             logging.info("Сессия закрыта")
 
 
-def start_bot(user_db, resource_db, stats_db, user_service):
+def start_bot(
+    user_db: UserDB,
+    resource_db: ResourceDB,
+    stats_db: StatsDB,
+    user_service: UserService,
+) -> None:
     asyncio.run(main(user_db, resource_db, stats_db, user_service))

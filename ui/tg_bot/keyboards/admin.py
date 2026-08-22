@@ -1,10 +1,11 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from core.models.user import User
 from ui.tg_bot.callbacks.admin import AdminCallback, ModerationCallback
 
 
-def create_keyboard_admin_panel():
+def create_keyboard_admin_panel() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="1", callback_data=AdminCallback(option="1").pack())
     builder.button(text="2", callback_data=AdminCallback(option="2").pack())
@@ -15,10 +16,15 @@ def create_keyboard_admin_panel():
     return builder.as_markup()
 
 
-def create_keyboard_page_users(users, page, total_page, compact_threshold: int = 3):
+def create_keyboard_page_users(
+    users: list[User],
+    page: int,
+    total_page: int,
+    compact_threshold: int = 3,
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    nav_buttons = []
-    user_buttons = []
+    nav_buttons: list[InlineKeyboardButton] = []
+    user_buttons: list[InlineKeyboardButton] = []
 
     if page > 1:
         nav_buttons.append(
@@ -46,13 +52,15 @@ def create_keyboard_page_users(users, page, total_page, compact_threshold: int =
         )
 
     compact = len(users) <= compact_threshold
+
     if compact:
-        all_buttons = []
+        all_buttons: list[InlineKeyboardButton] = []
         if page > 1:
             all_buttons.append(nav_buttons[0])
         all_buttons.extend(user_buttons)
         if page < total_page:
             all_buttons.append(nav_buttons[-1])
+
         for btn in all_buttons:
             builder.button(text=btn.text, callback_data=btn.callback_data)
         builder.adjust(len(all_buttons))
@@ -74,8 +82,14 @@ def create_keyboard_page_users(users, page, total_page, compact_threshold: int =
     return builder.as_markup()
 
 
-def create_keyboard_view_user(page, is_active, tg_id, search: bool = False):
+def create_keyboard_view_user(
+    page: int,
+    is_active: bool,
+    tg_id: int,
+    search: bool = False,
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
     builder.button(
         text="Забанить" if is_active else "Разбанить",
         callback_data=ModerationCallback(
@@ -92,6 +106,7 @@ def create_keyboard_view_user(page, is_active, tg_id, search: bool = False):
             action="confirm_delete", tg_id=tg_id, page=page
         ).pack(),
     )
+
     if search:
         builder.button(
             text="Назад", callback_data=AdminCallback(action="back_to_search").pack()
@@ -105,7 +120,7 @@ def create_keyboard_view_user(page, is_active, tg_id, search: bool = False):
     return builder.as_markup()
 
 
-def create_keyboard_confirm_delete(page, tg_id):
+def create_keyboard_confirm_delete(page: int, tg_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
@@ -123,7 +138,7 @@ def create_keyboard_confirm_delete(page, tg_id):
     return builder.as_markup()
 
 
-def create_keyboard_confirm_delete_all():
+def create_keyboard_confirm_delete_all() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
@@ -174,6 +189,7 @@ def create_stats_keyboard(current: str) -> InlineKeyboardMarkup:
 
 def create_confirm_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
     builder.button(
         text="Да",
         callback_data=AdminCallback(action="confirm_send", option="yes").pack(),
@@ -182,14 +198,17 @@ def create_confirm_keyboard() -> InlineKeyboardMarkup:
         text="Нет",
         callback_data=AdminCallback(action="confirm_send", option="no").pack(),
     )
+
     builder.adjust(2)
     return builder.as_markup()
 
 
 def create_back_to_panel_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
     builder.button(
         text="В админ-панель",
         callback_data=AdminCallback(action="back_to_panel").pack(),
     )
+
     return builder.as_markup()

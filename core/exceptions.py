@@ -1,6 +1,3 @@
-from typing import Optional
-
-
 class ReprMixinError:
     def __repr__(self) -> str:
         fields = {k: v for k, v in self.__dict__.items() if k != "args"}
@@ -26,7 +23,7 @@ class InvalidParamError(ReprMixinError, ResourceError):
     param: str
     value: str
 
-    def __init__(self, param: str, value: str, message: Optional[str] = None) -> None:
+    def __init__(self, param: str, value: str, message: str | None = None) -> None:
         self.param = param
         self.value = value
         super().__init__(message or f"Некорректное значение параметра {param}: {value}")
@@ -36,7 +33,7 @@ class InvalidUrlParamError(ReprMixinError, ResourceError):
     param: str
     url: str
 
-    def __init__(self, param: str, url: str, message: Optional[str] = None) -> None:
+    def __init__(self, param: str, url: str, message: str | None = None) -> None:
         self.param = param
         self.url = url
         super().__init__(message or f"Некорректный параметр {param} для url: {url}")
@@ -46,7 +43,7 @@ class UnknownClassCodeError(ReprMixinError, ResourceError):
     code: str
     cls_name: str
 
-    def __init__(self, cls_name: str, code: str):
+    def __init__(self, cls_name: str, code: str) -> None:
         self.code = code
         self.cls_name = cls_name
         super().__init__(f"Неизвестный код {cls_name}: {code}")
@@ -67,8 +64,8 @@ class APIResponseError(ReprMixinError, ParseError):
 
 
 class ResourceNotFoundError(ReprMixinError, ParseError):
-    video_id: str
-    source: Optional[str]
+    resource_id: str
+    source: str | None
 
     def __init__(self, resource_id: str, source: str | None = None) -> None:
         self.resource_id = resource_id
@@ -84,10 +81,10 @@ class NetworkError(Exception):
 
 
 class ProxyRequestError(ReprMixinError, NetworkError):
-    proxy: Optional[str]
+    proxy: str | None
     original_error: Exception
 
-    def __init__(self, original_error: Exception, proxy: Optional[str] = None) -> None:
+    def __init__(self, original_error: Exception, proxy: str | None = None) -> None:
         self.proxy = proxy
         self.original_error = original_error
         super().__init__(

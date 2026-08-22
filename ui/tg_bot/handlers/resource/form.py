@@ -1,13 +1,14 @@
 import logging
+from typing_extensions import cast
 
-from aiogram import Bot, types
+from aiogram import Bot
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.markdown import hbold
 
-from core.models.resource import ResourceKind, ResourceStatus, ResourceType
-from data.exceptions import DuplicateResourceError
+from core.models.resource import Resource, ResourceKind, ResourceStatus, ResourceType
 from data.db.resources import ResourceDB
+from data.exceptions import DuplicateResourceError
 from ui.tg_bot.callbacks.resource import (
     ResourceCallback,
     get_callback_data,
@@ -19,39 +20,36 @@ from ui.tg_bot.keyboards.resource import create_kb_tags, create_kb_type
 from ui.tg_bot.states.resource import ResourceFormState
 from ui.tg_bot.utils.message import (
     get_editable_message,
-    safe_delete_many,
     with_action_label,
 )
-
-
-from typing import Any
-
 from ui.tg_bot.utils.transition import transition_to_message
 
 
 async def _handle_import_next_step(
-    callback: types.CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
     logger: logging.Logger,
-    data: dict[str, Any],
-    results: dict[str, Any],
+    data: dict[str, object],
+    results: dict[str, object],
     index: int,
-    message: types.Message,
+    message: Message,
     bot: Bot,
-):
+) -> None:
     if "import_urls" in data:
-        source_list = data["import_urls"]
+        source_list = cast(list[object], data["import_urls"])
         next_func = start_next_url_from_callback
     else:
-        source_list = data["import_resources"]
+        source_list = cast(list[object], data["import_resources"])
         next_func = start_next_resource_from_callback
 
     if index >= len(source_list):
         label = "ссылок" if "import_urls" in data else "ресурсов"
         msg = f"Импортировано {results['count']} из {len(source_list)} {label}."
+
         if results["errors"]:
-            msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
+            msg += "\n\nОшибки:\n" + "\n".join(cast(list[str], results["errors"])[-10:])
+
         await transition_to_message(
             message=message,
             state=state,
@@ -66,31 +64,26 @@ async def _handle_import_next_step(
 
 
 async def handle_form_actions(
-    callback: types.CallbackQuery,
+    callback: CallbackQuery,
     callback_data: ResourceCallback,
     state: FSMContext,
     resource_db: ResourceDB,
-    message: types.Message,
+    message: Message,
     logger: logging.Logger,
     bot: Bot,
-):
+) -> None:
     action = callback_data.action
 
     if action == "save":
         await _handle_save(callback, state, resource_db, message, logger, bot)
-
     elif action == "cancel":
         await _handle_cancel(callback, state, resource_db, message, logger, bot)
-
     elif action == "apply_new_tags":
         await _handle_apply_new_tags(callback, state)
-
     elif action == "keep_old_tags":
         await _handle_keep_old_tags(callback, state)
-
     elif action == "back":
         await show_save_summary(callback, state)
-
     elif action in (
         "change_type",
         "change_format",
@@ -101,18 +94,17 @@ async def handle_form_actions(
         "change_date",
     ):
         await _handle_change_field(callback_data, state, message)
-
     elif action == "edit":
         await show_edit_menu(state, message, bot)
 
 
 async def show_edit_menu(
     state: FSMContext,
-    message: types.Message,
+    message: Message,
     bot: Bot,
-):
+) -> None:
     data = await state.get_data()
-    resource = data["resource"]
+    resource: Resource = data["resource"]
     is_edit = data.get("edit_mode", False)
 
     if is_edit:
@@ -165,22 +157,32 @@ async def show_edit_menu(
     )
 
 
-async def show_save_summary(callback, state):
+async def show_save_summary(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
+
     data = await state.get_data()
-    resource = data["resource"]
+    resource: Resource = data["resource"]
     is_edit = data.get("edit_mode", False)
     msg = _build_save_summary_text(resource, is_edit)
+
     await message.edit_text(msg, reply_markup=_build_save_summary_keyboard())
 
 
-async def show_save_summary_direct(message, state, bot):
+async def show_save_summary_direct(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     data = await state.get_data()
-    resource = data["resource"]
+    resource: Resource = data["resource"]
     is_edit = data.get("edit_mode", False)
     msg = _build_save_summary_text(resource, is_edit)
+
     await transition_to_message(
         message=message,
         state=state,
@@ -190,9 +192,16 @@ async def show_save_summary_direct(message, state, bot):
     )
 
 
-async def _handle_save(callback, state, resource_db, message, logger, bot):
+async def _handle_save(
+    callback: CallbackQuery,
+    state: FSMContext,
+    resource_db: ResourceDB,
+    message: Message,
+    logger: logging.Logger,
+    bot: Bot,
+) -> None:
     data = await state.get_data()
-    resource = data["resource"]
+    resource: Resource = data["resource"]
     is_edit = data.get("edit_mode", False)
 
     try:
@@ -234,6 +243,7 @@ async def _handle_save(callback, state, resource_db, message, logger, bot):
             callback, state, resource_db, logger, data, results, index, message, bot
         )
         return
+
     await transition_to_message(
         message=message,
         state=state,
@@ -243,7 +253,14 @@ async def _handle_save(callback, state, resource_db, message, logger, bot):
     )
 
 
-async def _handle_cancel(callback, state, resource_db, message, logger, bot):
+async def _handle_cancel(
+    callback: CallbackQuery,
+    state: FSMContext,
+    resource_db: ResourceDB,
+    message: Message,
+    logger: logging.Logger,
+    bot: Bot,
+) -> None:
     data = await state.get_data()
 
     if "import_urls" in data or "import_resources" in data:
@@ -274,6 +291,7 @@ async def _handle_cancel(callback, state, resource_db, message, logger, bot):
             f"{hbold('Добавление отменено')}\n\n"
             "Ресурс не сохранён. Чтобы начать заново, используйте /add"
         )
+
     await transition_to_message(
         message=message,
         state=state,
@@ -283,16 +301,23 @@ async def _handle_cancel(callback, state, resource_db, message, logger, bot):
     )
 
 
-async def _handle_apply_new_tags(callback: types.CallbackQuery, state: FSMContext):
+async def _handle_apply_new_tags(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
     data = await state.get_data()
-    resource = data["resource"]
+    resource: Resource = data["resource"]
     new_tags = data.get("new_tags")
-    resource.tags = new_tags if new_tags else None
+    resource.tags = new_tags if new_tags is not None else []
+
     await state.update_data(resource=resource, new_tags=None, old_tags=None)
     await show_save_summary(callback, state)
 
 
-async def _handle_keep_old_tags(callback: types.CallbackQuery, state: FSMContext):
+async def _handle_keep_old_tags(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
     await state.update_data(new_tags=None, old_tags=None)
     await show_save_summary(callback, state)
 
@@ -300,8 +325,8 @@ async def _handle_keep_old_tags(callback: types.CallbackQuery, state: FSMContext
 async def _handle_change_field(
     callback_data: ResourceCallback,
     state: FSMContext,
-    message: types.Message,
-):
+    message: Message,
+) -> None:
     data = await state.get_data()
     await state.update_data(edit_target=callback_data.action)
 
@@ -364,12 +389,14 @@ async def _handle_change_field(
 
         current = data["resource"].my_rating
         builder = InlineKeyboardBuilder()
+
         for i in range(1, 6):
             text = f"★{i}" if current and i <= current else str(i)
             builder.button(
                 text=text,
                 callback_data=ResourceCallback(action=f"set_rating_{i}").pack(),
             )
+
         builder.button(
             text="Убрать оценку",
             callback_data=ResourceCallback(action="set_rating_0").pack(),
@@ -405,7 +432,7 @@ async def _handle_change_field(
             await state.update_data(prompt_msg_id=prompt_msg.message_id)
 
 
-def _build_save_summary_text(resource, is_edit: bool) -> str:
+def _build_save_summary_text(resource: Resource, is_edit: bool) -> str:
     if is_edit:
         return (
             f"Проверьте изменения перед сохранением\n\n"
@@ -418,6 +445,7 @@ def _build_save_summary_text(resource, is_edit: bool) -> str:
             f"{hbold('Рейтинг:')} {resource.my_rating or '—'}/5\n"
             f"{hbold('Дата завершения:')} {resource.completed_at or 'не указана'}"
         )
+
     return (
         f"Проверьте данные перед сохранением\n\n"
         f"{hbold('Ссылка:')} {resource.url}\n"

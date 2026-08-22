@@ -17,7 +17,7 @@ async def export_urls_callback(
     callback: CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
-):
+) -> None:
     await _export(callback, state, resource_db, "urls")
 
 
@@ -26,7 +26,7 @@ async def export_data_callback(
     callback: CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
-):
+) -> None:
     await _export(callback, state, resource_db, "data")
 
 

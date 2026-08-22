@@ -1,10 +1,14 @@
-from aiogram import Bot, F, Router, types
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import USERS_PER_PAGE
+from data.db.users import UserDB
 from ui.tg_bot.callbacks.admin import AdminCallback
+from ui.tg_bot.handlers.admin.formatting import render_page_users, render_view_user
 from ui.tg_bot.handlers.admin.panel import show_admin_panel
+from ui.tg_bot.handlers.admin.users import show_users_page
 from ui.tg_bot.keyboards.admin import (
     create_keyboard_page_users,
     create_keyboard_view_user,
@@ -14,16 +18,16 @@ from ui.tg_bot.states.admin import SearchState
 from ui.tg_bot.utils.message import get_editable_message
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
 
-from ui.tg_bot.handlers.admin.formatting import render_page_users, render_view_user
-from ui.tg_bot.handlers.admin.users import show_users_page
-
 admin_router = Router()
 admin_router.message.middleware(AdminMiddleware())
 admin_router.callback_query.middleware(AdminMiddleware())
 
 
 @admin_router.callback_query(AdminCallback.filter(F.option == "2"))
-async def cmd_search_user(callback: types.CallbackQuery, state: FSMContext):
+async def cmd_search_user(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -46,8 +50,11 @@ async def cmd_search_user(callback: types.CallbackQuery, state: FSMContext):
 
 @admin_router.message(SearchState.waiting_for_query)
 async def search_user_result(
-    message: types.Message, state: FSMContext, bot: Bot, user_db
-):
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+    user_db: UserDB,
+) -> None:
     query = message.text
     if not query:
         return
@@ -87,6 +94,7 @@ async def search_user_result(
         return
 
     users = user_db.search_users(query)
+
     if not users:
         await transition_to_message(
             message=message,
@@ -118,7 +126,11 @@ async def search_user_result(
 
 
 @admin_router.callback_query(AdminCallback.filter(F.action == "back_to_search"))
-async def back_to_search(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+async def back_to_search(
+    callback: CallbackQuery,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return

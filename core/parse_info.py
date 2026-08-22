@@ -1,7 +1,6 @@
 import json
 import re
 from datetime import datetime
-from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -15,9 +14,6 @@ from core.exceptions import (
 
 
 def parse_iso_duration_to_seconds(duration: str) -> int:
-    """
-    Converts an ISO 8601 duration into seconds
-    """
     pattern = re.compile(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?")
     match = pattern.match(duration)
     if not match:
@@ -31,18 +27,9 @@ def parse_iso_duration_to_seconds(duration: str) -> int:
 def fetch_youtube_video_info(
     video_id: str,
     api_key: str,
-    proxy: Optional[str] = None,
+    proxy: str | None = None,
     proxy_type: str = "socks5",
 ) -> dict | None:
-    """
-    Retrieves video information via the YouTube Data API v3.
-
-    proxy — a string in the format "host:port" or "user:pass@host:port"
-    proxy_type — "socks5", "http", "https" (default: socks5)
-
-    Returns a dictionary with the following keys:
-        title, description, tags, engagement(likes + comments), views, duration, published_at
-    """
     url = "https://www.googleapis.com/youtube/v3/videos"
     params = {
         "id": video_id,
@@ -52,20 +39,13 @@ def fetch_youtube_video_info(
 
     proxies = None
     if proxy:
-        if "://" in proxy:
-            proxy_url = proxy
-        else:
-            proxy_url = f"{proxy_type}://{proxy}"
-
-        proxies = {
-            "http": proxy_url,
-            "https": proxy_url,
-        }
+        proxy_url = proxy if "://" in proxy else f"{proxy_type}://{proxy}"
+        proxies = {"http": proxy_url, "https": proxy_url}
 
     try:
         response = requests.get(url, params=params, proxies=proxies, timeout=30)
     except requests.RequestException as e:
-        raise ProxyRequestError(e, proxy)
+        raise ProxyRequestError(e, proxy) from e
 
     if response.status_code != 200:
         raise APIResponseError(response.status_code, response.text)
@@ -102,24 +82,13 @@ def fetch_youtube_video_info(
 def fetch_page_info(
     url: str,
     platform: str = "unknown",
-    proxy: Optional[str] = None,
+    proxy: str | None = None,
     proxy_type: str = "socks5",
 ) -> dict | None:
-    """
-    proxy — a string in the format "host:port" or "user:pass@host:port"
-    proxy_type — "socks5", "http", "https" (default: socks5)
-
-    Returns a dictionary with the following keys:
-        title, description, tags
-        for habr: engagement, views, duration, published_at
-    """
     info = {}
     proxies = None
     if proxy:
-        if "://" in proxy:
-            proxy_url = proxy
-        else:
-            proxy_url = f"{proxy_type}://{proxy}"
+        proxy_url = proxy if "://" in proxy else f"{proxy_type}://{proxy}"
         proxies = {"http": proxy_url, "https": proxy_url}
 
     try:
@@ -127,19 +96,16 @@ def fetch_page_info(
             url,
             proxies=proxies,
             timeout=10,
-            headers={
-                "User-Agent": "Mozilla/5.0",
-            },
+            headers={"User-Agent": "Mozilla/5.0"},
         )
     except requests.RequestException as e:
-        raise ProxyRequestError(e, proxy)
+        raise ProxyRequestError(e, proxy) from e
 
     if response.status_code != 200:
         raise APIResponseError(response.status_code, response.text)
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # title
     og_title = soup.find("meta", property="og:title")
     if og_title and og_title.get("content"):
         info["title"] = og_title["content"]
@@ -148,7 +114,6 @@ def fetch_page_info(
         if title_tag:
             info["title"] = title_tag.text.strip()
 
-    # description
     og_desc = soup.find("meta", property="og:description")
     if og_desc and og_desc.get("content"):
         info["description"] = og_desc["content"]
@@ -157,7 +122,6 @@ def fetch_page_info(
         if meta_desc and meta_desc.get("content"):
             info["description"] = meta_desc["content"]
 
-    # tags
     if platform == "habr":
         meta_keywords = soup.find("meta", attrs={"name": "keywords"})
         if meta_keywords:
@@ -182,7 +146,6 @@ def fetch_page_info(
                     t.strip().lower() for t in content.split(",") if t.strip()
                 ]
 
-    # published_at
     time_tag = soup.find("time", datetime=True)
     if time_tag:
         dt_str = time_tag.get("datetime")
@@ -194,7 +157,6 @@ def fetch_page_info(
             except ValueError:
                 pass
 
-    # from JSON-LD or PINIA(duration, engagement, views)
     try:
         pinia_script = soup.find(
             "script",

@@ -1,6 +1,7 @@
-from aiogram import Bot, F, Router, types
+from aiogram import Bot, F, Router
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
 from ui.tg_bot.callbacks.admin import AdminCallback
 from ui.tg_bot.keyboards.admin import create_keyboard_admin_panel
@@ -14,7 +15,11 @@ admin_router.callback_query.middleware(AdminMiddleware())
 
 @admin_router.message(F.text == "Админ-панель")
 @admin_router.message(Command("admin"))
-async def cmd_admin_panel(message: types.Message, state: FSMContext, bot: Bot) -> None:
+async def cmd_admin_panel(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     await transition_to_message(
         message=message,
         state=state,
@@ -27,8 +32,10 @@ async def cmd_admin_panel(message: types.Message, state: FSMContext, bot: Bot) -
 
 @admin_router.callback_query(AdminCallback.filter(F.action == "back_to_panel"))
 async def back_to_admin_panel(
-    callback: types.CallbackQuery, state: FSMContext, bot: Bot
-):
+    callback: CallbackQuery,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     await transition_callback(
         callback=callback,
         state=state,
@@ -40,11 +47,15 @@ async def back_to_admin_panel(
     await callback.answer()
 
 
-async def show_admin_panel(target, state: FSMContext, bot: Bot):
+async def show_admin_panel(
+    target: Message | CallbackQuery,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     text = _get_admin_panel_text()
     markup = create_keyboard_admin_panel()
 
-    if isinstance(target, types.Message):
+    if isinstance(target, Message):
         await transition_to_message(
             message=target,
             state=state,
@@ -53,7 +64,7 @@ async def show_admin_panel(target, state: FSMContext, bot: Bot):
             reply_markup=markup,
             state_clear=True,
         )
-    elif isinstance(target, types.CallbackQuery):
+    elif isinstance(target, CallbackQuery):
         await transition_callback(
             callback=target,
             state=state,

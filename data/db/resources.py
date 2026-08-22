@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Any, Optional
+from typing import Any
 
 from core.exceptions import ResourceNotFoundError
 from core.models.resource import Resource
@@ -38,7 +38,7 @@ class ResourceDB(BaseDB):
                     raise RuntimeError("Failed to insert resource")
                 return cursor.lastrowid
         except sqlite3.IntegrityError:
-            raise DuplicateResourceError(resource.url)
+            raise DuplicateResourceError(resource.url) from None
 
     def update(self, resource: Resource) -> None:
         data = resource.to_db_dict()
@@ -60,7 +60,7 @@ class ResourceDB(BaseDB):
         with self.conn:
             self.conn.execute("DELETE FROM resources WHERE tg_id = ?", (tg_id,))
 
-    def get_resource(self, resource_id: int, tg_id: int) -> Optional[Resource]:
+    def get_resource(self, resource_id: int, tg_id: int) -> Resource | None:
         with self.conn:
             row = self.conn.execute(
                 "SELECT * FROM resources WHERE id = ? AND tg_id = ?",
@@ -86,15 +86,16 @@ class ResourceDB(BaseDB):
 
     def count_all_resources(self) -> int:
         with self.conn:
-            return self.conn.execute("SELECT COUNT(*) FROM resources").fetchone()[0]
+            row = self.conn.execute("SELECT COUNT(*) FROM resources").fetchone()
+        return row[0] if row else 0
 
     def search(
-        self, tg_id: int, filter: Optional[ResourceFilter] = None
+        self, tg_id: int, resource_filter: ResourceFilter | None = None
     ) -> list[tuple[Resource, int]]:
-        if filter is None:
-            filter = ResourceFilter(tg_id=tg_id)
-        resources = self._get_candidates(filter)
-        return calculate_scores(resources, filter)
+        if resource_filter is None:
+            resource_filter = ResourceFilter(tg_id=tg_id)
+        resources = self._get_candidates(resource_filter)
+        return calculate_scores(resources, resource_filter)
 
     def export_urls(self, tg_id: int) -> list[str]:
         with self.conn:
@@ -131,7 +132,7 @@ class ResourceDB(BaseDB):
 
         return count, len(data), errors
 
-    def get_by_url(self, url: str, tg_id: int) -> Optional[Resource]:
+    def get_by_url(self, url: str, tg_id: int) -> Resource | None:
         with self.conn as conn:
             cursor = conn.execute(
                 "SELECT * FROM resources WHERE url = ? AND tg_id = ?",

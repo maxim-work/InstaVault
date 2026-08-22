@@ -1,104 +1,43 @@
-from typing import Callable
+from collections.abc import Callable
+from typing import TypeVar, Any
 
-from aiogram.types.inline_keyboard_button import InlineKeyboardButton
-from aiogram.types.inline_keyboard_markup import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import RESOURCES_PER_PAGE
+from core.models.resource import Resource
 from ui.tg_bot.callbacks.resource import (
     ResourceCallback,
     SearchCallback,
     SettingsCallback,
 )
 
-
-def _build_keyboard(
-    items: list[tuple[str, str]], len_row: int = 2
-) -> InlineKeyboardMarkup:
-    buttons = []
-    row = []
-    for text, callback_data in items:
-        row.append(InlineKeyboardButton(text=text, callback_data=callback_data))
-        if len(row) == len_row:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+T = TypeVar("T")
 
 
 def create_kb_type(
-    options: list, get_cb: Callable[[str], str], len_row: int = 2
+    options: list,
+    get_cb: Callable[[str], str],
+    len_row: int = 2,
 ) -> InlineKeyboardMarkup:
-    return _build_keyboard([(opt.label, get_cb(opt.code)) for opt in options], len_row)
+    return _build_keyboard(
+        [(opt.label, get_cb(opt.code)) for opt in options],
+        len_row,
+    )
 
 
 def create_kb_tags(
-    labels: list[str], data: list[str], len_row: int = 2
+    labels: list[str],
+    data: list[str],
+    len_row: int = 2,
 ) -> InlineKeyboardMarkup:
     return _build_keyboard(list(zip(labels, data)), len_row)
 
 
-def _build_paginated_keyboard(
-    items: list,
+def create_list_keyboard(
+    resources: list[Resource],
     page: int,
     total_pages: int,
-    get_text: Callable,
-    get_callback: Callable,
-    compact_threshold: int = 3,
-) -> InlineKeyboardMarkup:
-
-    builder = InlineKeyboardBuilder()
-
-    compact = len(items) <= compact_threshold
-
-    nav_buttons = []
-    if page > 1:
-        nav_buttons.append(
-            InlineKeyboardButton(
-                text="◀ Назад", callback_data=get_callback("nav", page - 1)
-            )
-        )
-
-    item_buttons = []
-    for i, item in enumerate(items):
-        item_buttons.append(
-            InlineKeyboardButton(
-                text=get_text(i, item), callback_data=get_callback(i, item)
-            )
-        )
-
-    if page < total_pages:
-        nav_buttons.append(
-            InlineKeyboardButton(
-                text="Вперёд ▶", callback_data=get_callback("nav", page + 1)
-            )
-        )
-
-    if compact:
-        all_buttons = []
-        if page > 1:
-            all_buttons.extend(nav_buttons[:1])
-        all_buttons.extend(item_buttons)
-        if page < total_pages:
-            all_buttons.extend(nav_buttons[-1:])
-
-        for btn in all_buttons:
-            builder.button(text=btn.text, callback_data=btn.callback_data)
-        builder.adjust(len(all_buttons))
-    else:
-        for btn in item_buttons:
-            builder.button(text=btn.text, callback_data=btn.callback_data)
-        builder.adjust(3)
-
-        if nav_buttons:
-            builder.row(*nav_buttons)
-
-    return builder.as_markup()
-
-
-def create_list_keyboard(
-    resources: list, page: int, total_pages: int
 ) -> InlineKeyboardMarkup:
     return _build_paginated_keyboard(
         items=resources,
@@ -108,13 +47,19 @@ def create_list_keyboard(
         get_callback=lambda flag, val: (
             ResourceCallback(action="page", page=val).pack()
             if flag == "nav"
-            else ResourceCallback(action="view", resource_id=val.id, page=page).pack()
+            else ResourceCallback(
+                action="view",
+                resource_id=val.id if isinstance(val, Resource) else None,
+                page=page,
+            ).pack()
         ),
     )
 
 
 def create_search_keyboard(
-    results: list, page: int, total_pages: int
+    results: list[tuple[Resource, int]],
+    page: int,
+    total_pages: int,
 ) -> InlineKeyboardMarkup:
     return _build_paginated_keyboard(
         items=results,
@@ -126,14 +71,14 @@ def create_search_keyboard(
             if flag == "nav"
             else SearchCallback(
                 action="view",
-                resource_id=val[0].id if isinstance(val, tuple) else val.id,
+                resource_id=val[0].id if isinstance(val, tuple) else None,
                 page=page,
             ).pack()
         ),
     )
 
 
-def create_settings_menu():
+def create_settings_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Экспорт ссылок",
@@ -159,7 +104,7 @@ def create_settings_menu():
     return builder.as_markup()
 
 
-def create_import_urls_menu():
+def create_import_urls_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Быстрый импорт",
@@ -170,13 +115,14 @@ def create_import_urls_menu():
         callback_data=SettingsCallback(action="import_urls_detailed").pack(),
     )
     builder.button(
-        text="Назад", callback_data=SettingsCallback(action="settings").pack()
+        text="Назад",
+        callback_data=SettingsCallback(action="settings").pack(),
     )
     builder.adjust(2, 1)
     return builder.as_markup()
 
 
-def create_import_data_menu():
+def create_import_data_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Быстрый импорт",
@@ -187,13 +133,14 @@ def create_import_data_menu():
         callback_data=SettingsCallback(action="import_data_detailed").pack(),
     )
     builder.button(
-        text="Назад", callback_data=SettingsCallback(action="settings").pack()
+        text="Назад",
+        callback_data=SettingsCallback(action="settings").pack(),
     )
     builder.adjust(2, 1)
     return builder.as_markup()
 
 
-def create_del_import():
+def create_del_import() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Удаление всех ресурсов",
@@ -204,7 +151,86 @@ def create_del_import():
         callback_data=SettingsCallback(action="del_account").pack(),
     )
     builder.button(
-        text="Назад", callback_data=SettingsCallback(action="settings").pack()
+        text="Назад",
+        callback_data=SettingsCallback(action="settings").pack(),
     )
     builder.adjust(1, 1, 1)
+    return builder.as_markup()
+
+
+def _build_keyboard(
+    items: list[tuple[str, str]],
+    len_row: int = 2,
+) -> InlineKeyboardMarkup:
+    buttons: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+
+    for text, callback_data in items:
+        row.append(InlineKeyboardButton(text=text, callback_data=callback_data))
+        if len(row) == len_row:
+            buttons.append(row)
+            row = []
+
+    if row:
+        buttons.append(row)
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def _build_paginated_keyboard(
+    items: list[T],
+    page: int,
+    total_pages: int,
+    get_text: Callable[[int, T], str],
+    get_callback: Callable[[int | str, Any], str],
+    compact_threshold: int = 3,
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    compact = len(items) <= compact_threshold
+
+    nav_buttons: list[InlineKeyboardButton] = []
+    if page > 1:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="◀ Назад",
+                callback_data=get_callback("nav", page - 1),
+            )
+        )
+
+    item_buttons: list[InlineKeyboardButton] = []
+    for i, item in enumerate(items):
+        item_buttons.append(
+            InlineKeyboardButton(
+                text=get_text(i, item),
+                callback_data=get_callback(i, item),
+            )
+        )
+
+    if page < total_pages:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text="Вперёд ▶",
+                callback_data=get_callback("nav", page + 1),
+            )
+        )
+
+    if compact:
+        all_buttons: list[InlineKeyboardButton] = []
+        if page > 1:
+            all_buttons.extend(nav_buttons[:1])
+        all_buttons.extend(item_buttons)
+        if page < total_pages:
+            all_buttons.extend(nav_buttons[-1:])
+
+        for btn in all_buttons:
+            builder.button(text=btn.text, callback_data=btn.callback_data)
+        builder.adjust(len(all_buttons))
+    else:
+        for btn in item_buttons:
+            builder.button(text=btn.text, callback_data=btn.callback_data)
+        builder.adjust(3)
+
+        if nav_buttons:
+            builder.row(*nav_buttons)
+
     return builder.as_markup()

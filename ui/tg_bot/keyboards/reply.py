@@ -1,4 +1,4 @@
-from aiogram.types.reply_keyboard_markup import ReplyKeyboardMarkup
+from aiogram.types import ReplyKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 

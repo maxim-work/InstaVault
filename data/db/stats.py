@@ -70,18 +70,21 @@ class StatsDB(BaseDB):
 
     def get_total_new_users(self) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COALESCE(SUM(new_users), 0) FROM daily_stats"
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0
 
     def get_total_new_resources(self) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COALESCE(SUM(new_resources), 0) FROM daily_stats"
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0
 
     def get_total_banned_users(self) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COALESCE(SUM(banned_users), 0) FROM daily_stats"
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0

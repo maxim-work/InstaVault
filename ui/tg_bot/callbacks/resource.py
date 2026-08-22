@@ -1,18 +1,16 @@
-from typing import Optional
-
 from aiogram.filters.callback_data import CallbackData
 
 
 class ResourceCallback(CallbackData, prefix="res"):
     action: str
-    resource_id: Optional[int] = None
-    page: Optional[int] = None
+    resource_id: int | None = None
+    page: int | None = None
 
 
 class SearchCallback(CallbackData, prefix="search"):
     action: str
-    resource_id: Optional[int] = None
-    page: Optional[int] = None
+    resource_id: int | None = None
+    page: int | None = None
 
 
 class SettingsCallback(CallbackData, prefix="settings"):

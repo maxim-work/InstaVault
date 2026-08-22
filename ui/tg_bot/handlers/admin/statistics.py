@@ -5,6 +5,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from core.models.stats import Statistics
+from data.db.stats import StatsDB
 from ui.tg_bot.callbacks.admin import AdminCallback
 from ui.tg_bot.keyboards.admin import create_stats_keyboard
 from ui.tg_bot.middlewares.admin import AdminMiddleware
@@ -19,9 +20,9 @@ admin_router.callback_query.middleware(AdminMiddleware())
 async def show_statistics_period(
     callback: types.CallbackQuery,
     callback_data: AdminCallback,
-    stats_db,
+    stats_db: StatsDB,
     state: FSMContext,
-):
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
@@ -35,6 +36,7 @@ async def show_statistics_period(
         stats = _get_statistics(stats_db, selected_period)
         text = _format_statistics_for_file(stats, label)
         filepath = f"/tmp/stats_{callback.from_user.id}.txt"
+
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(text)
 
@@ -62,7 +64,7 @@ async def show_statistics_period(
     await callback.answer()
 
 
-def _get_statistics(stats_db, period: str) -> Statistics:
+def _get_statistics(stats_db: StatsDB, period: str) -> Statistics:
     today = datetime.now().strftime("%Y-%m-%d")
 
     if period == "week":

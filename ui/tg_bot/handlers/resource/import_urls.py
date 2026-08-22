@@ -1,15 +1,15 @@
 import logging
 from pathlib import Path
 
-from aiogram import Bot, F, Router
+from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from config import PROXY_URL, YOUTUBE_API_KEY
 from core.models.resource import Resource, ResourceType
 from core.service import ResourceService
-from data.exceptions import DuplicateResourceError
 from data.db.resources import ResourceDB
+from data.exceptions import DuplicateResourceError
 from ui.tg_bot.callbacks.resource import get_callback_data
 from ui.tg_bot.keyboards.resource import create_kb_type
 from ui.tg_bot.states.resource import ImportState, ResourceFormState
@@ -26,7 +26,7 @@ async def process_import_file(
     resource_db: ResourceDB,
     bot: Bot,
     logger: logging.Logger,
-):
+) -> None:
     if message.from_user is None or message.document is None:
         return
 
@@ -39,6 +39,7 @@ async def process_import_file(
 
     file = await bot.get_file(message.document.file_id)
     file_path = file.file_path
+
     if file_path is None:
         await transition_to_message(
             message=message,
@@ -79,7 +80,7 @@ async def process_import_text(
     resource_db: ResourceDB,
     logger: logging.Logger,
     bot: Bot,
-):
+) -> None:
     if message.from_user is None or message.text is None:
         return
 
@@ -107,7 +108,7 @@ async def _handle_urls_text(
     logger: logging.Logger,
     text: str,
     bot: Bot,
-):
+) -> None:
     urls = [line.strip() for line in text.split("\n") if line.strip()]
 
     if not urls:
@@ -125,13 +126,14 @@ async def _handle_urls_text(
 
     if mode == "fast":
         count = 0
-        errors = []
+        errors: list[str] = []
 
         for url in urls:
             try:
                 if not Resource._is_valid_url(url):
                     errors.append(f"Некорректная ссылка: {url}")
                     continue
+
                 if message.from_user is None:
                     return
 
@@ -151,6 +153,7 @@ async def _handle_urls_text(
                 errors.append(str(e))
 
         msg = f"Импортировано {count} из {len(urls)} ссылок."
+
         if errors:
             msg += "\n\nОшибки:\n" + "\n".join(errors[-10:])
 
@@ -178,10 +181,10 @@ async def _start_next_url(
     resource_db: ResourceDB,
     logger: logging.Logger,
     bot: Bot,
-):
+) -> None:
     data = await state.get_data()
-    urls = data["import_urls"]
-    index = data["import_index"]
+    urls: list[str] = data["import_urls"]
+    index: int = data["import_index"]
     total = len(urls)
 
     if message.from_user is None:
@@ -192,6 +195,7 @@ async def _start_next_url(
     if index >= total:
         results = data["import_results"]
         msg = f"Импортировано {results['count']} из {total} ссылок."
+
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
@@ -208,6 +212,7 @@ async def _start_next_url(
     url = urls[index]
 
     existing = resource_db.get_by_url(url, tg_id)
+
     if existing is not None:
         results = data["import_results"]
         results["errors"].append(f"Дубликат: {url}")
@@ -240,20 +245,21 @@ async def _start_next_url(
 
 
 async def start_next_url_from_callback(
-    callback,
+    callback: types.CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
     logger: logging.Logger,
     bot: Bot,
     index: int,
-):
+) -> None:
     data = await state.get_data()
-    urls = data["import_urls"]
+    urls: list[str] = data["import_urls"]
     total = len(urls)
 
     if index >= total:
         results = data["import_results"]
         msg = f"Импортировано {results['count']} из {total} ссылок."
+
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 

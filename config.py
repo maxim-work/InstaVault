@@ -1,24 +1,30 @@
 import os
 from pathlib import Path
+from typing import Final
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-PROXY_URL = os.getenv("PROXY_URL")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
-EXPORT_DIR = Path("exports")
-MAX_URL_LENGTH = 2048
-USER_UPDATE_INTERVAL_HOURS = 12
-USER_COMMANDS = "\n/start — начать\n/help — помощь"
-ADMIN_COMMANDS = "\n/start — начать\n/help — помощь"
-ADMIN_IDS = [
+BOT_TOKEN: Final[str | None] = os.getenv("BOT_TOKEN")
+PROXY_URL: Final[str | None] = os.getenv("PROXY_URL")
+YOUTUBE_API_KEY: Final[str | None] = os.getenv("YOUTUBE_API_KEY")
+
+EXPORT_DIR: Final[Path] = Path("exports")
+MAX_URL_LENGTH: Final[int] = 2048
+USER_UPDATE_INTERVAL_HOURS: Final[int] = 12
+
+USER_COMMANDS: Final[str] = "\n/start — начать\n/help — помощь"
+ADMIN_COMMANDS: Final[str] = "\n/start — начать\n/help — помощь"
+
+ADMIN_IDS: Final[list[int]] = [
     int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()
 ]
-RESOURCES_PER_PAGE = 5
-USERS_PER_PAGE = 5
-EXIT_TEXTS = {
+
+RESOURCES_PER_PAGE: Final[int] = 5
+USERS_PER_PAGE: Final[int] = 5
+
+EXIT_TEXTS: Final[set[str]] = {
     "/start",
     "/add",
     "Добавить ресурс",

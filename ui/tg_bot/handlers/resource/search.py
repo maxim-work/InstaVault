@@ -6,21 +6,27 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
 from config import RESOURCES_PER_PAGE
+from core.models.resource import Resource
+from data.db.resources import ResourceDB
 from data.filter import ResourceFilter
 from ui.tg_bot.callbacks.resource import SearchCallback
+from ui.tg_bot.handlers.resource.form import show_save_summary
 from ui.tg_bot.keyboards.resource import create_search_keyboard
 from ui.tg_bot.states.resource import ResourceFormState, SearchState
 from ui.tg_bot.utils.fsm import exit_fsm
 from ui.tg_bot.utils.message import get_editable_message, with_action_label
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
-from ui.tg_bot.handlers.resource.form import show_save_summary
 
 search_router = Router()
 
 
 @search_router.message(Command("search"))
 @search_router.message(F.text == "Поиск")
-async def cmd_search(message: Message, state: FSMContext, bot: Bot):
+async def cmd_search(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     await transition_to_message(
         message=message,
         state=state,
@@ -32,13 +38,20 @@ async def cmd_search(message: Message, state: FSMContext, bot: Bot):
 
 
 @search_router.message(SearchState.waiting_for_search)
-async def process_search(message: Message, state: FSMContext, bot: Bot, resource_db):
+async def process_search(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+    resource_db: ResourceDB,
+) -> None:
     if message.text is None:
         return
+
     if await exit_fsm(message, state):
         return
 
     keywords = message.text.strip()
+
     if not keywords:
         await transition_to_message(
             message=message,
@@ -53,7 +66,7 @@ async def process_search(message: Message, state: FSMContext, bot: Bot, resource
 
     tg_id = message.from_user.id
     f = ResourceFilter(tg_id=tg_id, keywords=keywords, limit=10)
-    results = resource_db.search(tg_id=tg_id, filter=f)
+    results = resource_db.search(tg_id=tg_id, resource_filter=f)
 
     if not results:
         await transition_to_message(
@@ -84,15 +97,15 @@ async def search_callback(
     callback: types.CallbackQuery,
     callback_data: SearchCallback,
     state: FSMContext,
-    resource_db,
+    resource_db: ResourceDB,
     bot: Bot,
-):
+) -> None:
     message = get_editable_message(callback)
     if message is None:
         return
 
     data = await state.get_data()
-    results = data.get("search_results", [])
+    results: list[tuple[Resource, int]] = data.get("search_results", [])
     action = callback_data.action
     page = callback_data.page or 1
     resource_id = callback_data.resource_id
@@ -117,6 +130,9 @@ async def search_callback(
         )
 
     elif action == "view":
+        if resource_id is None:
+            await callback.answer("Ошибка: ресурс не указан", show_alert=True)
+            return
         tg_id = callback.from_user.id
         r = resource_db.get_resource(resource_id, tg_id)
         if r is None:
@@ -141,10 +157,14 @@ async def search_callback(
         builder.adjust(2, 1)
 
         await message.edit_text(
-            _format_resource_detail(r), reply_markup=builder.as_markup()
+            _format_resource_detail(r),
+            reply_markup=builder.as_markup(),
         )
 
     elif action == "confirm_delete":
+        if resource_id is None:
+            await callback.answer("Ошибка: ресурс не указан", show_alert=True)
+            return
         r = resource_db.get_resource(resource_id, callback.from_user.id)
         if r is None:
             await callback.answer("Ресурс не найден", show_alert=True)
@@ -169,6 +189,9 @@ async def search_callback(
         )
 
     elif action == "delete":
+        if resource_id is None:
+            await callback.answer("Ошибка: ресурс не указан", show_alert=True)
+            return
         resource_db.delete(resource_id, callback.from_user.id)
         await callback.answer("Удалено")
 
@@ -197,6 +220,9 @@ async def search_callback(
         )
 
     elif action == "edit":
+        if resource_id is None:
+            await callback.answer("Ошибка: ресурс не указан", show_alert=True)
+            return
         tg_id = callback.from_user.id
         r = resource_db.get_resource(resource_id, tg_id)
         if r is None:
@@ -211,16 +237,23 @@ async def search_callback(
     await callback.answer()
 
 
-def _render_search_results(results: list, page: int, total_pages: int) -> str:
+def _render_search_results(
+    results: list[tuple[Resource, int]],
+    page: int,
+    total_pages: int,
+) -> str:
     lines = [f"{hbold('Результаты поиска:')}"]
-    for i, (r, score) in enumerate(results, 1):
+
+    for i, (r, _) in enumerate(results, 1):
         lines.append(f"{i}. {r.title} — {r.resource_type.label}")
+
     if total_pages > 1:
         lines.append(f"\nСтраница {page}/{total_pages}")
+
     return "\n".join(lines)
 
 
-def _format_resource_detail(r) -> str:
+def _format_resource_detail(r: Resource) -> str:
     return (
         f"{hbold(r.title)}\n\n"
         f"{hbold('Ссылка:')} {r.url}\n"
