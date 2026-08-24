@@ -1,6 +1,6 @@
 import os
 
-from aiogram import Bot, F, Router, types
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -8,8 +8,8 @@ from aiogram.utils.markdown import hbold
 
 from data.db.resources import ResourceDB
 from data.db.users import UserDB
-from data_io.export_data import write_data_file, write_urls_file
 from ui.tg_bot.callbacks.resource import SettingsCallback
+from ui.tg_bot.handlers.resource.export import export
 from ui.tg_bot.keyboards.resource import (
     create_del_import,
     create_import_data_menu,
@@ -56,10 +56,10 @@ async def settings_callback(
         await _build_settings_menu(message=message, state=state, bot=bot)
 
     elif action == "export_urls":
-        await _export(callback, state, resource_db, bot, "urls")
+        await export(callback, state, resource_db, "urls")
 
     elif action == "export_data":
-        await _export(callback, state, resource_db, bot, "data")
+        await export(callback, state, resource_db, "data")
 
     elif action == "import_urls_menu":
         await transition_callback(
@@ -189,43 +189,3 @@ async def _build_settings_menu(
         reply_markup=create_settings_menu(),
         state_clear=True,
     )
-
-
-async def _export(
-    callback: CallbackQuery,
-    state: FSMContext,
-    resource_db: ResourceDB,
-    bot: Bot,
-    mode: str,
-) -> None:
-    message = get_editable_message(callback)
-    if message is None:
-        return
-
-    tg_id = callback.from_user.id
-
-    if mode == "urls":
-        data = resource_db.export_urls(tg_id)
-        filepath, count = write_urls_file(data, f"urls_{tg_id}.txt")
-        filename = "urls_export.txt"
-        caption = f"Экспортировано {count} ссылок"
-    else:
-        data = resource_db.export_data(tg_id)
-        filepath, count = write_data_file(data, f"data_{tg_id}.json")
-        filename = "data_export.json"
-        caption = f"Экспортировано {count} ресурсов"
-
-    if not data:
-        await callback.answer("Нет ресурсов для экспорта", show_alert=True)
-        return
-
-    await state.clear()
-
-    prompt_msg = await message.answer_document(
-        document=types.FSInputFile(filepath, filename=filename),
-        caption=caption,
-    )
-
-    await state.update_data(prompt_msg_id=prompt_msg.message_id)
-    os.remove(filepath)
-    await callback.answer()

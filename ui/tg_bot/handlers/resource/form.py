@@ -3,7 +3,6 @@ from typing_extensions import cast
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
 from core.logger import get_logger
@@ -17,7 +16,12 @@ from ui.tg_bot.callbacks.resource import (
 )
 from ui.tg_bot.handlers.resource.import_data import start_next_resource_from_callback
 from ui.tg_bot.handlers.resource.import_urls import start_next_url_from_callback
-from ui.tg_bot.keyboards.resource import create_kb_tags, create_kb_type
+from ui.tg_bot.keyboards.resource import (
+    create_kb_tags,
+    create_kb_type,
+    create_rating_keyboard,
+    create_save_summary_keyboard,
+)
 from ui.tg_bot.states.resource import ResourceFormState
 from ui.tg_bot.utils.message import get_editable_message, with_action_label
 from ui.tg_bot.utils.transition import transition_to_message
@@ -168,7 +172,7 @@ async def show_save_summary(
     is_edit = data.get("edit_mode", False)
     msg = _build_save_summary_text(resource, is_edit)
 
-    await message.edit_text(msg, reply_markup=_build_save_summary_keyboard())
+    await message.edit_text(msg, reply_markup=create_save_summary_keyboard())
 
 
 async def show_save_summary_direct(
@@ -186,7 +190,7 @@ async def show_save_summary_direct(
         state=state,
         bot=bot,
         text=msg,
-        reply_markup=_build_save_summary_keyboard(),
+        reply_markup=create_save_summary_keyboard(),
     )
 
 
@@ -218,6 +222,7 @@ async def _handle_save(
             )
         else:
             resource_db.insert(resource)
+            logger.info("Resource created")
             msg = (
                 f"{hbold('Ресурс сохранён')}\n\n"
                 f"{hbold('Название:')} {resource.title}\n"
@@ -383,24 +388,6 @@ async def _handle_change_field(
 
     elif action == "change_rating":
         current = data["resource"].my_rating
-        builder = InlineKeyboardBuilder()
-
-        for i in range(1, 6):
-            text = f"★{i}" if current and i <= current else str(i)
-            builder.button(
-                text=text,
-                callback_data=ResourceCallback(action=f"set_rating_{i}").pack(),
-            )
-
-        builder.button(
-            text="Убрать оценку",
-            callback_data=ResourceCallback(action="set_rating_0").pack(),
-        )
-        builder.button(
-            text="Назад",
-            callback_data=ResourceCallback(action="edit").pack(),
-        )
-        builder.adjust(5, 2)
 
         prompt_msg = await message.edit_text(
             with_action_label(
@@ -408,7 +395,7 @@ async def _handle_change_field(
                 f"Текущий рейтинг: {current or '—'}/5\n\nВыберите новый:",
                 data.get("title", ""),
             ),
-            reply_markup=builder.as_markup(),
+            reply_markup=create_rating_keyboard(current),
         )
         if isinstance(prompt_msg, Message):
             await state.update_data(prompt_msg_id=prompt_msg.message_id)
@@ -448,11 +435,4 @@ def _build_save_summary_text(resource: Resource, is_edit: bool) -> str:
         f"{hbold('Тип:')} {resource.resource_type.label}\n"
         f"{hbold('Формат:')} {resource.kind.label}\n"
         f"{hbold('Тэги:')} {', '.join(resource.tags) if resource.tags else 'не указаны'}"
-    )
-
-
-def _build_save_summary_keyboard():
-    return create_kb_tags(
-        ["Сохранить", "Изменить", "Отмена"],
-        pack_callback_data_list(["save", "edit", "cancel"]),
     )

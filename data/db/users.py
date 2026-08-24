@@ -125,37 +125,42 @@ class UserDB(BaseDB):
 
     def count_banned_users(self) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COUNT(*) FROM users WHERE is_active = 0"
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0
 
     def count_active_users(self) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COUNT(*) FROM users WHERE is_active = 1"
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0
 
     def count_all_users(self) -> int:
         with self.conn:
-            return self.conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            row = self.conn.execute("SELECT COUNT(*) FROM users").fetchone()
+        return row[0] if row else 0
 
     def count_new_users_since(self, since: datetime) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COUNT(*) FROM users WHERE created_at >= ?",
                 (since,),
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0
 
     def count_active_users_since(self, since: datetime) -> int:
         with self.conn:
-            return self.conn.execute(
+            row = self.conn.execute(
                 "SELECT COUNT(*) FROM users WHERE last_active_at >= ?",
                 (since,),
-            ).fetchone()[0]
+            ).fetchone()
+        return row[0] if row else 0
 
     def update_last_active(self, tg_id: int) -> None:
         with self.conn:
             self.conn.execute(
                 "UPDATE users SET last_active_at = ? WHERE tg_id = ?",
-                (datetime.now().isoformat(), tg_id),
+                (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), tg_id),
             )

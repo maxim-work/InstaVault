@@ -38,7 +38,7 @@ EXIT_TEXTS: Final[set[str]] = {
     "Ещё",
 }
 
-MESSAGES_PER_SECOND = 20
-MESSAGES_PER_MINUTE = 600
-MAX_RETRIES = 3
-RETRY_DELAY = 2
+MESSAGES_PER_SECOND: Final[int] = 20
+MESSAGES_PER_MINUTE: Final[int] = 600
+MAX_RETRIES: Final[int] = 3
+RETRY_DELAY: Final[int] = 2

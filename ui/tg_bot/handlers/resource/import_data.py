@@ -78,6 +78,8 @@ async def process_import_data(
         )
         await state.clear()
         return
+    finally:
+        Path(dest).unlink(missing_ok=True)
 
     if mode == "fast":
         try:

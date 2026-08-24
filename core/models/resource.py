@@ -277,6 +277,7 @@ class Resource(BaseModel):
             "completed_at": self.completed_at.isoformat()
             if self.completed_at
             else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
     def __str__(self) -> str:

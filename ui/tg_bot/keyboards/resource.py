@@ -10,6 +10,7 @@ from ui.tg_bot.callbacks.resource import (
     ResourceCallback,
     SearchCallback,
     SettingsCallback,
+    pack_callback_data_list,
 )
 
 T = TypeVar("T")
@@ -137,6 +138,107 @@ def create_import_data_menu() -> InlineKeyboardMarkup:
         callback_data=SettingsCallback(action="settings").pack(),
     )
     builder.adjust(2, 1)
+    return builder.as_markup()
+
+
+def create_save_summary_keyboard() -> InlineKeyboardMarkup:
+    return create_kb_tags(
+        ["Сохранить", "Изменить", "Отмена"],
+        pack_callback_data_list(["save", "edit", "cancel"]),
+    )
+
+
+def create_rating_keyboard(current: int | None) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    for i in range(1, 6):
+        text = f"★{i}" if current and i <= current else str(i)
+        builder.button(
+            text=text,
+            callback_data=ResourceCallback(action=f"set_rating_{i}").pack(),
+        )
+
+    builder.button(
+        text="Убрать оценку",
+        callback_data=ResourceCallback(action="set_rating_0").pack(),
+    )
+    builder.button(
+        text="Назад",
+        callback_data=ResourceCallback(action="edit").pack(),
+    )
+    builder.adjust(5, 2)
+    return builder.as_markup()
+
+
+def create_view_resource_keyboard(resource_id: int, page: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Редактировать",
+        callback_data=ResourceCallback(action="edit", resource_id=resource_id).pack(),
+    )
+    builder.button(
+        text="Удалить",
+        callback_data=ResourceCallback(
+            action="confirm_delete", resource_id=resource_id, page=page
+        ).pack(),
+    )
+    builder.button(
+        text="К списку",
+        callback_data=ResourceCallback(action="page", page=1).pack(),
+    )
+    builder.adjust(2, 1)
+    return builder.as_markup()
+
+
+def create_confirm_delete_keyboard(resource_id: int, page: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Да, удалить",
+        callback_data=ResourceCallback(
+            action="delete", resource_id=resource_id, page=page
+        ).pack(),
+    )
+    builder.button(
+        text="Нет",
+        callback_data=ResourceCallback(
+            action="view", resource_id=resource_id, page=page
+        ).pack(),
+    )
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def create_view_res_search_keyboards(resource_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Редактировать",
+        callback_data=SearchCallback(action="edit", resource_id=resource_id).pack(),
+    )
+    builder.button(
+        text="Удалить",
+        callback_data=SearchCallback(
+            action="confirm_delete", resource_id=resource_id
+        ).pack(),
+    )
+    builder.button(
+        text="К результатам",
+        callback_data=SearchCallback(action="results", page=1).pack(),
+    )
+    builder.adjust(2, 1)
+    return builder.as_markup()
+
+
+def create_confirm_delete_res_keyboard(resource_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Да, удалить",
+        callback_data=SearchCallback(action="delete", resource_id=resource_id).pack(),
+    )
+    builder.button(
+        text="Нет",
+        callback_data=SearchCallback(action="view", resource_id=resource_id).pack(),
+    )
+    builder.adjust(2)
     return builder.as_markup()
 
 

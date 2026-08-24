@@ -1,7 +1,6 @@
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from config import USERS_PER_PAGE
 from data.db.users import UserDB
@@ -12,6 +11,7 @@ from ui.tg_bot.handlers.admin.users import show_users_page
 from ui.tg_bot.keyboards.admin import (
     create_keyboard_page_users,
     create_keyboard_view_user,
+    create_search_back_to_panel,
 )
 from ui.tg_bot.middlewares.admin import AdminMiddleware
 from ui.tg_bot.states.admin import SearchState
@@ -32,15 +32,9 @@ async def cmd_search_user(
     if message is None:
         return
 
-    builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Назад в админ-панель",
-        callback_data=AdminCallback(action="back_to_panel").pack(),
-    )
-
     await message.edit_text(
         "🔍 <b>Поиск пользователя</b>\n\nВведите TG ID или username пользователя:",
-        reply_markup=builder.as_markup(),
+        reply_markup=create_search_back_to_panel(),
         parse_mode="HTML",
     )
     await state.update_data(prompt_msg_id=message.message_id)
@@ -76,7 +70,7 @@ async def search_user_result(
                 state=state,
                 bot=bot,
                 text="Пользователь не найден. Попробуйте ещё раз:",
-                reply_markup=_build_search_back_keyboard(),
+                reply_markup=create_search_back_to_panel(),
             )
             return
 
@@ -101,7 +95,7 @@ async def search_user_result(
             state=state,
             bot=bot,
             text="Пользователи не найдены. Попробуйте ещё раз:",
-            reply_markup=_build_search_back_keyboard(),
+            reply_markup=create_search_back_to_panel(),
         )
         return
 
@@ -155,12 +149,3 @@ async def back_to_search(
         parse_mode="HTML",
     )
     await callback.answer()
-
-
-def _build_search_back_keyboard():
-    builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Назад в админ-панель",
-        callback_data=AdminCallback(action="back_to_panel").pack(),
-    )
-    return builder.as_markup()

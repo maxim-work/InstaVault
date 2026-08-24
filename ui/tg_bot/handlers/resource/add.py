@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from datetime import datetime
 
 from aiogram import Bot, F, Router, types
@@ -154,7 +153,6 @@ async def process_format(
     callback: types.CallbackQuery,
     callback_data: ResourceCallback,
     state: FSMContext,
-    logger: logging.Logger,
 ) -> None:
     data = await state.get_data()
     is_edit = data.get("edit_target") == "change_format"
@@ -252,7 +250,6 @@ async def process_save_or_edit(
     callback_data: ResourceCallback,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     message = get_editable_message(callback)

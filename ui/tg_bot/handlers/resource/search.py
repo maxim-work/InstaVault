@@ -2,7 +2,6 @@ from aiogram import Bot, F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
 from config import RESOURCES_PER_PAGE
@@ -11,7 +10,11 @@ from data.db.resources import ResourceDB
 from data.filter import ResourceFilter
 from ui.tg_bot.callbacks.resource import SearchCallback
 from ui.tg_bot.handlers.resource.form import show_save_summary
-from ui.tg_bot.keyboards.resource import create_search_keyboard
+from ui.tg_bot.keyboards.resource import (
+    create_confirm_delete_res_keyboard,
+    create_search_keyboard,
+    create_view_res_search_keyboards,
+)
 from ui.tg_bot.states.resource import ResourceFormState, SearchState
 from ui.tg_bot.utils.fsm import exit_fsm
 from ui.tg_bot.utils.message import get_editable_message, with_action_label
@@ -44,6 +47,8 @@ async def process_search(
     bot: Bot,
     resource_db: ResourceDB,
 ) -> None:
+    if message.from_user is None:
+        return
     if message.text is None:
         return
 
@@ -52,16 +57,13 @@ async def process_search(
 
     keywords = message.text.strip()
 
-    if not keywords:
+    if len(keywords) > 100:
         await transition_to_message(
             message=message,
             state=state,
             bot=bot,
-            text="Введите хотя бы одно ключевое слово.",
+            text="Слишком длинный запрос. Максимум 100 символов.",
         )
-        return
-
-    if message.from_user is None:
         return
 
     tg_id = message.from_user.id
@@ -134,58 +136,32 @@ async def search_callback(
             await callback.answer("Ошибка: ресурс не указан", show_alert=True)
             return
         tg_id = callback.from_user.id
-        r = resource_db.get_resource(resource_id, tg_id)
-        if r is None:
+        res = resource_db.get_resource(resource_id, tg_id)
+        if res is None:
             await callback.answer("Ресурс не найден", show_alert=True)
             return
-
-        builder = InlineKeyboardBuilder()
-        builder.button(
-            text="Редактировать",
-            callback_data=SearchCallback(action="edit", resource_id=r.id).pack(),
-        )
-        builder.button(
-            text="Удалить",
-            callback_data=SearchCallback(
-                action="confirm_delete", resource_id=r.id
-            ).pack(),
-        )
-        builder.button(
-            text="К результатам",
-            callback_data=SearchCallback(action="results", page=1).pack(),
-        )
-        builder.adjust(2, 1)
+        if res.id is None:
+            return
 
         await message.edit_text(
-            _format_resource_detail(r),
-            reply_markup=builder.as_markup(),
+            _format_resource_detail(res),
+            reply_markup=create_view_res_search_keyboards(res.id),
         )
 
     elif action == "confirm_delete":
         if resource_id is None:
             await callback.answer("Ошибка: ресурс не указан", show_alert=True)
             return
-        r = resource_db.get_resource(resource_id, callback.from_user.id)
-        if r is None:
+        res = resource_db.get_resource(resource_id, callback.from_user.id)
+        if res is None:
             await callback.answer("Ресурс не найден", show_alert=True)
             return
-
-        builder = InlineKeyboardBuilder()
-        builder.button(
-            text="Да, удалить",
-            callback_data=SearchCallback(
-                action="delete", resource_id=resource_id
-            ).pack(),
-        )
-        builder.button(
-            text="Нет",
-            callback_data=SearchCallback(action="view", resource_id=resource_id).pack(),
-        )
-        builder.adjust(2)
+        if res.id is None:
+            return
 
         await message.edit_text(
-            f"Удалить ресурс «{r.title}»?",
-            reply_markup=builder.as_markup(),
+            f"Удалить ресурс «{res.title}»?",
+            reply_markup=create_confirm_delete_res_keyboard(res.id),
         )
 
     elif action == "delete":

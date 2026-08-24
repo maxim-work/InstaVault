@@ -18,7 +18,7 @@ async def export_urls_callback(
     state: FSMContext,
     resource_db: ResourceDB,
 ) -> None:
-    await _export(callback, state, resource_db, "urls")
+    await export(callback, state, resource_db, "urls")
 
 
 @export_router.callback_query(SettingsCallback.filter(F.action == "export_data"))
@@ -27,10 +27,10 @@ async def export_data_callback(
     state: FSMContext,
     resource_db: ResourceDB,
 ) -> None:
-    await _export(callback, state, resource_db, "data")
+    await export(callback, state, resource_db, "data")
 
 
-async def _export(
+async def export(
     callback: CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
@@ -45,13 +45,13 @@ async def _export(
     if mode == "urls":
         data = resource_db.export_urls(tg_id)
         filepath, count = write_urls_file(data, f"urls_{tg_id}.txt")
-        caption = f"Экспортировано {count} ссылок"
         filename = "urls_export.txt"
+        caption = f"Экспортировано {count} ссылок"
     else:
         data = resource_db.export_data(tg_id)
         filepath, count = write_data_file(data, f"data_{tg_id}.json")
-        caption = f"Экспортировано {count} ресурсов"
         filename = "data_export.json"
+        caption = f"Экспортировано {count} ресурсов"
 
     if not data:
         await callback.answer("Нет ресурсов для экспорта", show_alert=True)
@@ -63,7 +63,7 @@ async def _export(
         document=types.FSInputFile(filepath, filename=filename),
         caption=caption,
     )
-    await state.update_data(prompt_msg_id=prompt_msg.message_id)
 
+    await state.update_data(prompt_msg_id=prompt_msg.message_id)
     os.remove(filepath)
     await callback.answer()

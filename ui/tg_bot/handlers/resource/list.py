@@ -2,7 +2,6 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
 from config import RESOURCES_PER_PAGE
@@ -10,7 +9,11 @@ from core.models.resource import Resource
 from data.db.resources import ResourceDB
 from ui.tg_bot.callbacks.resource import ResourceCallback
 from ui.tg_bot.handlers.resource.form import show_save_summary
-from ui.tg_bot.keyboards.resource import create_list_keyboard
+from ui.tg_bot.keyboards.resource import (
+    create_confirm_delete_keyboard,
+    create_list_keyboard,
+    create_view_resource_keyboard,
+)
 from ui.tg_bot.states.resource import ResourceFormState
 from ui.tg_bot.utils.message import get_editable_message
 from ui.tg_bot.utils.transition import transition_to_message
@@ -99,31 +102,16 @@ async def handle_view_resource(
         await callback.answer("Ошибка: ресурс не указан", show_alert=True)
         return
 
-    r = resource_db.get_resource(resource_id, tg_id)
-    if r is None:
+    res = resource_db.get_resource(resource_id, tg_id)
+    if res is None:
         await callback.answer("Ресурс не найден", show_alert=True)
         return
-
-    builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Редактировать",
-        callback_data=ResourceCallback(action="edit", resource_id=r.id).pack(),
-    )
-    builder.button(
-        text="Удалить",
-        callback_data=ResourceCallback(
-            action="confirm_delete", resource_id=r.id, page=page
-        ).pack(),
-    )
-    builder.button(
-        text="К списку",
-        callback_data=ResourceCallback(action="page", page=1).pack(),
-    )
-    builder.adjust(2, 1)
+    if res.id is None:
+        return
 
     await message.edit_text(
-        _format_resource_detail(r),
-        reply_markup=builder.as_markup(),
+        _format_resource_detail(res),
+        reply_markup=create_view_resource_keyboard(res.id, page),
     )
     await callback.answer()
 
@@ -184,24 +172,9 @@ async def handle_confirm_delete(
         await callback.answer("Ресурс не найден", show_alert=True)
         return
 
-    builder = InlineKeyboardBuilder()
-    builder.button(
-        text="Да, удалить",
-        callback_data=ResourceCallback(
-            action="delete", resource_id=resource_id, page=page
-        ).pack(),
-    )
-    builder.button(
-        text="Нет",
-        callback_data=ResourceCallback(
-            action="view", resource_id=resource_id, page=page
-        ).pack(),
-    )
-    builder.adjust(2)
-
     await message.edit_text(
         f"Удалить ресурс «{r.title}»?",
-        reply_markup=builder.as_markup(),
+        reply_markup=create_confirm_delete_keyboard(resource_id, page),
     )
     await callback.answer()
 

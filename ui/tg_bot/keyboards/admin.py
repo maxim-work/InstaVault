@@ -212,3 +212,12 @@ def create_back_to_panel_keyboard() -> InlineKeyboardMarkup:
     )
 
     return builder.as_markup()
+
+
+def create_search_back_to_panel() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Назад в админ-панель",
+        callback_data=AdminCallback(action="back_to_panel").pack(),
+    )
+    return builder.as_markup()

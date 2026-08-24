@@ -27,6 +27,7 @@ class ResourceDB(BaseDB):
         "duration",
         "published_at",
         "completed_at",
+        "created_at",
     ]
 
     def insert(self, resource: Resource) -> int:
@@ -122,10 +123,13 @@ class ResourceDB(BaseDB):
             for resource in data:
                 try:
                     resource_data = resource.to_db_dict()
+                    resource_data["tg_id"] = tg_id
                     conn.execute(self._build_insert_query(), resource_data)
                     count += 1
                 except sqlite3.IntegrityError:
                     errors.append(f"Дубликат: {resource.url}")
+                except (ValueError, TypeError) as e:
+                    errors.append(f"Ошибка данных: {e}")
                 except Exception as e:
                     errors.append(f"{resource.url}: {e}")
             conn.commit()

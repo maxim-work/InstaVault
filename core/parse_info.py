@@ -84,7 +84,7 @@ def fetch_page_info(
     platform: str = "unknown",
     proxy: str | None = None,
     proxy_type: str = "socks5",
-) -> dict | None:
+) -> dict:
     info = {}
     proxies = None
     if proxy:
