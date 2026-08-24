@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 from aiogram import Bot, F, Router, types
@@ -6,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from config import PROXY_URL, YOUTUBE_API_KEY
+from core.logger import get_logger
 from core.models.resource import Resource, ResourceType
 from core.service import ResourceService
 from data.db.resources import ResourceDB
@@ -16,6 +16,8 @@ from ui.tg_bot.states.resource import ImportState, ResourceFormState
 from ui.tg_bot.utils.message import with_action_label
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
 
+logger = get_logger("import_urls")
+
 import_urls_router = Router()
 
 
@@ -25,7 +27,6 @@ async def process_import_file(
     state: FSMContext,
     resource_db: ResourceDB,
     bot: Bot,
-    logger: logging.Logger,
 ) -> None:
     if message.from_user is None or message.document is None:
         return
@@ -55,6 +56,7 @@ async def process_import_file(
     await bot.download_file(file_path, dest)
 
     text = Path(dest).read_text(encoding="utf-8")
+    Path(dest).unlink(missing_ok=True)
 
     await transition_to_message(
         message=message,
@@ -67,7 +69,6 @@ async def process_import_file(
         message=message,
         state=state,
         resource_db=resource_db,
-        logger=logger,
         text=text,
         bot=bot,
     )
@@ -78,7 +79,6 @@ async def process_import_text(
     message: Message,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     if message.from_user is None or message.text is None:
@@ -95,7 +95,6 @@ async def process_import_text(
         message=message,
         state=state,
         resource_db=resource_db,
-        logger=logger,
         text=message.text,
         bot=bot,
     )
@@ -105,10 +104,11 @@ async def _handle_urls_text(
     message: Message,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     text: str,
     bot: Bot,
 ) -> None:
+    if message.from_user is None:
+        return
     urls = [line.strip() for line in text.split("\n") if line.strip()]
 
     if not urls:
@@ -134,9 +134,6 @@ async def _handle_urls_text(
                     errors.append(f"Некорректная ссылка: {url}")
                     continue
 
-                if message.from_user is None:
-                    return
-
                 resource = ResourceService.create_resource(
                     url=url,
                     tg_id=message.from_user.id,
@@ -151,6 +148,9 @@ async def _handle_urls_text(
                 errors.append(f"Дубликат: {url}")
             except Exception as e:
                 errors.append(str(e))
+                logger.warning(f"User {message.from_user.id} failed to import url")
+
+        logger.info(f"User imported {count}/{len(urls)} urls (fast mode)")
 
         msg = f"Импортировано {count} из {len(urls)} ссылок."
 
@@ -172,14 +172,13 @@ async def _handle_urls_text(
             import_index=0,
             import_results={"count": 0, "errors": []},
         )
-        await _start_next_url(message, state, resource_db, logger, bot)
+        await _start_next_url(message, state, resource_db, bot)
 
 
 async def _start_next_url(
     message: Message,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     data = await state.get_data()
@@ -199,6 +198,8 @@ async def _start_next_url(
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
+        logger.info(f"User finished detailed import: {results['count']}/{total}")
+
         await transition_to_message(
             message=message,
             state=state,
@@ -217,7 +218,7 @@ async def _start_next_url(
         results = data["import_results"]
         results["errors"].append(f"Дубликат: {url}")
         await state.update_data(import_index=index + 1, import_results=results)
-        await _start_next_url(message, state, resource_db, logger, bot)
+        await _start_next_url(message, state, resource_db, bot)
         return
 
     try:
@@ -226,8 +227,9 @@ async def _start_next_url(
     except Exception:
         results = data["import_results"]
         results["errors"].append(f"Ошибка получения: {url}")
+        logger.warning("User failed to fetch info for url")
         await state.update_data(import_index=index + 1, import_results=results)
-        await _start_next_url(message, state, resource_db, logger, bot)
+        await _start_next_url(message, state, resource_db, bot)
         return
 
     await state.update_data(link=url, title=title)
@@ -248,7 +250,6 @@ async def start_next_url_from_callback(
     callback: types.CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     bot: Bot,
     index: int,
 ) -> None:
@@ -281,12 +282,12 @@ async def start_next_url_from_callback(
     except Exception:
         results = data["import_results"]
         results["errors"].append(f"Ошибка получения: {url}")
+        logger.warning("User failed to fetch info for url")
         await state.update_data(import_index=index + 1, import_results=results)
         await start_next_url_from_callback(
             callback,
             state,
             resource_db,
-            logger,
             bot,
             index + 1,
         )

@@ -6,6 +6,9 @@ from aiogram.types import CallbackQuery, Message, TelegramObject, Update
 
 from data.db.users import UserDB
 from ui.tg_bot.utils.message import with_action_label
+from core.logger import get_logger
+
+logger = get_logger("security")
 
 
 class CheckUserBanMiddleware(BaseMiddleware):
@@ -32,5 +35,8 @@ class CheckUserBanMiddleware(BaseMiddleware):
                         await real_event.answer(msg, show_alert=True)
                     elif isinstance(real_event, Message):
                         await real_event.answer(msg)
+                    logger.warning(
+                        f"Banned user {real_event.from_user.id} tried to access bot"
+                    )
                     return
         return await handler(event, data)

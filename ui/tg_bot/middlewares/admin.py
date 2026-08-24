@@ -5,6 +5,9 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
 from config import ADMIN_IDS
+from core.logger import get_logger
+
+logger = get_logger("security")
 
 
 class AdminMiddleware(BaseMiddleware):
@@ -23,6 +26,7 @@ class AdminMiddleware(BaseMiddleware):
                     await event.answer("У вас нет доступа", show_alert=True)
                 elif isinstance(event, Message):
                     await event.answer("У вас нет доступа")
+                logger.warning(f"User {event.from_user.id} tried to access admin panel")
                 return
             return await handler(event, data)
         return await handler(event, data)

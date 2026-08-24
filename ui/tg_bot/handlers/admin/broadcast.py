@@ -156,6 +156,9 @@ async def sending_message(
     if user is not None and page is not None:
         try:
             await bot.send_message(chat_id=user.tg_id, text=message_text)
+            logger.info(
+                f"Admin {callback.from_user.id} sent message to user({user.tg_id})"
+            )
             msg = f"Сообщение: {message_text}, доставлено {user.full_name}!"
         except Exception as e:
             logger.error(f"Failed to send message to {user.tg_id}: {e}")
@@ -246,6 +249,9 @@ async def _broadcast(
         f"Ошибок: {failed}\n"
         f"Rate limit hits: {rate_limit_hits}",
         reply_markup=create_back_to_panel_keyboard(),
+    )
+    logger.info(
+        f"Admin {admin_chat_id} broadcast to {total} users: sent={sent}, failed={failed}"
     )
 
 

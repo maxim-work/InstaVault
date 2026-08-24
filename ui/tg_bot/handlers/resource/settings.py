@@ -19,6 +19,9 @@ from ui.tg_bot.keyboards.resource import (
 from ui.tg_bot.states.resource import ImportState
 from ui.tg_bot.utils.message import get_editable_message
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
+from core.logger import get_logger
+
+logger = get_logger("settings")
 
 settings_router = Router()
 
@@ -139,8 +142,10 @@ async def settings_callback(
         )
 
     elif action == "del_all_resources":
-        if resource_db.count_user_resources(tg_id):
+        count = resource_db.count_user_resources(tg_id)
+        if count:
             resource_db.delete_all(tg_id)
+            logger.warning(f"User {tg_id} deleted all resources ({count})")
             await transition_callback(
                 callback=callback,
                 state=state,
@@ -158,6 +163,7 @@ async def settings_callback(
 
     elif action == "del_account":
         user_db.delete(tg_id)
+        logger.warning(f"User {tg_id} deleted account")
         await transition_callback(
             callback=callback,
             state=state,

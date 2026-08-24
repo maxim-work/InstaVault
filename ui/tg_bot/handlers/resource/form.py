@@ -1,11 +1,12 @@
-import logging
 from typing_extensions import cast
 
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.markdown import hbold
 
+from core.logger import get_logger
 from core.models.resource import Resource, ResourceKind, ResourceStatus, ResourceType
 from data.db.resources import ResourceDB
 from data.exceptions import DuplicateResourceError
@@ -18,18 +19,16 @@ from ui.tg_bot.handlers.resource.import_data import start_next_resource_from_cal
 from ui.tg_bot.handlers.resource.import_urls import start_next_url_from_callback
 from ui.tg_bot.keyboards.resource import create_kb_tags, create_kb_type
 from ui.tg_bot.states.resource import ResourceFormState
-from ui.tg_bot.utils.message import (
-    get_editable_message,
-    with_action_label,
-)
+from ui.tg_bot.utils.message import get_editable_message, with_action_label
 from ui.tg_bot.utils.transition import transition_to_message
+
+logger = get_logger("resource_form")
 
 
 async def _handle_import_next_step(
     callback: CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     data: dict[str, object],
     results: dict[str, object],
     index: int,
@@ -60,7 +59,7 @@ async def _handle_import_next_step(
         )
         return
 
-    await next_func(callback, state, resource_db, logger, bot, index)
+    await next_func(callback, state, resource_db, bot, index)
 
 
 async def handle_form_actions(
@@ -69,15 +68,14 @@ async def handle_form_actions(
     state: FSMContext,
     resource_db: ResourceDB,
     message: Message,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     action = callback_data.action
 
     if action == "save":
-        await _handle_save(callback, state, resource_db, message, logger, bot)
+        await _handle_save(callback, state, resource_db, message, bot)
     elif action == "cancel":
-        await _handle_cancel(callback, state, resource_db, message, logger, bot)
+        await _handle_cancel(callback, state, resource_db, message, bot)
     elif action == "apply_new_tags":
         await _handle_apply_new_tags(callback, state)
     elif action == "keep_old_tags":
@@ -197,7 +195,6 @@ async def _handle_save(
     state: FSMContext,
     resource_db: ResourceDB,
     message: Message,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     data = await state.get_data()
@@ -232,6 +229,7 @@ async def _handle_save(
                 f"{hbold('Рейтинг:')} {resource.my_rating or '—'}/5\n"
             )
     except DuplicateResourceError:
+        logger.warning(f"User {callback.from_user.id} tried to duplicate resource")
         msg = "Ресурс с такой ссылкой уже существует"
 
     if "import_urls" in data or "import_resources" in data:
@@ -240,7 +238,7 @@ async def _handle_save(
         index = data["import_index"] + 1
         await state.update_data(import_index=index, import_results=results)
         await _handle_import_next_step(
-            callback, state, resource_db, logger, data, results, index, message, bot
+            callback, state, resource_db, data, results, index, message, bot
         )
         return
 
@@ -258,7 +256,6 @@ async def _handle_cancel(
     state: FSMContext,
     resource_db: ResourceDB,
     message: Message,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     data = await state.get_data()
@@ -278,7 +275,7 @@ async def _handle_cancel(
         index = data["import_index"] + 1
         await state.update_data(import_index=index, import_results=results)
         await _handle_import_next_step(
-            callback, state, resource_db, logger, data, results, index, message, bot
+            callback, state, resource_db, data, results, index, message, bot
         )
         return
 
@@ -385,8 +382,6 @@ async def _handle_change_field(
             await state.update_data(prompt_msg_id=prompt_msg.message_id)
 
     elif action == "change_rating":
-        from aiogram.utils.keyboard import InlineKeyboardBuilder
-
         current = data["resource"].my_rating
         builder = InlineKeyboardBuilder()
 

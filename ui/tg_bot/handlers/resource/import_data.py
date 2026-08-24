@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 from aiogram import Bot, F, Router, types
@@ -6,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
+from core.logger import get_logger
 from core.models.resource import Resource
 from data.db.resources import ResourceDB
 from data_io.import_data import parse_data
@@ -16,6 +16,8 @@ from ui.tg_bot.utils.error_handler import handle_resource_error
 from ui.tg_bot.utils.message import with_action_label
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
 
+logger = get_logger("import_data")
+
 import_data_router = Router()
 
 
@@ -25,7 +27,6 @@ async def process_import_data(
     state: FSMContext,
     resource_db: ResourceDB,
     bot: Bot,
-    logger: logging.Logger,
 ) -> None:
     if message.document is None or message.from_user is None:
         return
@@ -65,7 +66,18 @@ async def process_import_data(
         text="Обрабатываю данные...",
     )
 
-    resources = parse_data(dest)
+    try:
+        resources = parse_data(dest)
+    except Exception as e:
+        await handle_resource_error(
+            error=e,
+            with_action_label=with_action_label,
+            action="error_import",
+            message=message,
+            context={"user_id": tg_id},
+        )
+        await state.clear()
+        return
 
     if mode == "fast":
         try:
@@ -80,6 +92,8 @@ async def process_import_data(
             )
             await state.clear()
             return
+
+        logger.info(f"User imported {count}/{total} resources (fast mode)")
 
         msg = f"Импортировано {count} из {total} ресурсов."
 
@@ -101,14 +115,13 @@ async def process_import_data(
             import_index=0,
             import_results={"count": 0, "errors": []},
         )
-        await _start_next_resource(message, state, resource_db, logger, bot)
+        await _start_next_resource(message, state, resource_db, bot)
 
 
 async def _start_next_resource(
     message: Message,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     bot: Bot,
 ) -> None:
     data = await state.get_data()
@@ -128,6 +141,8 @@ async def _start_next_resource(
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
+        logger.info(f"User finished detailed import: {results['count']}/{total}")
+
         await transition_to_message(
             message=message,
             state=state,
@@ -146,7 +161,7 @@ async def _start_next_resource(
         results = data["import_results"]
         results["errors"].append(f"Дубликат: {resource.url}")
         await state.update_data(import_index=index + 1, import_results=results)
-        await _start_next_resource(message, state, resource_db, logger, bot)
+        await _start_next_resource(message, state, resource_db, bot)
         return
 
     await state.update_data(
@@ -176,7 +191,6 @@ async def start_next_resource_from_callback(
     callback: types.CallbackQuery,
     state: FSMContext,
     resource_db: ResourceDB,
-    logger: logging.Logger,
     bot: Bot,
     index: int,
 ) -> None:
@@ -214,7 +228,6 @@ async def start_next_resource_from_callback(
             callback,
             state,
             resource_db,
-            logger,
             bot,
             index + 1,
         )

@@ -17,6 +17,9 @@ from ui.tg_bot.keyboards.admin import (
 from ui.tg_bot.middlewares.admin import AdminMiddleware
 from ui.tg_bot.utils.message import get_editable_message, with_action_label
 from ui.tg_bot.utils.transition import transition_to_message
+from core.logger import get_logger
+
+logger = get_logger("users")
 
 admin_router = Router()
 admin_router.message.middleware(AdminMiddleware())
@@ -118,6 +121,7 @@ async def delete_user(
 
     user_db.delete(callback_data.tg_id)
     await callback.answer(f"Пользователь {user_name} удален", show_alert=True)
+    logger.info(f"Admin {callback.from_user.id} delete user({callback_data.tg_id})")
 
     data = await state.get_data()
     search_results = data.get("search_results")
@@ -179,6 +183,7 @@ async def toggle_user_ban(
 
     if callback_data.action == "ban":
         user_db.ban(callback_data.tg_id)
+        logger.info(f"Admin {callback.from_user.id} ban user({callback_data.tg_id})")
         action_text = "забанен"
         await bot.send_message(
             chat_id=callback_data.tg_id,
@@ -186,6 +191,7 @@ async def toggle_user_ban(
         )
     else:
         user_db.unban(callback_data.tg_id)
+        logger.info(f"Admin {callback.from_user.id} unban user({callback_data.tg_id})")
         action_text = "разбанен"
         await bot.send_message(
             chat_id=callback_data.tg_id,
@@ -260,17 +266,8 @@ async def cmd_delete_all_users(
     user_db.delete_all_users()
 
     await callback.answer(f"Удалено {count} пользователей", show_alert=True)
+    logger.warning(f"Admin {callback.from_user.id} delete all users")
     await show_admin_panel(callback, state, bot)
-
-
-def _get_users_page(
-    users: list[User],
-    page: int,
-) -> tuple[list[User], int]:
-    total_pages = (len(users) + USERS_PER_PAGE - 1) // USERS_PER_PAGE
-    start = (page - 1) * USERS_PER_PAGE
-    page_users = users[start : start + USERS_PER_PAGE]
-    return page_users, total_pages
 
 
 async def show_users_page(
@@ -340,3 +337,13 @@ async def view_user(
         parse_mode="HTML",
     )
     await callback.answer()
+
+
+def _get_users_page(
+    users: list[User],
+    page: int,
+) -> tuple[list[User], int]:
+    total_pages = (len(users) + USERS_PER_PAGE - 1) // USERS_PER_PAGE
+    start = (page - 1) * USERS_PER_PAGE
+    page_users = users[start : start + USERS_PER_PAGE]
+    return page_users, total_pages

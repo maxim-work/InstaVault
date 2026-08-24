@@ -81,11 +81,21 @@ async def process_link(
         )
         return
 
-    title = ResourceService.get_info_for_url(
-        link,
-        proxy=PROXY_URL,
-        youtube_api_key=YOUTUBE_API_KEY,
-    )["title"]
+    try:
+        title = ResourceService.get_info_for_url(
+            link,
+            proxy=PROXY_URL,
+            youtube_api_key=YOUTUBE_API_KEY,
+        )["title"]
+    except Exception as e:
+        await handle_resource_error(
+            error=e,
+            with_action_label=with_action_label,
+            action="error_add",
+            message=message,
+            context={"url": link},
+        )
+        return
 
     await state.update_data(title=title, link=link)
     await state.set_state(ResourceFormState.waiting_for_type)
@@ -280,7 +290,6 @@ async def process_save_or_edit(
         state=state,
         resource_db=resource_db,
         message=message,
-        logger=logger,
         bot=bot,
     )
 
