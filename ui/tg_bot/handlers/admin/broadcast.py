@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from datetime import datetime
 
 from aiogram import Bot, F, Router
@@ -13,6 +12,7 @@ from config import (
     RETRY_DELAY,
     MAX_RETRIES,
 )
+from core.logger import get_logger
 from core.models.user import User
 from data.db.users import UserDB
 from ui.tg_bot.callbacks.admin import AdminCallback, ModerationCallback
@@ -26,6 +26,8 @@ from ui.tg_bot.middlewares.admin import AdminMiddleware
 from ui.tg_bot.states.admin import NewsletterState
 from ui.tg_bot.utils.message import get_editable_message
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
+
+logger = get_logger("broadcast")
 
 admin_router = Router()
 admin_router.message.middleware(AdminMiddleware())
@@ -113,7 +115,6 @@ async def sending_message(
     state: FSMContext,
     bot: Bot,
     user_db: UserDB,
-    logger: logging.Logger,
 ) -> None:
     message = get_editable_message(callback)
     if message is None:
@@ -175,7 +176,6 @@ async def sending_message(
             admin_chat_id=callback.from_user.id,
             tg_ids=tg_ids,
             message_text=message_text,
-            logger=logger,
         )
 
     await state.clear()
@@ -187,7 +187,6 @@ async def _broadcast(
     admin_chat_id: int,
     tg_ids: list[int],
     message_text: str,
-    logger: logging.Logger,
 ) -> None:
     total = len(tg_ids)
     sent = 0
@@ -219,7 +218,7 @@ async def _broadcast(
             messages_in_window = 0
 
         try:
-            await _send_with_retry(bot, tg_id, message_text, logger)
+            await _send_with_retry(bot, tg_id, message_text)
             sent += 1
         except Exception as e:
             failed += 1
@@ -254,7 +253,6 @@ async def _send_with_retry(
     bot: Bot,
     tg_id: int,
     text: str,
-    logger: logging.Logger,
 ) -> None:
     last_error: Exception | None = None
 

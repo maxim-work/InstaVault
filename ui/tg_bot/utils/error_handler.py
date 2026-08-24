@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -13,7 +12,10 @@ from core.exceptions import (
     ProxyRequestError,
     ResourceNotFoundError,
 )
+from core.logger import get_logger
 from ui.tg_bot.utils.message import get_editable_message
+
+logger = get_logger("error_handler")
 
 USER_ERRORS: dict[type[Exception], str | Callable[[Exception], str]] = {
     InvalidUrlParamError: "Некорректная ссылка.",
@@ -34,7 +36,6 @@ SYSTEM_ERRORS: tuple[type[Exception], ...] = (
 async def handle_resource_error(
     error: Exception,
     context: dict[str, Any],
-    logger: logging.Logger,
     with_action_label: Callable[[str, str], str],
     action: str = "error_add",
     callback: CallbackQuery | None = None,

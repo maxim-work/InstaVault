@@ -1,7 +1,4 @@
 import asyncio
-import logging
-import os
-import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -9,6 +6,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 
 from config import BOT_TOKEN, PROXY_URL
+from core.logger import get_logger, setup_logging
 from core.service import UserService
 from data.db.resources import ResourceDB
 from data.db.stats import StatsDB
@@ -23,18 +21,8 @@ from ui.tg_bot.middlewares.logger import LoggerMiddleware
 from ui.tg_bot.middlewares.registration import RegistrationMiddleware
 from ui.tg_bot.middlewares.user_update import UserUpdateMiddleware
 
-os.makedirs("logs", exist_ok=True)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(message)s",
-    handlers=[
-        logging.FileHandler("logs/bot.log", encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
-
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger("dispatcher")
 
 
 async def main(
@@ -56,13 +44,13 @@ async def main(
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
                 session=session,
             )
-            logging.info(f"Бот запущен через прокси: {PROXY_URL}")
+            logger.info(f"Бот запущен через прокси: {PROXY_URL}")
         else:
             bot = Bot(
                 token=BOT_TOKEN,
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             )
-            logging.info("Бот запущен без прокси")
+            logger.info("Бот запущен без прокси")
 
         dp = Dispatcher()
         dp.update.middleware(RegistrationMiddleware(user_db, user_service))
@@ -74,19 +62,19 @@ async def main(
         dp.include_router(admin_router)
         dp.include_router(resource_router)
         dp.include_router(common_router)
-        logging.info("Роутеры подключены")
+        logger.info("Роутеры подключены")
 
-        logging.info("Запуск поллинга...")
+        logger.info("Запуск поллинга...")
         await dp.start_polling(bot)
 
     except KeyboardInterrupt:
-        logging.info("Бот остановлен пользователем (Ctrl+C)")
+        logger.info("Бот остановлен пользователем (Ctrl+C)")
     except Exception as e:
-        logging.critical(f"Критическая ошибка: {e}", exc_info=True)
+        logger.critical(f"Критическая ошибка: {e}", exc_info=True)
     finally:
         if bot is not None:
             await bot.session.close()
-            logging.info("Сессия закрыта")
+            logger.info("Сессия закрыта")
 
 
 def start_bot(

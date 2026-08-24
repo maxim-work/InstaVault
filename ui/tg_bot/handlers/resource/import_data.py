@@ -73,7 +73,6 @@ async def process_import_data(
         except Exception as e:
             await handle_resource_error(
                 error=e,
-                logger=logger,
                 with_action_label=with_action_label,
                 action="error_import",
                 message=message,

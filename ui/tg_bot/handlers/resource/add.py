@@ -176,7 +176,6 @@ async def process_format(
             callback=callback,
             error=e,
             context={"user_id": callback.from_user.id, "url": data.get("link")},
-            logger=logger,
             with_action_label=with_action_label,
         )
         if handled:
