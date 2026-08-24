@@ -2,7 +2,7 @@ from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from config import USERS_PER_PAGE
+from config import ADMIN_IDS, USERS_PER_PAGE
 from core.models.user import User
 from data.db.users import UserDB
 from ui.tg_bot.callbacks.admin import AdminCallback, ModerationCallback
@@ -256,14 +256,15 @@ async def cmd_delete_all_users(
     if message is None:
         return
 
-    users = user_db.get_all_users()
+    exclude_ids = [*ADMIN_IDS, callback.from_user.id]
+    users = user_db.get_all_tg_ids_except(exclude_ids)
     count = len(users)
 
     if not users:
         await callback.answer("Нет пользователей для удаления", show_alert=True)
         return
 
-    user_db.delete_all_users()
+    user_db.delete_all_users_except(exclude_ids)
 
     await callback.answer(f"Удалено {count} пользователей", show_alert=True)
     logger.warning(f"Admin {callback.from_user.id} delete all users")

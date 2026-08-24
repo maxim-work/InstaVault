@@ -63,10 +63,12 @@ class UserDB(BaseDB):
         with self.conn:
             self.conn.execute("DELETE FROM users WHERE tg_id = ?", (tg_id,))
 
-    def delete_all_users(self) -> None:
+    def delete_all_users_except(self, exclude_ids: list[int]) -> None:
+        placeholders = ",".join("?" * len(exclude_ids))
         with self.conn:
-            self.conn.execute("DELETE FROM users")
-            self.conn.execute("DELETE FROM sqlite_sequence WHERE name='users'")
+            self.conn.execute(
+                f"DELETE FROM users WHERE tg_id NOT IN ({placeholders})", exclude_ids
+            )
 
     def get_user(self, tg_id: int) -> User | None:
         with self.conn:
@@ -96,6 +98,11 @@ class UserDB(BaseDB):
         return [User(**dict(row)) for row in rows]
 
     def get_all_tg_ids_except(self, exclude_ids: list[int]) -> list[int]:
+        if not exclude_ids:
+            return [
+                row["tg_id"]
+                for row in self.conn.execute("SELECT tg_id FROM users").fetchall()
+            ]
         placeholders = ",".join("?" * len(exclude_ids))
         with self.conn:
             rows = self.conn.execute(

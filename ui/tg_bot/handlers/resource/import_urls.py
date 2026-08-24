@@ -134,6 +134,10 @@ async def _handle_urls_text(
                     errors.append(f"Некорректная ссылка: {url}")
                     continue
 
+                if resource_db.get_by_url(url, message.from_user.id) is not None:
+                    errors.append(f"Дубликат: {url}")
+                    continue
+
                 resource = ResourceService.create_resource(
                     url=url,
                     tg_id=message.from_user.id,
