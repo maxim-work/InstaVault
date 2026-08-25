@@ -19,6 +19,7 @@ from ui.tg_bot.middlewares.append_db import DBMiddleware
 from ui.tg_bot.middlewares.check_user_ban import CheckUserBanMiddleware
 from ui.tg_bot.middlewares.logger import LoggerMiddleware
 from ui.tg_bot.middlewares.registration import RegistrationMiddleware
+from ui.tg_bot.middlewares.throttling import ThrottlingMiddleware
 from ui.tg_bot.middlewares.user_update import UserUpdateMiddleware
 
 setup_logging()
@@ -53,6 +54,7 @@ async def main(
             logger.info("Бот запущен без прокси")
 
         dp = Dispatcher()
+        dp.update.middleware(ThrottlingMiddleware(rate_limit=1, window=1))
         dp.update.middleware(RegistrationMiddleware(user_db, user_service))
         dp.update.middleware(CheckUserBanMiddleware(user_db))
         dp.update.middleware(UserUpdateMiddleware(user_db, user_service))
