@@ -1,11 +1,10 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from data.db.resources import ResourceDB
 from data.db.stats import StatsDB
 from data.db.users import UserDB
-
 
 scheduler = AsyncIOScheduler()
 
@@ -15,8 +14,8 @@ async def recalc_daily_stats(
     resource_db: ResourceDB,
     stats_db: StatsDB,
 ) -> None:
-    today = datetime.now().strftime("%Y-%m-%d")
-    since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    since = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
     new_users = user_db.count_new_users_since(since)
     new_resources = resource_db.count_all_resources()

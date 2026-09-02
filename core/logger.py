@@ -1,8 +1,8 @@
 import logging
-import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-os.makedirs("logs", exist_ok=True)
+Path("logs").mkdir(parents=True, exist_ok=True)
 
 FORMATTER = logging.Formatter(
     "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",

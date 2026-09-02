@@ -1,8 +1,12 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field, field_validator
 
 from core.exceptions import InvalidParamError
+
+
+def _now_utc() -> datetime:
+    return datetime.now(UTC)
 
 
 class User(BaseModel):
@@ -15,7 +19,7 @@ class User(BaseModel):
     last_name: str | None = None
     is_active: bool = True
     last_active_at: datetime | None = None
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=_now_utc)
 
     @field_validator("tg_id")
     @classmethod
@@ -60,23 +64,18 @@ class User(BaseModel):
     def activate(self) -> None:
         self.is_active = True
 
-    def to_db_dict(self) -> dict:
+    def to_db_dict(self) -> dict[str, object]:
         return {
             "tg_id": self.tg_id,
             "username": self.username,
             "first_name": self.first_name,
             "last_name": self.last_name,
             "is_active": self.is_active,
-            "last_active_at": self.last_active_at.isoformat()
-            if self.last_active_at
-            else None,
+            "last_active_at": self.last_active_at.isoformat() if self.last_active_at else None,
         }
 
     def __str__(self) -> str:
         return f"{self.full_name} @{self.username or 'отсутствует'}"
 
     def __repr__(self) -> str:
-        return (
-            f"{self.full_name} is_active={self.is_active} "
-            f"last_active_at={self.last_active_at}"
-        )
+        return f"{self.full_name} is_active={self.is_active} last_active_at={self.last_active_at}"

@@ -19,20 +19,18 @@ def is_valid_domain(domain: str) -> bool:
 def detect_platform(url: str) -> str:
     domain = urlparse(url).netloc.lower()
 
-    if domain.startswith("www."):
-        domain = domain[4:]
+    domain = domain.removeprefix("www.")
 
     if not domain:
         return "unknown"
 
     if any(yt in domain for yt in ["youtube.com", "youtu.be"]):
         return "youtube"
-    elif any(h in domain for h in ["habr.com", "habr.ru"]):
+    if any(h in domain for h in ["habr.com", "habr.ru"]):
         return "habr"
-    elif is_valid_domain(domain):
+    if is_valid_domain(domain):
         return domain
-    else:
-        return "unknown"
+    return "unknown"
 
 
 def extract_external_id(url: str, platform: str) -> str | None:

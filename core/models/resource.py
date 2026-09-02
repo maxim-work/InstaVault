@@ -1,6 +1,8 @@
 import json
-from datetime import datetime
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from math import log10
+from typing import Any, TypedDict
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, ValidationInfo, field_serializer, field_validator
@@ -9,9 +11,20 @@ from config import MAX_URL_LENGTH
 from core.config import RATING_CONFIG
 from core.enum import ResourceKind, ResourcePlatform, ResourceStatus, ResourceType
 from core.exceptions import InvalidParamError, InvalidRatingError, UnknownClassCodeError
+from core.protocols import SupportsCode
 from core.utils import detect_platform
 
-_PLATFORM_RATING_PARAMS = {
+
+class _PlatformRatingParams(TypedDict):
+    view_smoothing: int
+    engagement_smoothing: int
+    view_norm: float
+    reach_multiplier: float
+    engagement_rate_multiplier: float
+    engagement_multiplier: float
+
+
+_PLATFORM_RATING_PARAMS: dict[ResourcePlatform, _PlatformRatingParams] = {
     ResourcePlatform.YOUTUBE: {
         "view_smoothing": RATING_CONFIG.view_smoothing,
         "engagement_smoothing": RATING_CONFIG.engagement_smoothing,
@@ -29,6 +42,10 @@ _PLATFORM_RATING_PARAMS = {
         "engagement_multiplier": RATING_CONFIG.habr_engagement_multiplier,
     },
 }
+
+
+def _now_utc() -> datetime:
+    return datetime.now(UTC)
 
 
 class Resource(BaseModel):
@@ -52,7 +69,7 @@ class Resource(BaseModel):
     duration: int | None = None
     published_at: datetime | None = None
     completed_at: datetime | None = None
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=_now_utc)
 
     @field_validator("title")
     @classmethod
@@ -66,13 +83,13 @@ class Resource(BaseModel):
     def url_must_be_valid(cls, v: str) -> str:
         if not v:
             raise InvalidParamError("url", str(v), "URL обязателен")
-        if not cls._is_valid_url(v):
+        if not cls.is_valid_url(v):
             raise InvalidParamError("url", v, f"Некорректный URL: {v}")
         return v
 
     @field_validator("resource_type", mode="before")
     @classmethod
-    def coerce_resource_type(cls, v) -> ResourceType:
+    def coerce_resource_type(cls, v: object) -> ResourceType:
         if isinstance(v, str):
             try:
                 return ResourceType.from_code(v)
@@ -84,7 +101,7 @@ class Resource(BaseModel):
 
     @field_validator("platform", mode="before")
     @classmethod
-    def coerce_and_detect_platform(cls, v, info: ValidationInfo) -> ResourcePlatform:
+    def coerce_and_detect_platform(cls, v: object, info: ValidationInfo) -> ResourcePlatform:
         if isinstance(v, str):
             try:
                 v = ResourcePlatform.from_code(v)
@@ -102,7 +119,7 @@ class Resource(BaseModel):
 
     @field_validator("kind", mode="before")
     @classmethod
-    def coerce_and_detect_kind(cls, v, info: ValidationInfo) -> ResourceKind:
+    def coerce_and_detect_kind(cls, v: object, info: ValidationInfo) -> ResourceKind:
         if isinstance(v, str):
             try:
                 v = ResourceKind.from_code(v)
@@ -114,13 +131,13 @@ class Resource(BaseModel):
             platform = info.data.get("platform") if info.data else None
             if platform == ResourcePlatform.YOUTUBE:
                 return ResourceKind.VIDEO
-            elif platform == ResourcePlatform.HABR:
+            if platform == ResourcePlatform.HABR:
                 return ResourceKind.ARTICLE
         return v
 
     @field_validator("status", mode="before")
     @classmethod
-    def coerce_status(cls, v) -> ResourceStatus:
+    def coerce_status(cls, v: object) -> ResourceStatus:
         if isinstance(v, str):
             try:
                 return ResourceStatus.from_code(v)
@@ -132,7 +149,7 @@ class Resource(BaseModel):
 
     @field_validator("tags", mode="before")
     @classmethod
-    def coerce_tags(cls, v) -> list[str]:
+    def coerce_tags(cls, v: object) -> list[str]:
         if v is None:
             return []
         if isinstance(v, str):
@@ -156,13 +173,11 @@ class Resource(BaseModel):
     def validate_positive(cls, v: int | None, info: ValidationInfo) -> int | None:
         if v is not None and v < 0:
             field_name = info.field_name or "поле"
-            raise InvalidParamError(
-                field_name, str(v), f"{field_name} не может быть отрицательным"
-            )
+            raise InvalidParamError(field_name, str(v), f"{field_name} не может быть отрицательным")
         return v
 
     @field_serializer("resource_type", "platform", "kind", "status")
-    def serialize_enum(self, value) -> str:
+    def serialize_enum(self, value: SupportsCode) -> str:
         return value.code
 
     @field_serializer("tags")
@@ -170,7 +185,7 @@ class Resource(BaseModel):
         return json.dumps(value, ensure_ascii=False)
 
     @classmethod
-    def from_url(cls, url: str, title: str = "") -> "Resource":
+    def from_url(cls, url: str, title: str = "") -> Resource:
         return cls(url=url, title=title)
 
     def update_my_rating(self, rating: int) -> None:
@@ -178,9 +193,7 @@ class Resource(BaseModel):
             raise InvalidRatingError(rating, RATING_CONFIG.max_personal_rating)
         self.my_rating = rating
 
-    def update_stats(
-        self, views: int | None = None, engagement: int | None = None
-    ) -> None:
+    def update_stats(self, views: int | None = None, engagement: int | None = None) -> None:
         if views is not None:
             self.views = views
         if engagement is not None:
@@ -196,14 +209,14 @@ class Resource(BaseModel):
 
     def complete(self, rating: int | None = None) -> None:
         self.status = ResourceStatus.TEACHED
-        self.completed_at = datetime.now()
+        self.completed_at = datetime.now(UTC)
         if rating is not None:
             self.update_my_rating(rating)
 
     def master(self) -> None:
         self.status = ResourceStatus.MASTERED
         if not self.completed_at:
-            self.completed_at = datetime.now()
+            self.completed_at = datetime.now(UTC)
 
     def archive(self) -> None:
         self.status = ResourceStatus.ARCHIVED
@@ -254,7 +267,7 @@ class Resource(BaseModel):
             parts.append(f"(Ваша оценка: {self.my_rating}/5)")
         return " ".join(parts)
 
-    def to_db_dict(self) -> dict:
+    def to_db_dict(self) -> dict[str, object]:
         return {
             "tg_id": self.tg_id,
             "title": self.title,
@@ -271,12 +284,8 @@ class Resource(BaseModel):
             "engagement": self.engagement,
             "views": self.views,
             "duration": self.duration,
-            "published_at": self.published_at.isoformat()
-            if self.published_at
-            else None,
-            "completed_at": self.completed_at.isoformat()
-            if self.completed_at
-            else None,
+            "published_at": self.published_at.isoformat() if self.published_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -288,7 +297,7 @@ class Resource(BaseModel):
         parts = [f"{k}={v!r}" for k, v in fields.items()]
         return f"Resource({', '.join(parts)})"
 
-    def __rich_repr__(self):
+    def __rich_repr__(self) -> Iterator[tuple[str, Any]]:
         yield "id", self.id
         yield "title", self.title
         yield "url", self.url
@@ -330,8 +339,7 @@ class Resource(BaseModel):
         if self.my_rating is not None:
             personal_score = self._personal_rating_score()
             return round(
-                cfg.platform_weight * platform_score
-                + cfg.personal_weight * personal_score,
+                cfg.platform_weight * platform_score + cfg.personal_weight * personal_score,
                 2,
             )
 
@@ -340,18 +348,14 @@ class Resource(BaseModel):
     def _personal_rating_score(self) -> float:
         if self.my_rating is None:
             return 0.0
-        return (
-            self.my_rating / RATING_CONFIG.max_personal_rating
-        ) * RATING_CONFIG.max_score
+        return (self.my_rating / RATING_CONFIG.max_personal_rating) * RATING_CONFIG.max_score
 
     @staticmethod
-    def _is_valid_url(url: str) -> bool:
+    def is_valid_url(url: str) -> bool:
         try:
             parsed = urlparse(url)
             return bool(
-                parsed.scheme in ("http", "https")
-                and parsed.netloc
-                and len(url) <= MAX_URL_LENGTH
+                parsed.scheme in ("http", "https") and parsed.netloc and len(url) <= MAX_URL_LENGTH
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False

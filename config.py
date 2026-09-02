@@ -18,7 +18,7 @@ USER_COMMANDS: Final[str] = "\n/start — начать\n/help — помощь"
 ADMIN_COMMANDS: Final[str] = "\n/start — начать\n/help — помощь"
 
 ADMIN_IDS: Final[list[int]] = [
-    int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()
+    int(admin_id.strip()) for admin_id in os.getenv("ADMIN_IDS", "").split(",") if admin_id.strip()
 ]
 
 RESOURCES_PER_PAGE: Final[int] = 5
@@ -44,3 +44,5 @@ MAX_RETRIES: Final[int] = 3
 RETRY_DELAY: Final[int] = 2
 
 ACTIVITY_UPDATE_INTERVAL_SECONDS: Final[int] = 120
+MIN_TG_ID: Final[int] = 2_000_000
+MAX_SEARCH_QUERY_LENGTH: Final[int] = 100
