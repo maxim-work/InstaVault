@@ -9,7 +9,7 @@ from data.filter import ResourceFilter, calculate_scores
 
 
 class ResourceDB(BaseDB):
-    COLUMNS = [
+    COLUMNS = (
         "tg_id",
         "title",
         "url",
@@ -28,7 +28,7 @@ class ResourceDB(BaseDB):
         "published_at",
         "completed_at",
         "created_at",
-    ]
+    )
 
     def insert(self, resource: Resource) -> int:
         try:
@@ -107,19 +107,14 @@ class ResourceDB(BaseDB):
 
     def export_data(self, tg_id: int) -> list[Resource]:
         with self.conn:
-            rows = self.conn.execute(
-                "SELECT * FROM resources WHERE tg_id = ?", (tg_id,)
-            ).fetchall()
+            rows = self.conn.execute("SELECT * FROM resources WHERE tg_id = ?", (tg_id,)).fetchall()
         return [Resource(**dict(row)) for row in rows]
 
-    def import_data(
-        self, data: list[Resource], tg_id: int
-    ) -> tuple[int, int, list[str]]:
+    def import_data(self, data: list[Resource], tg_id: int) -> tuple[int, int, list[str]]:
         count = 0
         errors = []
 
         with self.conn as conn:
-            conn.execute("BEGIN")
             for resource in data:
                 try:
                     resource_data = resource.to_db_dict()
@@ -130,9 +125,8 @@ class ResourceDB(BaseDB):
                     errors.append(f"Дубликат: {resource.url}")
                 except (ValueError, TypeError) as e:
                     errors.append(f"Ошибка данных: {e}")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     errors.append(f"{resource.url}: {e}")
-            conn.commit()
 
         return count, len(data), errors
 
@@ -183,8 +177,8 @@ class ResourceDB(BaseDB):
     def _build_insert_query(self) -> str:
         cols = ", ".join(self.COLUMNS)
         placeholders = ", ".join(f":{col}" for col in self.COLUMNS)
-        return f"INSERT INTO resources ({cols}) VALUES ({placeholders})"
+        return f"INSERT INTO resources ({cols}) VALUES ({placeholders})"  # noqa: S608
 
     def _build_update_query(self) -> str:
         sets = ", ".join(f"{col} = :{col}" for col in self.COLUMNS)
-        return f"UPDATE resources SET {sets} WHERE id = :id"
+        return f"UPDATE resources SET {sets} WHERE id = :id"  # noqa: S608

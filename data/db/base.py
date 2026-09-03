@@ -1,5 +1,6 @@
 import sqlite3
 from types import TracebackType
+from typing import Self
 
 
 class BaseDB:
@@ -12,7 +13,7 @@ class BaseDB:
     def close(self) -> None:
         self.conn.close()
 
-    def __enter__(self) -> "BaseDB":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

@@ -19,7 +19,7 @@ class DuplicateUserError(DataError):
 
 
 class EmptyDatabaseError(DataError):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("База данных пуста")
 
 

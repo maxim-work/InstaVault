@@ -1,4 +1,13 @@
+from typing import TypedDict
+
 from data.db.base import BaseDB
+
+
+class StatsDict(TypedDict):
+    total_users: int
+    banned_users: int
+    total_resources: int
+    new_users: int
 
 
 class StatsDB(BaseDB):
@@ -39,7 +48,7 @@ class StatsDB(BaseDB):
                 ),
             )
 
-    def get_stats_for_period(self, since: str, until: str) -> dict:
+    def get_stats_for_period(self, since: str, until: str) -> StatsDict:
         with self.conn:
             row = self.conn.execute(
                 """
@@ -54,7 +63,12 @@ class StatsDB(BaseDB):
                 """,
                 (since, until),
             ).fetchone()
-        return dict(row)
+        return StatsDict(
+            total_users=row["total_users"],
+            banned_users=row["banned_users"],
+            total_resources=row["total_resources"],
+            new_users=row["new_users"],
+        )
 
     def get_active_users_for_period(self, since: str, until: str) -> int:
         with self.conn:

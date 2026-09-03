@@ -1,12 +1,14 @@
 import json
+from pathlib import Path
+
 from pydantic import TypeAdapter, ValidationError
+
 from core.models.resource import Resource
 
 
 def parse_data(filepath: str) -> list[Resource]:
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(Path(filepath).read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
         raise ValueError(f"Ошибка в JSON: {e}") from e
     except FileNotFoundError:

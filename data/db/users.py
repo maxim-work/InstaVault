@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime
 
 from core.models.user import User
 from data.db.base import BaseDB
@@ -25,8 +25,8 @@ class UserDB(BaseDB):
                     ),
                 )
                 return cursor.lastrowid or 0
-            except sqlite3.IntegrityError:
-                raise DuplicateUserError(user.tg_id)
+            except sqlite3.IntegrityError as err:
+                raise DuplicateUserError(user.tg_id) from err
 
     def update(self, user: User) -> None:
         with self.conn:
@@ -67,7 +67,8 @@ class UserDB(BaseDB):
         placeholders = ",".join("?" * len(exclude_ids))
         with self.conn:
             self.conn.execute(
-                f"DELETE FROM users WHERE tg_id NOT IN ({placeholders})", exclude_ids
+                f"DELETE FROM users WHERE tg_id NOT IN ({placeholders})",  # noqa: S608
+                exclude_ids,
             )
 
     def get_user(self, tg_id: int) -> User | None:
@@ -80,16 +81,12 @@ class UserDB(BaseDB):
 
     def get_banned_users(self) -> list[User]:
         with self.conn:
-            rows = self.conn.execute(
-                "SELECT * FROM users WHERE is_active = 0"
-            ).fetchall()
+            rows = self.conn.execute("SELECT * FROM users WHERE is_active = 0").fetchall()
         return [User(**dict(row)) for row in rows]
 
     def get_active_users(self) -> list[User]:
         with self.conn:
-            rows = self.conn.execute(
-                "SELECT * FROM users WHERE is_active = 1"
-            ).fetchall()
+            rows = self.conn.execute("SELECT * FROM users WHERE is_active = 1").fetchall()
         return [User(**dict(row)) for row in rows]
 
     def get_all_users(self) -> list[User]:
@@ -99,14 +96,11 @@ class UserDB(BaseDB):
 
     def get_all_tg_ids_except(self, exclude_ids: list[int]) -> list[int]:
         if not exclude_ids:
-            return [
-                row["tg_id"]
-                for row in self.conn.execute("SELECT tg_id FROM users").fetchall()
-            ]
+            return [row["tg_id"] for row in self.conn.execute("SELECT tg_id FROM users").fetchall()]
         placeholders = ",".join("?" * len(exclude_ids))
         with self.conn:
             rows = self.conn.execute(
-                f"SELECT tg_id FROM users WHERE tg_id NOT IN ({placeholders})",
+                f"SELECT tg_id FROM users WHERE tg_id NOT IN ({placeholders})",  # noqa: S608
                 exclude_ids,
             ).fetchall()
         return [row["tg_id"] for row in rows]
@@ -132,16 +126,12 @@ class UserDB(BaseDB):
 
     def count_banned_users(self) -> int:
         with self.conn:
-            row = self.conn.execute(
-                "SELECT COUNT(*) FROM users WHERE is_active = 0"
-            ).fetchone()
+            row = self.conn.execute("SELECT COUNT(*) FROM users WHERE is_active = 0").fetchone()
         return row[0] if row else 0
 
     def count_active_users(self) -> int:
         with self.conn:
-            row = self.conn.execute(
-                "SELECT COUNT(*) FROM users WHERE is_active = 1"
-            ).fetchone()
+            row = self.conn.execute("SELECT COUNT(*) FROM users WHERE is_active = 1").fetchone()
         return row[0] if row else 0
 
     def count_all_users(self) -> int:
@@ -169,5 +159,5 @@ class UserDB(BaseDB):
         with self.conn:
             self.conn.execute(
                 "UPDATE users SET last_active_at = ? WHERE tg_id = ?",
-                (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), tg_id),
+                (datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"), tg_id),
             )

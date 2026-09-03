@@ -9,9 +9,10 @@ def write_urls_file(urls: list[str], filename: str = "urls.txt") -> tuple[Path, 
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     filepath = EXPORT_DIR / filename
 
-    with open(filepath, "w", encoding="utf-8") as f:
-        for url in urls:
-            f.write(url + "\n")
+    Path(filepath).write_text(
+        "\n".join(urls) + ("\n" if urls else ""),
+        encoding="utf-8",
+    )
 
     return filepath, len(urls)
 
@@ -24,7 +25,9 @@ def write_data_file(
 
     serialized = [r.model_dump(mode="json") for r in data]
 
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(serialized, f, ensure_ascii=False, indent=2)
+    Path(filepath).write_text(
+        json.dumps(serialized, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     return filepath, len(data)
