@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
+from config import MIN_TG_ID
 from core.exceptions import (
     InvalidParamError,
     InvalidUrlParamError,
@@ -149,9 +150,9 @@ class UserService:
         username: str | None = None,
         last_name: str | None = None,
     ) -> User:
-        if tg_id < 2000000:
+        if tg_id < MIN_TG_ID:
             raise InvalidParamError(
-                "tg_id", str(tg_id), "tg id не может быть меньше 2 000 000"
+                "tg_id", str(tg_id), f"tg id не может быть меньше {MIN_TG_ID}"
             )
         if not first_name:
             raise InvalidParamError(
@@ -162,7 +163,7 @@ class UserService:
             username=username,
             first_name=first_name,
             last_name=last_name,
-            last_active_at=datetime.now(),
+            last_active_at=datetime.now(UTC),
         )
 
     @staticmethod
