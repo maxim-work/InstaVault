@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 
 from aiogram import Bot, F, Router, types
@@ -8,6 +7,7 @@ from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
 from config import PROXY_URL, YOUTUBE_API_KEY
+from core.exceptions import UnknownClassCodeError
 from core.models.resource import Resource, ResourceKind, ResourceStatus, ResourceType
 from core.service import ResourceService
 from data.db.resources import ResourceDB
@@ -31,6 +31,7 @@ from ui.tg_bot.utils.message import (
     get_editable_message,
     with_action_label,
 )
+from ui.tg_bot.utils.tasks import create_background_task
 from ui.tg_bot.utils.transition import transition_callback, transition_to_message
 
 add_router = Router()
@@ -47,9 +48,7 @@ async def cmd_add(
         message=message,
         state=state,
         bot=bot,
-        text=with_action_label(
-            "add", "Пришлите ссылку на статью, видео или другой материал"
-        ),
+        text=with_action_label("add", "Пришлите ссылку на статью, видео или другой материал"),
         state_clear=True,
     )
     await state.set_state(ResourceFormState.waiting_for_link)
@@ -68,7 +67,7 @@ async def process_link(
     if link is None:
         return
 
-    if not Resource._is_valid_url(link):
+    if not Resource.is_valid_url(link):
         await transition_to_message(
             message=message,
             state=state,
@@ -77,6 +76,7 @@ async def process_link(
                 "error_add",
                 f"Некорректная ссылка: {link}\nПришлите ссылку на статью, видео или другой материал",
             ),
+            parse_mode="HTML",
         )
         return
 
@@ -86,7 +86,7 @@ async def process_link(
             proxy=PROXY_URL,
             youtube_api_key=YOUTUBE_API_KEY,
         )["title"]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await handle_resource_error(
             error=e,
             with_action_label=with_action_label,
@@ -105,12 +105,11 @@ async def process_link(
         bot=bot,
         text=with_action_label("add", "Выберите тип:", title),
         reply_markup=create_kb_type(list(ResourceType), get_callback_data),
+        parse_mode="HTML",
     )
 
 
-@add_router.callback_query(
-    ResourceFormState.waiting_for_type, ResourceCallback.filter()
-)
+@add_router.callback_query(ResourceFormState.waiting_for_type, ResourceCallback.filter())
 async def process_type(
     callback: types.CallbackQuery,
     callback_data: ResourceCallback,
@@ -143,12 +142,11 @@ async def process_type(
             bot=bot,
             text=with_action_label("add", "Выберите формат", data["title"]),
             reply_markup=create_kb_type(list(ResourceKind), get_callback_data),
+            parse_mode="HTML",
         )
 
 
-@add_router.callback_query(
-    ResourceFormState.waiting_for_format, ResourceCallback.filter()
-)
+@add_router.callback_query(ResourceFormState.waiting_for_format, ResourceCallback.filter())
 async def process_format(
     callback: types.CallbackQuery,
     callback_data: ResourceCallback,
@@ -214,7 +212,7 @@ async def process_new_tags(
     old_tags = resource.tags.copy()
 
     await state.update_data(
-        new_tags=new_tags if new_tags else None,
+        new_tags=new_tags or None,
         old_tags=old_tags,
         edit_target=None,
     )
@@ -235,16 +233,13 @@ async def process_new_tags(
         text=msg,
         reply_markup=create_kb_tags(
             ["Применить новые", "Изменить ещё", "Оставить старые", "Отмена"],
-            pack_callback_data_list(
-                ["apply_new_tags", "change_tags", "keep_old_tags", "back"]
-            ),
+            pack_callback_data_list(["apply_new_tags", "change_tags", "keep_old_tags", "back"]),
         ),
+        parse_mode="HTML",
     )
 
 
-@add_router.callback_query(
-    ResourceFormState.waiting_for_save, ResourceCallback.filter()
-)
+@add_router.callback_query(ResourceFormState.waiting_for_save, ResourceCallback.filter())
 async def process_save_or_edit(
     callback: types.CallbackQuery,
     callback_data: ResourceCallback,
@@ -265,7 +260,7 @@ async def process_save_or_edit(
         try:
             new_status = ResourceStatus.from_code(callback_data.action)
             resource.update_status(new_status)
-        except Exception:
+        except UnknownClassCodeError:
             await callback.answer("Неверный статус", show_alert=True)
             return
 
@@ -280,6 +275,7 @@ async def process_save_or_edit(
         resource.my_rating = rating if rating > 0 else None
         await state.update_data(resource=resource)
         await show_edit_menu(state, message, bot)
+        return
 
     await handle_form_actions(
         callback=callback,
@@ -335,9 +331,7 @@ async def process_rating(
         await message.delete()
         error_msg = await message.answer("Введите число от 1 до 5.")
         await state.update_data(error_msg_id=error_msg.message_id)
-        asyncio.create_task(
-            auto_delete(bot, message.chat.id, error_msg.message_id, delay=3)
-        )
+        create_background_task(auto_delete(bot, message.chat.id, error_msg.message_id, delay=3))
         return
 
     resource.my_rating = int(text)
@@ -371,9 +365,7 @@ async def process_date(
                 "Неверный формат. Используйте ГГГГ-ММ-ДД или '-' для сброса."
             )
             await state.update_data(error_msg_id=error_msg.message_id)
-            asyncio.create_task(
-                auto_delete(bot, message.chat.id, error_msg.message_id, delay=3)
-            )
+            create_background_task(auto_delete(bot, message.chat.id, error_msg.message_id, delay=3))
             return
 
     await _finish_field_edit(message, state, bot, resource)

@@ -38,6 +38,10 @@ async def main(
         if not BOT_TOKEN:
             raise ValueError("BOT_TOKEN не указан!")
 
+        from core.scheduler import start_scheduler  # noqa: PLC0415
+
+        start_scheduler(user_db, resource_db, stats_db)
+
         if PROXY_URL:
             session = AiohttpSession(proxy=PROXY_URL)
             bot = Bot(
@@ -45,7 +49,7 @@ async def main(
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
                 session=session,
             )
-            logger.info(f"Бот запущен через прокси: {PROXY_URL}")
+            logger.info("Бот запущен через прокси: %s", PROXY_URL)
         else:
             bot = Bot(
                 token=BOT_TOKEN,
@@ -72,8 +76,13 @@ async def main(
     except KeyboardInterrupt:
         logger.info("Бот остановлен пользователем (Ctrl+C)")
     except Exception as e:
-        logger.critical(f"Критическая ошибка: {e}", exc_info=True)
+        logger.critical("Критическая ошибка: %s", e, exc_info=True)
     finally:
+        from core.scheduler import scheduler  # noqa: PLC0415
+
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+
         if bot is not None:
             await bot.session.close()
             logger.info("Сессия закрыта")

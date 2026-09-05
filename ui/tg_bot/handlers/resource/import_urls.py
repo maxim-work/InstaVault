@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from aiogram import Bot, F, Router, types
@@ -51,12 +52,13 @@ async def process_import_file(
         return
 
     imports_dir = Path("imports")
-    imports_dir.mkdir(exist_ok=True)
+    imports_dir.mkdir(exist_ok=True)  # noqa: ASYNC240
     dest = str(imports_dir / f"urls_{message.from_user.id}.txt")
+
     await bot.download_file(file_path, dest)
 
-    text = Path(dest).read_text(encoding="utf-8")
-    Path(dest).unlink(missing_ok=True)
+    text = await asyncio.to_thread(Path(dest).read_text, encoding="utf-8")
+    await asyncio.to_thread(Path(dest).unlink, missing_ok=True)
 
     await transition_to_message(
         message=message,
@@ -109,8 +111,8 @@ async def _handle_urls_text(
 ) -> None:
     if message.from_user is None:
         return
-    urls = [line.strip() for line in text.split("\n") if line.strip()]
 
+    urls = [line.strip() for line in text.split("\n") if line.strip()]
     if not urls:
         await transition_to_message(
             message=message,
@@ -125,58 +127,91 @@ async def _handle_urls_text(
     mode = data.get("import_mode", "fast")
 
     if mode == "fast":
-        count = 0
-        errors: list[str] = []
-
-        for url in urls:
-            try:
-                if not Resource._is_valid_url(url):
-                    errors.append(f"Некорректная ссылка: {url}")
-                    continue
-
-                if resource_db.get_by_url(url, message.from_user.id) is not None:
-                    errors.append(f"Дубликат: {url}")
-                    continue
-
-                resource = ResourceService.create_resource(
-                    url=url,
-                    tg_id=message.from_user.id,
-                    resource_type=ResourceType.OTHER,
-                    proxy=PROXY_URL,
-                    youtube_api_key=YOUTUBE_API_KEY,
-                )
-                resource_db.insert(resource)
-                count += 1
-
-            except DuplicateResourceError:
-                errors.append(f"Дубликат: {url}")
-            except Exception as e:
-                errors.append(str(e))
-                logger.warning(f"User {message.from_user.id} failed to import url")
-
-        logger.info(f"User imported {count}/{len(urls)} urls (fast mode)")
-
-        msg = f"Импортировано {count} из {len(urls)} ссылок."
-
-        if errors:
-            msg += "\n\nОшибки:\n" + "\n".join(errors[-10:])
-
-        await transition_to_message(
-            message=message,
-            state=state,
-            bot=bot,
-            text=msg,
-            disable_web_page_preview=True,
-            state_clear=True,
-        )
-
+        await _import_urls_fast(message, state, resource_db, urls, bot)
     elif mode == "detailed":
-        await state.update_data(
-            import_urls=urls,
-            import_index=0,
-            import_results={"count": 0, "errors": []},
+        await _import_urls_detailed(message, state, resource_db, urls, bot)
+
+
+async def _import_urls_fast(
+    message: Message,
+    state: FSMContext,
+    resource_db: ResourceDB,
+    urls: list[str],
+    bot: Bot,
+) -> None:
+    if message.from_user is None:
+        return
+    count = 0
+    errors: list[str] = []
+
+    for url in urls:
+        error = _import_one_url(url, message.from_user.id, resource_db)
+        if error is None:
+            count += 1
+        else:
+            errors.append(error)
+
+    logger.info(
+        "User %s imported %d/%d urls (fast mode)",
+        message.from_user.id, count, len(urls),
+    )
+
+    msg = f"Импортировано {count} из {len(urls)} ссылок."
+    if errors:
+        msg += "\n\nОшибки:\n" + "\n".join(errors[-10:])
+
+    await transition_to_message(
+        message=message,
+        state=state,
+        bot=bot,
+        text=msg,
+        disable_web_page_preview=True,
+        state_clear=True,
+    )
+
+
+def _import_one_url(
+    url: str,
+    tg_id: int,
+    resource_db: ResourceDB,
+) -> str | None:
+    try:
+        if not Resource.is_valid_url(url):
+            return f"Некорректная ссылка: {url}"
+
+        if resource_db.get_by_url(url, tg_id) is not None:
+            return f"Дубликат: {url}"
+
+        resource = ResourceService.create_resource(
+            url=url,
+            tg_id=tg_id,
+            resource_type=ResourceType.OTHER,
+            proxy=PROXY_URL,
+            youtube_api_key=YOUTUBE_API_KEY,
         )
-        await _start_next_url(message, state, resource_db, bot)
+        resource_db.insert(resource)
+        return None
+
+    except DuplicateResourceError:
+        return f"Дубликат: {url}"
+    except Exception as e:  # noqa: BLE001
+        logger.warning("User %s failed to import url %s: %s", tg_id, url, e)
+        return str(e)
+
+
+async def _import_urls_detailed(
+    message: Message,
+    state: FSMContext,
+    resource_db: ResourceDB,
+    urls: list[str],
+    bot: Bot,
+) -> None:
+    await state.update_data(
+        import_urls=urls,
+        import_index=0,
+        import_results={"count": 0, "errors": []},
+    )
+    await _start_next_url(message, state, resource_db, bot)
 
 
 async def _start_next_url(
@@ -202,7 +237,11 @@ async def _start_next_url(
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
-        logger.info(f"User finished detailed import: {results['count']}/{total}")
+        logger.info(
+            "User finished detailed import: %s/%s",
+            results["count"],
+            total,
+        )
 
         await transition_to_message(
             message=message,
@@ -228,7 +267,7 @@ async def _start_next_url(
     try:
         info = ResourceService.get_info_for_url(url, YOUTUBE_API_KEY, PROXY_URL)
         title = info["title"]
-    except Exception:
+    except Exception:  # noqa: BLE001
         results = data["import_results"]
         results["errors"].append(f"Ошибка получения: {url}")
         logger.warning("User failed to fetch info for url")
@@ -243,10 +282,9 @@ async def _start_next_url(
         message=message,
         state=state,
         bot=bot,
-        text=with_action_label(
-            "add", f"[{index + 1}/{total}] {title}\n\nВыберите тип:"
-        ),
+        text=with_action_label("add", f"[{index + 1}/{total}] {title}\n\nВыберите тип:"),
         reply_markup=create_kb_type(list(ResourceType), get_callback_data),
+        parse_mode="HTML"
     )
 
 
@@ -283,7 +321,7 @@ async def start_next_url_from_callback(
     try:
         info = ResourceService.get_info_for_url(url, YOUTUBE_API_KEY, PROXY_URL)
         title = info["title"]
-    except Exception:
+    except Exception:  # noqa: BLE001
         results = data["import_results"]
         results["errors"].append(f"Ошибка получения: {url}")
         logger.warning("User failed to fetch info for url")
@@ -304,8 +342,7 @@ async def start_next_url_from_callback(
         callback=callback,
         state=state,
         bot=bot,
-        text=with_action_label(
-            "add", f"[{index + 1}/{total}] {title}\n\nВыберите тип:"
-        ),
+        text=with_action_label("add", f"[{index + 1}/{total}] {title}\n\nВыберите тип:"),
         reply_markup=create_kb_type(list(ResourceType), get_callback_data),
+        parse_mode="HTML",
     )

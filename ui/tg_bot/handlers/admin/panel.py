@@ -64,7 +64,7 @@ async def show_admin_panel(
             reply_markup=markup,
             state_clear=True,
         )
-    elif isinstance(target, CallbackQuery):
+    else:
         await transition_callback(
             callback=target,
             state=state,

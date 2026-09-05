@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
@@ -7,10 +7,10 @@ from aiogram.types import CallbackQuery, Message
 
 from config import (
     ADMIN_IDS,
+    MAX_RETRIES,
     MESSAGES_PER_MINUTE,
     MESSAGES_PER_SECOND,
     RETRY_DELAY,
-    MAX_RETRIES,
 )
 from core.logger import get_logger
 from core.models.user import User
@@ -144,24 +144,21 @@ async def sending_message(
             await show_admin_panel(callback, state, bot)
         return
 
-    if user is not None and page is not None:
-        if callback.from_user.id == user.tg_id:
-            await callback.answer("Самому себе нельзя отправлять!", show_alert=True)
-            call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
-            await view_user(callback, call_data, state, user_db)
-            return
+    if user is not None and page is not None and callback.from_user.id == user.tg_id:
+        await callback.answer("Самому себе нельзя отправлять!", show_alert=True)
+        call_data = ModerationCallback(action="view", tg_id=user.tg_id, page=page)
+        await view_user(callback, call_data, state, user_db)
+        return
 
     await message.delete()
 
     if user is not None and page is not None:
         try:
             await bot.send_message(chat_id=user.tg_id, text=message_text)
-            logger.info(
-                f"Admin {callback.from_user.id} sent message to user({user.tg_id})"
-            )
+            logger.info("Admin %s sent message to user(%s)", callback.from_user.id, user.tg_id)
             msg = f"Сообщение: {message_text}, доставлено {user.full_name}!"
-        except Exception as e:
-            logger.error(f"Failed to send message to {user.tg_id}: {e}")
+        except Exception:
+            logger.exception("Failed to send message to %s", user.tg_id)
             msg = (
                 f"При отправке сообщения({message_text}) "
                 f"пользователю({user.full_name}) произошла ошибка."
@@ -201,13 +198,13 @@ async def _broadcast(
         text=f"Отправка: 0/{total}",
     )
 
-    start_time = datetime.now()
+    start_time = datetime.now(UTC)
     messages_in_window = 0
     window_start = start_time
 
     for idx, tg_id in enumerate(tg_ids, 1):
         if messages_in_window >= MESSAGES_PER_MINUTE:
-            elapsed = (datetime.now() - window_start).total_seconds()
+            elapsed = (datetime.now(UTC) - window_start).total_seconds()
             if elapsed < 60:
                 wait_time = 60 - elapsed
                 await status_msg.edit_text(
@@ -217,22 +214,22 @@ async def _broadcast(
                     f"⏳ Пауза {wait_time:.0f}с (rate limit)"
                 )
                 await asyncio.sleep(wait_time)
-            window_start = datetime.now()
+            window_start = datetime.now(UTC)
             messages_in_window = 0
 
         try:
             await _send_with_retry(bot, tg_id, message_text)
             sent += 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             failed += 1
             if "429" in str(e):
                 rate_limit_hits += 1
-            logger.warning(f"Failed to send broadcast to {tg_id}: {e}")
+            logger.warning("Failed to send broadcast to %s: %s", tg_id, e)
 
         messages_in_window += 1
 
         if idx % 10 == 0 or idx == total:
-            elapsed = (datetime.now() - start_time).total_seconds()
+            elapsed = (datetime.now(UTC) - start_time).total_seconds()
             speed = idx / elapsed if elapsed > 0 else 0
             await status_msg.edit_text(
                 f"Отправка: {sent}/{total}\n"
@@ -251,7 +248,7 @@ async def _broadcast(
         reply_markup=create_back_to_panel_keyboard(),
     )
     logger.info(
-        f"Admin {admin_chat_id} broadcast to {total} users: sent={sent}, failed={failed}"
+        "Admin %s broadcast to %s users: sent=%s, failed=%s", admin_chat_id, total, sent, failed
     )
 
 
@@ -266,16 +263,16 @@ async def _send_with_retry(
         try:
             await bot.send_message(chat_id=tg_id, text=text)
             return
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             last_error = e
             error_str = str(e)
             if "429" in error_str:
                 wait_time = RETRY_DELAY * (attempt + 1)
                 logger.warning(
-                    f"Rate limit hit for {tg_id}, retry {attempt + 1} in {wait_time}s"
+                    "Rate limit hit for %s, retry %s in %ss", tg_id, attempt + 1, wait_time
                 )
                 await asyncio.sleep(wait_time)
             else:
                 break
 
-    raise last_error if last_error else RuntimeError("Send failed")
+    raise last_error or RuntimeError("Send failed")

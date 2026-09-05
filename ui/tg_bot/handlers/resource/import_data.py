@@ -55,7 +55,7 @@ async def process_import_data(
         return
 
     imports_dir = Path("imports")
-    imports_dir.mkdir(exist_ok=True)
+    imports_dir.mkdir(exist_ok=True)  # noqa: ASYNC240
     dest = str(imports_dir / f"{tg_id}_{message.document.file_name}")
     await bot.download_file(file_path, dest)
 
@@ -68,7 +68,7 @@ async def process_import_data(
 
     try:
         resources = parse_data(dest)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await handle_resource_error(
             error=e,
             with_action_label=with_action_label,
@@ -79,12 +79,12 @@ async def process_import_data(
         await state.clear()
         return
     finally:
-        Path(dest).unlink(missing_ok=True)
+        Path(dest).unlink(missing_ok=True)  # noqa: ASYNC240
 
     if mode == "fast":
         try:
             count, total, errors = resource_db.import_data(resources, tg_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             await handle_resource_error(
                 error=e,
                 with_action_label=with_action_label,
@@ -95,7 +95,7 @@ async def process_import_data(
             await state.clear()
             return
 
-        logger.info(f"User imported {count}/{total} resources (fast mode)")
+        logger.info("User imported %s/%s resources (fast mode)", count, total)
 
         msg = f"Импортировано {count} из {total} ресурсов."
 
@@ -143,7 +143,7 @@ async def _start_next_resource(
         if results["errors"]:
             msg += "\n\nОшибки:\n" + "\n".join(results["errors"][-10:])
 
-        logger.info(f"User finished detailed import: {results['count']}/{total}")
+        logger.info("User finished detailed import: %s/%s", results["count"], total)
 
         await transition_to_message(
             message=message,
@@ -186,6 +186,7 @@ async def _start_next_resource(
             pack_callback_data_list(["save", "edit", "cancel"]),
         ),
         disable_web_page_preview=True,
+        parse_mode="HTML",
     )
 
 
@@ -260,4 +261,5 @@ async def start_next_resource_from_callback(
             pack_callback_data_list(["save", "edit", "cancel"]),
         ),
         disable_web_page_preview=True,
+        parse_mode="HTML",
     )

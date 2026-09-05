@@ -2,11 +2,11 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message, TelegramObject, Update
+from aiogram.types import CallbackQuery, TelegramObject, Update
 
+from core.logger import get_logger
 from data.db.users import UserDB
 from ui.tg_bot.utils.message import with_action_label
-from core.logger import get_logger
 
 logger = get_logger("security")
 
@@ -22,21 +22,28 @@ class CheckUserBanMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        if isinstance(event, Update):
-            real_event = event.message or event.callback_query
-            if real_event and real_event.from_user:
-                if not self.user_db.is_active(real_event.from_user.id):
-                    msg = with_action_label(
-                        "info",
-                        "Вы заблокированы и не можете использовать бота.\n"
-                        "Если считаете это ошибкой, свяжитесь с администратором.",
-                    )
-                    if isinstance(real_event, CallbackQuery):
-                        await real_event.answer(msg, show_alert=True)
-                    elif isinstance(real_event, Message):
-                        await real_event.answer(msg)
-                    logger.warning(
-                        f"Banned user {real_event.from_user.id} tried to access bot"
-                    )
-                    return
-        return await handler(event, data)
+        if not isinstance(event, Update):
+            return await handler(event, data)
+
+        real_event = event.message or event.callback_query
+        if not (real_event and real_event.from_user):
+            return await handler(event, data)
+
+        if self.user_db.is_active(real_event.from_user.id):
+            return await handler(event, data)
+
+        msg = with_action_label(
+            "info",
+            "Вы заблокированы и не можете использовать бота.\n"
+            "Если считаете это ошибкой, свяжитесь с администратором.",
+        )
+        if isinstance(real_event, CallbackQuery):
+            await real_event.answer(msg, show_alert=True)
+        else:
+            await real_event.answer(msg)
+
+        logger.warning(
+            "Banned user %s tried to access bot",
+            real_event.from_user.id,
+        )
+        return None

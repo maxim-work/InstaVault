@@ -2,7 +2,7 @@ from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from config import USERS_PER_PAGE
+from config import MAX_SEARCH_QUERY_LENGTH, USERS_PER_PAGE
 from data.db.users import UserDB
 from ui.tg_bot.callbacks.admin import AdminCallback
 from ui.tg_bot.handlers.admin.formatting import render_page_users, render_view_user
@@ -53,7 +53,7 @@ async def search_user_result(
     if not query:
         return
 
-    if len(query) > 100:
+    if len(query) > MAX_SEARCH_QUERY_LENGTH:
         await transition_to_message(
             message=message,
             state=state,

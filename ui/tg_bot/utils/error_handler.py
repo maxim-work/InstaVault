@@ -19,9 +19,7 @@ logger = get_logger("error_handler")
 
 USER_ERRORS: dict[type[Exception], str | Callable[[Exception], str]] = {
     InvalidUrlParamError: "Некорректная ссылка.",
-    InvalidParamError: lambda e: (
-        f"Некорректный параметр: {_format_invalid_param_error(e)}"
-    ),
+    InvalidParamError: lambda e: f"Некорректный параметр: {_format_invalid_param_error(e)}",
     InvalidRatingError: "Некорректный рейтинг.",
 }
 
@@ -54,8 +52,9 @@ async def handle_resource_error(
 
     if isinstance(error, SYSTEM_ERRORS):
         logger.error(
-            f"Ошибка при создании ресурса: {type(error).__name__}",
-            exc_info=True,
+            "Ошибка при создании ресурса: %s",
+            type(error).__name__,
+            exc_info=error,
             extra=context,
         )
         await message.edit_text(
@@ -64,16 +63,16 @@ async def handle_resource_error(
         return True
 
     logger.error(
-        f"Неизвестная ошибка: {type(error).__name__}",
-        exc_info=True,
+        "Неизвестная ошибка: %s",
+        type(error).__name__,
+        exc_info=error,
         extra=context,
     )
-    await message.edit_text(
-        with_action_label(action, "Ошибка сервиса. Мы уже работаем над этим.")
-    )
+    await message.edit_text(with_action_label(action, "Ошибка сервиса. Мы уже работаем над этим."))
     return True
 
 
 def _format_invalid_param_error(e: Exception) -> str:
-    assert isinstance(e, InvalidParamError)
+    if not isinstance(e, InvalidParamError):
+        return "Некорректный параметр."
     return f"Некорректный параметр: {e.param}"

@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from aiogram import BaseMiddleware
@@ -33,7 +33,7 @@ class UserUpdateMiddleware(BaseMiddleware):
             tg_id = real_event.from_user.id
             last_update = self.dict_update.get(tg_id)
 
-            if last_update is None or datetime.now() > last_update + timedelta(
+            if last_update is None or datetime.now(UTC) > last_update + timedelta(
                 hours=USER_UPDATE_INTERVAL_HOURS
             ):
                 user = self.user_service.create_user(
@@ -43,6 +43,6 @@ class UserUpdateMiddleware(BaseMiddleware):
                     last_name=real_event.from_user.last_name,
                 )
                 self.user_db.update(user)
-                self.dict_update[tg_id] = datetime.now()
+                self.dict_update[tg_id] = datetime.now(UTC)
 
         return await handler(event, data)

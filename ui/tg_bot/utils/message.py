@@ -1,25 +1,53 @@
 import asyncio
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.markdown import hbold
 
+from core.logger import get_logger
 
-async def auto_delete(bot: Bot, chat_id: int, message_id: int, delay: int = 3) -> None:
-    await asyncio.sleep(delay)
+logger = get_logger("message")
+
+async def _safe_delete_one(
+    bot: Bot,
+    chat_id: int,
+    message_id: int | None,
+) -> None:
+    if message_id is None:
+        return
     try:
-        await bot.delete_message(chat_id, message_id)
-    except Exception:
-        pass
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except TelegramBadRequest:
+        logger.debug("Сообщение %s уже недоступно в чате %s", message_id, chat_id)
+    except TelegramAPIError as e:
+        logger.warning(
+            "Не удалось удалить сообщение %s в чате %s: %s",
+            message_id,
+            chat_id,
+            e,
+        )
 
 
-async def safe_delete_many(bot: Bot, chat_id: int, *message_ids: int) -> None:
-    for msg_id in message_ids:
-        try:
-            await bot.delete_message(chat_id=chat_id, message_id=msg_id)
-        except Exception:
-            pass
+async def auto_delete(
+    bot: Bot,
+    chat_id: int,
+    message_id: int,
+    delay: int = 3,
+) -> None:
+    await asyncio.sleep(delay)
+    await _safe_delete_one(bot, chat_id, message_id)
+
+
+async def safe_delete_many(
+    bot: Bot,
+    chat_id: int,
+    *message_ids: int,
+) -> None:
+    await asyncio.gather(
+        *(_safe_delete_one(bot, chat_id, mid) for mid in message_ids),
+    )
 
 
 ACTION_TEMPLATES: dict[str, tuple[str, str]] = {
@@ -56,13 +84,11 @@ def get_editable_message(callback: CallbackQuery) -> Message | None:
     return callback.message if isinstance(callback.message, Message) else None
 
 
-async def cleanup_previous_message(
-    message: Message, state: FSMContext, bot: Bot
-) -> None:
+async def cleanup_previous_message(message: Message, state: FSMContext, bot: Bot) -> None:
     data = await state.get_data()
     prompt_msg_id = data.get("prompt_msg_id")
     if prompt_msg_id is not None:
         try:
             await bot.delete_message(message.chat.id, prompt_msg_id)
-        except Exception:
-            pass
+        except TelegramBadRequest as e:
+            logger.info("Сообщение %s уже недоступно: %s", prompt_msg_id, e)

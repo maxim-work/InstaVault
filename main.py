@@ -20,10 +20,8 @@ if __name__ == "__main__":
     if mode == "tg":
         from core.service import UserService
         from ui.tg_bot.dispatcher import start_bot
-        from core.scheduler import start_scheduler
 
         start_bot(user_db, resource_db, stats_db, UserService())
-        start_scheduler(user_db, resource_db, stats_db)
 
     elif mode == "cli":
         from ui.cli.cli import start_cli

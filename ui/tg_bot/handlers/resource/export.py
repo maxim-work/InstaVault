@@ -1,4 +1,5 @@
-import os
+import asyncio
+from pathlib import Path
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
@@ -59,11 +60,13 @@ async def export(
 
     await state.clear()
 
-    prompt_msg = await message.answer_document(
-        document=types.FSInputFile(filepath, filename=filename),
-        caption=caption,
-    )
+    try:
+        prompt_msg = await message.answer_document(
+            document=types.FSInputFile(filepath, filename=filename),
+            caption=caption,
+        )
+    finally:
+        await asyncio.to_thread(Path(filepath).unlink, missing_ok=True)
 
     await state.update_data(prompt_msg_id=prompt_msg.message_id)
-    os.remove(filepath)
     await callback.answer()

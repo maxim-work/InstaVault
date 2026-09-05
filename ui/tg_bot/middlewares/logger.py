@@ -1,12 +1,13 @@
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 
 
 class LoggerMiddleware(BaseMiddleware):
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger) -> None:
         self.logger = logger
         super().__init__()
 

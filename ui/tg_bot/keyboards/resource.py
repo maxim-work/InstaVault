@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import TypeVar, Any
+from typing import Any, TypeVar
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -17,7 +17,7 @@ T = TypeVar("T")
 
 
 def create_kb_type(
-    options: list,
+    options: list[Any],
     get_cb: Callable[[str], str],
     len_row: int = 2,
 ) -> InlineKeyboardMarkup:
@@ -32,7 +32,7 @@ def create_kb_tags(
     data: list[str],
     len_row: int = 2,
 ) -> InlineKeyboardMarkup:
-    return _build_keyboard(list(zip(labels, data)), len_row)
+    return _build_keyboard(list(zip(labels, data, strict=True)), len_row)
 
 
 def create_list_keyboard(
@@ -44,7 +44,7 @@ def create_list_keyboard(
         items=resources,
         page=page,
         total_pages=total_pages,
-        get_text=lambda i, r: str(i + 1),
+        get_text=lambda i, _: str(i + 1),
         get_callback=lambda flag, val: (
             ResourceCallback(action="page", page=val).pack()
             if flag == "nav"
@@ -66,7 +66,7 @@ def create_search_keyboard(
         items=results,
         page=page,
         total_pages=total_pages,
-        get_text=lambda i, item: str((page - 1) * RESOURCES_PER_PAGE + i + 1),
+        get_text=lambda i, _: str((page - 1) * RESOURCES_PER_PAGE + i + 1),
         get_callback=lambda flag, val: (
             SearchCallback(action="page", page=val).pack()
             if flag == "nav"
@@ -194,15 +194,11 @@ def create_confirm_delete_keyboard(resource_id: int, page: int) -> InlineKeyboar
     builder = InlineKeyboardBuilder()
     builder.button(
         text="Да, удалить",
-        callback_data=ResourceCallback(
-            action="delete", resource_id=resource_id, page=page
-        ).pack(),
+        callback_data=ResourceCallback(action="delete", resource_id=resource_id, page=page).pack(),
     )
     builder.button(
         text="Нет",
-        callback_data=ResourceCallback(
-            action="view", resource_id=resource_id, page=page
-        ).pack(),
+        callback_data=ResourceCallback(action="view", resource_id=resource_id, page=page).pack(),
     )
     builder.adjust(2)
     return builder.as_markup()
@@ -216,9 +212,7 @@ def create_view_res_search_keyboards(resource_id: int) -> InlineKeyboardMarkup:
     )
     builder.button(
         text="Удалить",
-        callback_data=SearchCallback(
-            action="confirm_delete", resource_id=resource_id
-        ).pack(),
+        callback_data=SearchCallback(action="confirm_delete", resource_id=resource_id).pack(),
     )
     builder.button(
         text="К результатам",
@@ -279,7 +273,7 @@ def _build_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def _build_paginated_keyboard(
+def _build_paginated_keyboard[T](
     items: list[T],
     page: int,
     total_pages: int,

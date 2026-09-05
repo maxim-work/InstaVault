@@ -29,17 +29,14 @@ class ThrottlingMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        if isinstance(event, Update):
+        if isinstance(event, Update):  # noqa: SIM108
             real_event = event.message or event.callback_query
         else:
             real_event = event
 
-        if isinstance(real_event, Message):
+        user_id: int | None = None
+        if isinstance(real_event, (Message, CallbackQuery)):
             user_id = real_event.from_user.id if real_event.from_user else None
-        elif isinstance(real_event, CallbackQuery):
-            user_id = real_event.from_user.id if real_event.from_user else None
-        else:
-            user_id = None
 
         if user_id is None:
             return await handler(event, data)
@@ -53,14 +50,14 @@ class ThrottlingMiddleware(BaseMiddleware):
         ]
 
         if len(self.requests[user_id]) >= self.rate_limit:
-            logger.warning(f"Throttling: user {user_id} exceeded rate limit")
+            logger.warning("Throttling: user %s exceeded rate limit", user_id)
             if isinstance(real_event, CallbackQuery):
                 await real_event.answer(
                     "Слишком много действий. Подождите секунду.", show_alert=True
                 )
             elif isinstance(real_event, Message):
                 await real_event.answer("Слишком много сообщений. Подождите секунду.")
-            return
+            return None
 
         self.requests[user_id].append(now)
         return await handler(event, data)

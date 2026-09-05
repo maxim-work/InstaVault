@@ -20,13 +20,19 @@ class AdminMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        if isinstance(event, (Message, CallbackQuery)) and event.from_user:
-            if event.from_user.id not in ADMIN_IDS:
-                if isinstance(event, CallbackQuery):
-                    await event.answer("У вас нет доступа", show_alert=True)
-                elif isinstance(event, Message):
-                    await event.answer("У вас нет доступа")
-                logger.warning(f"User {event.from_user.id} tried to access admin panel")
-                return
+        if not (isinstance(event, (Message, CallbackQuery)) and event.from_user):
             return await handler(event, data)
-        return await handler(event, data)
+
+        if event.from_user.id in ADMIN_IDS:
+            return await handler(event, data)
+
+        if isinstance(event, CallbackQuery):
+            await event.answer("У вас нет доступа", show_alert=True)
+        else:
+            await event.answer("У вас нет доступа")
+
+        logger.warning(
+            "User %s tried to access admin panel",
+            event.from_user.id,
+        )
+        return None

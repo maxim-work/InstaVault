@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from config import ADMIN_IDS, USERS_PER_PAGE
+from core.logger import get_logger
 from core.models.user import User
 from data.db.users import UserDB
 from ui.tg_bot.callbacks.admin import AdminCallback, ModerationCallback
@@ -17,7 +18,6 @@ from ui.tg_bot.keyboards.admin import (
 from ui.tg_bot.middlewares.admin import AdminMiddleware
 from ui.tg_bot.utils.message import get_editable_message, with_action_label
 from ui.tg_bot.utils.transition import transition_to_message
-from core.logger import get_logger
 
 logger = get_logger("users")
 
@@ -42,9 +42,7 @@ async def cmd_view_users(
     await callback.answer()
 
 
-@admin_router.callback_query(
-    AdminCallback.filter(F.action.in_(["prev", "page", "next"]))
-)
+@admin_router.callback_query(AdminCallback.filter(F.action.in_(["prev", "page", "next"])))
 async def handle_pagination(
     callback: CallbackQuery,
     callback_data: AdminCallback,
@@ -92,9 +90,7 @@ async def confirm_delete_user(
         f"🆔 <code>{user.tg_id}</code>\n\n"
         f"<i>Это действие нельзя отменить!</i>\n"
         f"<i>Все его ресурсы тоже будут удалены!</i>",
-        reply_markup=create_keyboard_confirm_delete(
-            page=callback_data.page, tg_id=user.tg_id
-        ),
+        reply_markup=create_keyboard_confirm_delete(page=callback_data.page, tg_id=user.tg_id),
         parse_mode="HTML",
     )
     await callback.answer()
@@ -121,7 +117,7 @@ async def delete_user(
 
     user_db.delete(callback_data.tg_id)
     await callback.answer(f"Пользователь {user_name} удален", show_alert=True)
-    logger.info(f"Admin {callback.from_user.id} delete user({callback_data.tg_id})")
+    logger.info("Admin %s delete user(%s)", callback.from_user.id, callback_data.tg_id)
 
     data = await state.get_data()
     search_results = data.get("search_results")
@@ -183,7 +179,7 @@ async def toggle_user_ban(
 
     if callback_data.action == "ban":
         user_db.ban(callback_data.tg_id)
-        logger.info(f"Admin {callback.from_user.id} ban user({callback_data.tg_id})")
+        logger.info("Admin %s ban user(%s)", callback.from_user.id, callback_data.tg_id)
         action_text = "забанен"
         await bot.send_message(
             chat_id=callback_data.tg_id,
@@ -191,7 +187,7 @@ async def toggle_user_ban(
         )
     else:
         user_db.unban(callback_data.tg_id)
-        logger.info(f"Admin {callback.from_user.id} unban user({callback_data.tg_id})")
+        logger.info("Admin %s unban user(%s)", callback.from_user.id, callback_data.tg_id)
         action_text = "разбанен"
         await bot.send_message(
             chat_id=callback_data.tg_id,
@@ -267,7 +263,8 @@ async def cmd_delete_all_users(
     user_db.delete_all_users_except(exclude_ids)
 
     await callback.answer(f"Удалено {count} пользователей", show_alert=True)
-    logger.warning(f"Admin {callback.from_user.id} delete all users")
+    logger.warning("Admin %s delete all users", callback.from_user.id)
+
     await show_admin_panel(callback, state, bot)
 
 

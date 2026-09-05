@@ -53,6 +53,7 @@ async def cmd_list(
         bot=bot,
         text=_render_resource_list(page_resources, 1, total_pages),
         reply_markup=create_list_keyboard(page_resources, 1, total_pages),
+        parse_mode="HTML",
         state_clear=True,
     )
 
@@ -80,6 +81,7 @@ async def handle_pagination(
     await message.edit_text(
         _render_resource_list(page_resources, page, total),
         reply_markup=create_list_keyboard(page_resources, page, total),
+        parse_mode="HTML"
     )
     await callback.answer()
 
@@ -112,6 +114,7 @@ async def handle_view_resource(
     await message.edit_text(
         _format_resource_detail(res),
         reply_markup=create_view_resource_keyboard(res.id, page),
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -219,6 +222,7 @@ async def handle_delete_resource(
     await message.edit_text(
         _render_resource_list(page_resources, page, total),
         reply_markup=create_list_keyboard(page_resources, page, total),
+        parse_mode="HTML"
     )
     await callback.answer()
 

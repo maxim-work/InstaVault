@@ -1,4 +1,4 @@
-from typing_extensions import cast
+from typing import cast
 
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
@@ -40,10 +40,10 @@ async def _handle_import_next_step(
     bot: Bot,
 ) -> None:
     if "import_urls" in data:
-        source_list = cast(list[object], data["import_urls"])
+        source_list = cast("list[object]", data["import_urls"])
         next_func = start_next_url_from_callback
     else:
-        source_list = cast(list[object], data["import_resources"])
+        source_list = cast("list[object]", data["import_resources"])
         next_func = start_next_resource_from_callback
 
     if index >= len(source_list):
@@ -51,7 +51,7 @@ async def _handle_import_next_step(
         msg = f"Импортировано {results['count']} из {len(source_list)} {label}."
 
         if results["errors"]:
-            msg += "\n\nОшибки:\n" + "\n".join(cast(list[str], results["errors"])[-10:])
+            msg += "\n\nОшибки:\n" + "\n".join(cast("list[str]", results["errors"])[-10:])
 
         await transition_to_message(
             message=message,
@@ -60,6 +60,7 @@ async def _handle_import_next_step(
             text=msg,
             disable_web_page_preview=True,
             state_clear=True,
+            parse_mode="HTML",
         )
         return
 
@@ -156,6 +157,7 @@ async def show_edit_menu(
         bot=bot,
         text=msg,
         reply_markup=create_kb_tags(buttons, pack_callback_data_list(actions)),
+        parse_mode="HTML",
     )
 
 
@@ -172,7 +174,7 @@ async def show_save_summary(
     is_edit = data.get("edit_mode", False)
     msg = _build_save_summary_text(resource, is_edit)
 
-    await message.edit_text(msg, reply_markup=create_save_summary_keyboard())
+    await message.edit_text(msg, reply_markup=create_save_summary_keyboard(), parse_mode="HTML")
 
 
 async def show_save_summary_direct(
@@ -191,6 +193,7 @@ async def show_save_summary_direct(
         bot=bot,
         text=msg,
         reply_markup=create_save_summary_keyboard(),
+        parse_mode="HTML",
     )
 
 
@@ -234,7 +237,7 @@ async def _handle_save(
                 f"{hbold('Рейтинг:')} {resource.my_rating or '—'}/5\n"
             )
     except DuplicateResourceError:
-        logger.warning(f"User {callback.from_user.id} tried to duplicate resource")
+        logger.warning("User %s tried to duplicate resource", callback.from_user.id)
         msg = "Ресурс с такой ссылкой уже существует"
 
     if "import_urls" in data or "import_resources" in data:
@@ -253,6 +256,7 @@ async def _handle_save(
         bot=bot,
         text=msg,
         state_clear=True,
+        parse_mode="HTML",
     )
 
 
@@ -269,9 +273,7 @@ async def _handle_cancel(
         results = data["import_results"]
 
         if "import_urls" in data:
-            results["errors"].append(
-                f"Пропущено: {data['import_urls'][data['import_index']]}"
-            )
+            results["errors"].append(f"Пропущено: {data['import_urls'][data['import_index']]}")
         else:
             results["errors"].append(
                 f"Пропущено: {data['import_resources'][data['import_index']].title}"
@@ -300,6 +302,7 @@ async def _handle_cancel(
         bot=bot,
         text=msg,
         state_clear=True,
+        parse_mode="HTML",
     )
 
 
@@ -332,86 +335,72 @@ async def _handle_change_field(
     data = await state.get_data()
     await state.update_data(edit_target=callback_data.action)
 
+    title = data.get("title", "")
     action = callback_data.action
 
     if action == "change_type":
-        await state.set_state(ResourceFormState.waiting_for_type)
-        prompt_msg = await message.edit_text(
-            with_action_label("edit", "Выберите новый тип:", data.get("title", "")),
-            reply_markup=create_kb_type(list(ResourceType), get_callback_data),
-        )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        new_state = ResourceFormState.waiting_for_type
+        text = with_action_label("edit", "Выберите новый тип:", title)
+        markup = create_kb_type(list(ResourceType), get_callback_data)
 
     elif action == "change_format":
-        await state.set_state(ResourceFormState.waiting_for_format)
-        prompt_msg = await message.edit_text(
-            with_action_label("edit", "Выберите новый формат:", data.get("title", "")),
-            reply_markup=create_kb_type(list(ResourceKind), get_callback_data),
-        )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        new_state = ResourceFormState.waiting_for_format
+        text = with_action_label("edit", "Выберите новый формат:", title)
+        markup = create_kb_type(list(ResourceKind), get_callback_data)
 
     elif action == "change_status":
-        await state.set_state(ResourceFormState.waiting_for_save)
-        prompt_msg = await message.edit_text(
-            with_action_label("edit", "Выберите новый статус:", data.get("title", "")),
-            reply_markup=create_kb_type(list(ResourceStatus), get_callback_data),
-        )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        new_state = ResourceFormState.waiting_for_save
+        text = with_action_label("edit", "Выберите новый статус:", title)
+        markup = create_kb_type(list(ResourceStatus), get_callback_data)
 
     elif action == "change_tags":
-        await state.set_state(ResourceFormState.waiting_for_new_tags)
-        prompt_msg = await message.edit_text(
-            with_action_label(
-                "edit",
-                "Отправьте новые теги.\n"
-                "Если менять не нужно — введите что угодно, на следующем шаге можно вернуть старые.",
-            )
+        new_state = ResourceFormState.waiting_for_new_tags
+        text = with_action_label(
+            "edit",
+            "Отправьте новые теги.\n"
+            "Если менять не нужно — введите что угодно, "
+            "на следующем шаге можно вернуть старые.",
         )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        markup = None
 
     elif action == "change_notes":
-        await state.set_state(ResourceFormState.waiting_for_notes)
+        new_state = ResourceFormState.waiting_for_notes
         current = data["resource"].my_notes or "нет"
-        prompt_msg = await message.edit_text(
-            with_action_label(
-                "edit",
-                f"Текущая заметка: {current}\n\nНапишите новую (или '-' для удаления):",
-                data.get("title", ""),
-            )
+        text = with_action_label(
+            "edit",
+            f"Текущая заметка: {current}\n\nНапишите новую (или '-' для удаления):",
+            title,
         )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        markup = None
 
     elif action == "change_rating":
+        new_state = ResourceFormState.waiting_for_rating
         current = data["resource"].my_rating
-
-        prompt_msg = await message.edit_text(
-            with_action_label(
-                "edit",
-                f"Текущий рейтинг: {current or '—'}/5\n\nВыберите новый:",
-                data.get("title", ""),
-            ),
-            reply_markup=create_rating_keyboard(current),
+        text = with_action_label(
+            "edit",
+            f"Текущий рейтинг: {current or '—'}/5\n\nВыберите новый:",
+            title,
         )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        markup = create_rating_keyboard(current)
 
     elif action == "change_date":
-        await state.set_state(ResourceFormState.waiting_for_date)
+        new_state = ResourceFormState.waiting_for_date
         current = data["resource"].completed_at or "не указана"
-        prompt_msg = await message.edit_text(
-            with_action_label(
-                "edit",
-                f"Текущая дата: {current}\n\nВведите дату (ГГГГ-ММ-ДД или '-' для сброса):",
-                data.get("title", ""),
-            )
+        text = with_action_label(
+            "edit",
+            f"Текущая дата: {current}\n\nВведите дату (ГГГГ-ММ-ДД или '-' для сброса):",
+            title,
         )
-        if isinstance(prompt_msg, Message):
-            await state.update_data(prompt_msg_id=prompt_msg.message_id)
+        markup = None
+
+    else:
+        logger.warning("Unknown change action: %s", action)
+        return
+
+    await state.set_state(new_state)
+    prompt_msg = await message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+    if isinstance(prompt_msg, Message):
+        await state.update_data(prompt_msg_id=prompt_msg.message_id)
 
 
 def _build_save_summary_text(resource: Resource, is_edit: bool) -> str:

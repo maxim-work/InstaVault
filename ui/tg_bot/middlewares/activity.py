@@ -1,7 +1,9 @@
 import time
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message, Update
+from aiogram.types import CallbackQuery, Message, TelegramObject, Update
 
 from config import ACTIVITY_UPDATE_INTERVAL_SECONDS
 from data.db.users import UserDB
@@ -14,14 +16,16 @@ class ActivityMiddleware(BaseMiddleware):
         self.last_flush: dict[int, float] = {}
         super().__init__()
 
-    async def __call__(self, handler, event, data):
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
         if isinstance(event, Update):
             real_event = get_real_event(event)
 
-            if (
-                isinstance(real_event, (Message, CallbackQuery))
-                and real_event.from_user
-            ):
+            if isinstance(real_event, (Message, CallbackQuery)) and real_event.from_user:
                 tg_id = real_event.from_user.id
                 now = time.monotonic()
 

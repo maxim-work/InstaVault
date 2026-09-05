@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from core.models.user import User
 
@@ -56,7 +56,7 @@ def _format_datetime(dt: datetime | str | None) -> str:
 
     try:
         if isinstance(dt, str):
-            dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+            dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
         return dt.strftime("%d.%m.%Y в %H:%M")
-    except Exception:
+    except Exception:  # noqa: BLE001
         return str(dt)

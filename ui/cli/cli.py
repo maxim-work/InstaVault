@@ -1,31 +1,20 @@
-import os
+import io
 import sys
+from pathlib import Path
 
 from data.db.resources import ResourceDB
 from data_io.export_data import write_data_file, write_urls_file
 from data_io.import_data import parse_data
-
 from ui.cli.handlers import add_video_cli, edit_video_cli, search_cli, show_all_videos
 
 
 def setup_encoding() -> None:
-    try:
-        if hasattr(sys.stdout, "buffer"):
-            sys.stdout = open(
-                sys.stdout.fileno(),
-                mode="w",
-                encoding="utf-8",
-                buffering=1,
-            )
-    except Exception:
-        pass
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
 
 def clear() -> None:
-    if sys.platform == "win32":
-        os.system("cls")
-    else:
-        os.system("clear")
+    print("\033[H\033[2J", end="", flush=True)
 
 
 def pause() -> None:
@@ -36,56 +25,75 @@ def start_cli(db: ResourceDB) -> None:
     clear()
 
     while True:
-        print("=== База знаний ===\n")
-        print("1. Добавить")
-        print("2. Поиск")
-        print("3. Удалить по id")
-        print("4. Удалить все")
-        print("5. Показать все")
-        print("6. Редактировать")
-        print("7. Экспорт")
-        print("8. Импорт")
-        print("0. Выход")
-
+        _print_main_menu()
         user_enter = input("\n: ").strip()
 
-        if user_enter == "1":
+        if user_enter in ("0", "exit"):
+            clear()
+            return
+
+        _handle_main_choice(db, user_enter)
+
+
+def _print_main_menu() -> None:
+    print("=== База знаний ===\n")
+    print("1. Добавить")
+    print("2. Поиск")
+    print("3. Удалить по id")
+    print("4. Удалить все")
+    print("5. Показать все")
+    print("6. Редактировать")
+    print("7. Экспорт")
+    print("8. Импорт")
+    print("0. Выход")
+
+
+def _handle_main_choice(db: ResourceDB, choice: str) -> None:
+    match choice:
+        case "1":
             add_video_cli(db, clear, pause)
-        elif user_enter == "2":
+        case "2":
             search_cli(db, clear, pause)
-        elif user_enter == "3":
-            clear()
-            print("=== Удаление по id ===\n")
-            id_resource = input("Введите id: ").strip()
-            if id_resource.isdigit():
-                db.delete(int(id_resource), 0)
-                print("Done!", flush=True)
-                pause()
-        elif user_enter == "4":
-            clear()
-            print("=== Очистка всей базы ===\n")
-            confirm = input("Точно удалить ВСЁ? (yes/no): ").strip()
-            if confirm.lower() == "yes":
-                db.delete_all(0)
-                print("Done!", flush=True)
-                pause()
-        elif user_enter == "5":
+        case "3":
+            _delete_by_id(db)
+        case "4":
+            _delete_all(db)
+        case "5":
             show_all_videos(db, clear, pause)
-        elif user_enter == "6":
+        case "6":
             edit_video_cli(db, clear, pause)
-        elif user_enter == "7":
+        case "7":
             _handle_export(db)
-        elif user_enter == "8":
+        case "8":
             _handle_import(db)
-        elif user_enter in ["0", "exit"]:
-            clear()
-            break
-        else:
+        case _:
             clear()
             print("=== База знаний ===\n")
             print("Неверный ввод, попробуйте снова", flush=True)
             pause()
-        clear()
+            return
+
+    clear()
+
+
+def _delete_by_id(db: ResourceDB) -> None:
+    clear()
+    print("=== Удаление по id ===\n")
+    id_resource = input("Введите id: ").strip()
+    if id_resource.isdigit():
+        db.delete(int(id_resource), 0)
+        print("Done!", flush=True)
+        pause()
+
+
+def _delete_all(db: ResourceDB) -> None:
+    clear()
+    print("=== Очистка всей базы ===\n")
+    confirm = input("Точно удалить ВСЁ? (yes/no): ").strip()
+    if confirm.lower() == "yes":
+        db.delete_all(0)
+        print("Done!", flush=True)
+        pause()
 
 
 def _handle_export(db: ResourceDB) -> None:
@@ -132,7 +140,7 @@ def _handle_import(db: ResourceDB) -> None:
         pause()
         return
 
-    if not os.path.exists(filepath):
+    if not Path(filepath).exists():
         print(f"Файл не найден: {filepath}", flush=True)
         pause()
         return
@@ -146,7 +154,7 @@ def _handle_import(db: ResourceDB) -> None:
             f"Добавлено {added} из {total} (пропущено {total - added})",
             flush=True,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         clear()
         print("=== Импорт ===\n")
         print(f"Ошибка: {e}", flush=True)
