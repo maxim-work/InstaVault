@@ -1,0 +1,111 @@
+<div class="main">
+    <div class="header" id="header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1>Ежедневник</h1>
+                <div class="header-nav">
+                    <div class="nav-arrow">←</div>
+                    <div class="date">9 марта</div>
+                    <div class="nav-arrow">→</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-btn">+</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content" id="content">
+        <div class="daily-container">
+            <div class="daily-greeting">Доброе утро, {{ name|default:"Name" }}</div>
+            
+            <!-- Главная заметка дня -->
+            <div class="daily-main-note">
+                <div class="main-note-header">
+                    <i class="fas fa-chevron-down"></i>
+                    <div class="main-note-title">Заметка дня</div>
+                    <div class="main-note-menu">
+                        <div class="main-note-dots">⋯</div>
+                    </div>
+                </div>
+                <div class="main-note-content">
+                    <textarea placeholder="Напишите заметку..."># Планы на день
+
+- Закончить дизайн
+- Подготовить презентацию
+- Купить продукты</textarea>
+                </div>
+            </div>
+
+            <!-- Утро -->
+            <div class="time-group">
+                <div class="time-group-title">Утро</div>
+                <div class="daily-task">
+                    <div class="task-checkbox"></div>
+                    <div class="task-content">
+                        <div class="task-title">Планерка</div>
+                        <div class="task-time">09:00 - 10:00</div>
+                    </div>
+                    <div class="task-actions">
+                        <div class="task-btn">
+                            <i class="fas fa-pencil-alt"></i>
+                        </div>
+                        <div class="task-btn delete">
+                            <i class="fas fa-trash"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- День -->
+            <div class="time-group">
+                <div class="time-group-title">День</div>
+                <div class="daily-task">
+                    <div class="task-checkbox"></div>
+                    <div class="task-content">
+                        <div class="task-title">Дизайн</div>
+                        <div class="task-time">11:00 - 12:30</div>
+                    </div>
+                    <div class="task-actions">
+                        <div class="task-btn">
+                            <i class="fas fa-pencil-alt"></i>
+                        </div>
+                        <div class="task-btn delete">
+                            <i class="fas fa-trash"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="right-panel">
+    <!-- Погода -->
+    <div class="weather-card">
+        <div class="weather-header">
+            <span class="weather-city">Москва</span>
+            <i class="fas fa-cloud-sun" style="color: #E07A5F; font-size: 24px;"></i>
+        </div>
+        <div class="weather-temp">-3°C</div>
+        <div class="weather-desc">
+            <i class="fas fa-cloud"></i>
+            <span>Облачно, ощущается как -7°</span>
+        </div>
+    </div>
+
+    <!-- Статистика дня -->
+    <div class="stats-card">
+        <div class="stats-title">ЗАДАЧИ СЕГОДНЯ</div>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-value">1/4</div>
+                <div class="stat-label">Выполнено</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">25%</div>
+                <div class="stat-label">Продуктивность</div>
+            </div>
+        </div>
+    </div>
+</div>
