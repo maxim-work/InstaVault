@@ -1,0 +1,307 @@
+{% extends "users/base.html" %}
+
+{% block content %}
+<div id="main-content">
+    <div class="register-card">
+        <h1 class="register-title">
+            <i class="fas fa-gavel"></i> 
+            InstaVault
+        </h1>
+        <div class="register-subtitle">Оспорить блокировку аккаунта</div>
+
+        <form id="appeal-form" onsubmit="submitAppeal(event)">
+            {% csrf_token %}
+            
+            <!-- Инфо-блок -->
+            <div class="info-block">
+                <i class="fas fa-info-circle"></i>
+                <span>Администратор может отклонить апелляцию без объяснения причины.<br>Вы можете оставить контактные данные для связи.</span>
+            </div>
+
+            <!-- Имя пользователя -->
+            <div class="input-group">
+                <label class="input-label">Имя пользователя</label>
+                <input type="text" class="input-field" id="appeal-username" name="username" 
+                    placeholder="Ваше имя пользователя"
+                    value="{% if request.user.is_authenticated %}{{ request.user.username }}{% endif %}"
+                    {% if request.user.is_authenticated %}readonly{% endif %}
+                    oninput="checkAppealUsername()"
+                    autofocus>
+                <div class="input-error" id="username-error"></div>
+                <div class="input-success" id="username-success"></div>
+            </div>
+
+            <!-- Контакт для связи (показываем всегда) -->
+            <div class="input-group">
+                <label class="input-label">Контакт для связи (необязательно)</label>
+                <input type="text" class="input-field" id="appeal-contact" name="contact" 
+                    placeholder="Email или Telegram для обратной связи">
+                <div class="input-hint">
+                    <i class="fas fa-info-circle"></i> Оставьте email или @username Telegram, чтобы админ мог с вами связаться
+                </div>
+            </div>
+
+            <!-- Сообщение -->
+            <div class="input-group">
+                <label class="input-label">Текст апелляции</label>
+                <textarea class="input-field textarea" id="appeal-message" name="message" 
+                    placeholder="Опишите, почему вы считаете блокировку несправедливой..."
+                    rows="6" maxlength="2000" oninput="updateCharCount()"></textarea>
+                <div class="input-hint" id="char-count">
+                    <i class="fas fa-pen"></i> <span id="char-remaining">2000</span> символов осталось
+                </div>
+                <div class="input-error" id="message-error"></div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="submit-btn" disabled>Отправить апелляцию</button>
+        </form>
+
+        <!-- Результат (скрыт изначально) -->
+        <div id="appeal-result" style="display: none;">
+            <div class="result-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="result-title">Апелляция отправлена</h2>
+            <p class="result-text">
+                Ваша апелляция будет рассмотрена администратором. 
+                Решение придёт на указанные контакты или вы можете проверить статус позже.
+            </p>
+            <button class="btn-primary" onclick="window.location.href='{% url 'users:login' %}'" style="margin-top: 16px;">
+                Вернуться на страницу входа
+            </button>
+        </div>
+
+        <div class="footer-links">
+            <a href="{% url 'users:login' %}">Вход</a>
+            <a href="{% url 'users:register' %}">Регистрация</a>
+        </div>
+    </div>
+
+    <style>
+        .info-block {
+            background: rgba(224, 122, 95, 0.08);
+            border: 1px solid rgba(224, 122, 95, 0.2);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 13px;
+            color: #B0B0C0;
+            line-height: 1.5;
+        }
+        .info-block i {
+            color: #E07A5F;
+            font-size: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .input-success {
+            color: #10b981;
+            font-size: 12px;
+            margin-top: 4px;
+            min-height: 18px;
+        }
+        .input-error {
+            color: #ff4d4d;
+            font-size: 12px;
+            margin-top: 4px;
+            min-height: 18px;
+        }
+        .input-hint {
+            font-size: 12px;
+            color: #6B6B7A;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .input-hint i {
+            color: #E07A5F;
+            font-size: 10px;
+        }
+        .textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 40px;
+            background: #E07A5F;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+            margin-top: 8px;
+            letter-spacing: 0.3px;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #c96b51;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(224, 122, 95, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .result-icon {
+            text-align: center;
+            font-size: 64px;
+            color: #10b981;
+            margin-bottom: 16px;
+        }
+        .result-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .result-text {
+            text-align: center;
+            color: #B0B0C0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        @media (max-width: 500px) {
+            .register-card {
+                padding: 24px 20px;
+            }
+        }
+    </style>
+
+    <script>
+        function getCsrfToken() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            return token ? token.value : '';
+        }
+
+        let isUsernameValid = false;
+        let checkTimer;
+
+        function checkAppealUsername() {
+            clearTimeout(checkTimer);
+            const username = document.getElementById('appeal-username').value.trim();
+            const errorEl = document.getElementById('username-error');
+            const successEl = document.getElementById('username-success');
+
+            if (!username) {
+                errorEl.innerHTML = '';
+                successEl.innerHTML = '';
+                isUsernameValid = false;
+                updateSubmitBtn();
+                return;
+            }
+
+            checkTimer = setTimeout(() => {
+                fetch('{% url "users:check_appeal_username" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: 'username=' + encodeURIComponent(username)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exists) {
+                        errorEl.innerHTML = '';
+                        successEl.innerHTML = '✅ Пользователь найден';
+                        isUsernameValid = true;
+                    } else {
+                        errorEl.innerHTML = '<span style="color: #ffb3b3;">Пользователь не найден</span>';
+                        successEl.innerHTML = '';
+                        isUsernameValid = false;
+                    }
+                    updateSubmitBtn();
+                });
+            }, 500);
+        }
+
+        function updateCharCount() {
+            const message = document.getElementById('appeal-message').value;
+            const remaining = 2000 - message.length;
+            document.getElementById('char-remaining').textContent = remaining;
+            
+            const countEl = document.getElementById('char-count');
+            if (remaining < 100) {
+                countEl.style.color = '#ff4d4d';
+            } else if (remaining < 500) {
+                countEl.style.color = '#E07A5F';
+            } else {
+                countEl.style.color = '#6B6B7A';
+            }
+            
+            updateSubmitBtn();
+        }
+
+        function updateSubmitBtn() {
+            const username = document.getElementById('appeal-username').value.trim();
+            const message = document.getElementById('appeal-message').value.trim();
+            const submitBtn = document.getElementById('submit-btn');
+            
+            submitBtn.disabled = !(isUsernameValid && message.length >= 10);
+        }
+
+        function submitAppeal(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('appeal-username').value.trim();
+            const contact = document.getElementById('appeal-contact').value.trim();
+            const message = document.getElementById('appeal-message').value.trim();
+            const submitBtn = document.getElementById('submit-btn');
+            
+            if (!isUsernameValid || message.length < 10) return;
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Отправка...';
+            
+            fetch('{% url "users:submit_appeal" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: 'username=' + encodeURIComponent(username) + 
+                      '&contact=' + encodeURIComponent(contact) + 
+                      '&message=' + encodeURIComponent(message)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('appeal-form').style.display = 'none';
+                    document.getElementById('appeal-result').style.display = 'block';
+                } else {
+                    document.getElementById('message-error').innerText = data.error || 'Ошибка отправки';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Отправить апелляцию';
+                }
+            })
+            .catch(err => {
+                document.getElementById('message-error').innerText = 'Ошибка соединения';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Отправить апелляцию';
+            });
+        }
+
+        // Enter submit
+        document.getElementById('appeal-message').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey && !document.getElementById('submit-btn').disabled) {
+                document.getElementById('appeal-form').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Init
+        {% if request.user.is_authenticated %}
+            isUsernameValid = true;
+            updateSubmitBtn();
+        {% endif %}
+    </script>
+</div>
+{% endblock %}

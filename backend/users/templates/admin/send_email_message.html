@@ -1,0 +1,64 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="module">
+    <h2>Отправка Email-писем</h2>
+    
+    <div class="info" style="padding: 15px; margin: 15px 0; border-left: 4px solid #2196f3;">
+        <strong>📊 Получатели:</strong>
+        <ul>
+            <li>Всего выбрано: <strong>{{ count }}</strong> пользователей</li>
+            <li>Список: <strong>{{ usernames|join:", " }}</strong></li>
+        </ul>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div class="form-row" style="margin-bottom: 15px;">
+            <div style="margin-bottom: 5px;">
+                <strong>{{ field.label_tag }}</strong>
+            </div>
+            <div>
+                {{ field }}
+                {% if field.help_text %}
+                <div class="help" style="color: #666; font-size: 12px; margin-top: 5px;">
+                    {{ field.help_text }}
+                </div>
+                {% endif %}
+            </div>
+            {% if field.errors %}
+            <div class="errors" style="color: #dc3545; margin-top: 5px;">
+                {{ field.errors }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <div class="submit-row" style="margin-top: 20px;">
+            <button type="submit" name="action" value="send" class="button" style="background: #28a745; color: white; padding: 10px 20px; border: none; cursor: pointer;">
+                📨 Отправить письмо
+            </button>
+            <a href="{% url 'admin:users_customuser_changelist' %}" class="button" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">
+                ❌ Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+    textarea {
+        width: 100%;
+        max-width: 600px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+    
+    .button:hover {
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}

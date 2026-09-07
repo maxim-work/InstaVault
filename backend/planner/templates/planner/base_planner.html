@@ -1,0 +1,880 @@
+{% extends "users/base.html" %}
+
+{% block content %}
+<style>
+    #main-content { display: flex !important; flex-direction: column !important; height: calc(100vh - 32px) !important; max-height: 900px !important; width: 100% !important; max-width: 1000px !important; margin: 0 auto !important; padding: 0 !important; align-items: stretch !important; justify-content: flex-start !important; }
+    .app-layout { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
+    .topbar { display: flex; align-items: center; gap: 24px; padding: 12px 20px; background: rgba(12,12,15,0.85); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 2px; }
+    .topbar-user-link { text-decoration: none; flex-shrink: 0; }
+    .topbar-user { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border-radius: 12px; transition: background 0.2s; }
+    .topbar-user-link:hover .topbar-user { background: rgba(224,122,95,0.1); }
+    .avatar-topbar { width: 34px; height: 34px; border-radius: 10px; background: #E07A5F; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex-shrink: 0; color: white; }
+    .topbar-user-info { display: flex; flex-direction: column; line-height: 1.2; }
+    .topbar-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+    .topbar-user-streak { font-size: 11px; color: #E07A5F; }
+    .topbar-nav { display: flex; align-items: center; gap: 4px; flex: 1; }
+    .topbar-nav-link { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; color: #B0B0C0; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.2s; }
+    .topbar-nav-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .topbar-nav-link.active { background: rgba(224,122,95,0.15); color: #E07A5F; }
+    .topbar-nav-link i { font-size: 15px; width: 18px; text-align: center; }
+    .topbar-actions { flex-shrink: 0; display: flex; align-items: center; width: 36px; }
+    .main-area { flex: 1 1 0; background: rgba(12,12,15,0.85); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .day-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; min-height: 68px; }
+    .header-left { display: flex; align-items: center; gap: 24px; flex: 1; }
+    .date-nav { display: flex; align-items: center; gap: 12px; width: 260px; flex-shrink: 0; }
+    .date-arrow { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: #B0B0C0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .date-arrow:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .date-display { font-size: 14px; color: #fff; font-weight: 500; text-align: center; cursor: pointer; padding: 4px 12px; border-radius: 8px; transition: all 0.2s; user-select: none; }
+    .date-display:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .header-stats { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #B0B0C0; width: 380px; flex-shrink: 0; }
+    .header-stats span { display: flex; align-items: center; gap: 4px; }
+    .header-stats strong { color: #E07A5F; font-weight: 600; }
+    .stats-separator { color: #3A3A45; }
+    .header-right { width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
+    .btn-add-header { width: 36px; height: 36px; border-radius: 50%; background: #E07A5F; border: none; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(224,122,95,0.3); transition: all 0.2s; }
+    .btn-add-header:hover { background: #c96b51; transform: translateY(-2px); }
+    .day-content { flex: 1 1 0; display: flex; flex-direction: column; padding: 24px 24px 0 24px; min-height: 0; overflow: hidden; }
+    .daily-greeting { font-size: 24px; font-weight: 600; color: #fff; margin-bottom: 16px; flex-shrink: 0; }
+    .day-note { background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 16px; overflow: hidden; flex-shrink: 0; }
+    .note-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; font-weight: 600; color: #B0B0C0; text-transform: uppercase; letter-spacing: 0.5px; cursor: default; }
+    .note-header i { transition: transform 0.2s; font-size: 12px; }
+    .note-header.collapsed i { transform: rotate(-90deg); }
+    .note-menu { margin-left: auto; position: relative; }
+    .note-menu-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 16px; cursor: pointer; }
+    .note-dropdown { position: absolute; top: 35px; right: 0; width: 150px; background: #1A1A20; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 20px rgba(0,0,0,0.5); display: none; z-index: 10; }
+    .note-dropdown.active { display: block; }
+    .dropdown-item { padding: 10px 14px; font-size: 13px; color: #E1E1E6; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .note-body { padding: 16px; }
+    .note-body.collapsed { display: none; }
+    .note-body textarea { width: 100%; background: transparent; border: none; color: #E1E1E6; font-size: 15px; line-height: 1.7; resize: none; min-height: 60px; outline: none; font-family: inherit; overflow: hidden; }
+    .custom-select-wrapper { position: relative; flex: 1; }
+    .custom-select-trigger { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; color: white; font-size: 14px; cursor: pointer; transition: all 0.2s; user-select: none; width: 100%; }
+    .custom-select-trigger:hover { border-color: rgba(224,122,95,0.4); }
+    .custom-select-trigger i { font-size: 10px; color: #6B6B7A; transition: transform 0.2s; }
+    .custom-select-wrapper.open .custom-select-trigger { border-color: #E07A5F; }
+    .custom-select-wrapper.open .custom-select-trigger i { transform: rotate(180deg); color: #E07A5F; }
+    .custom-select-dropdown { position: fixed; background: #1A1A20; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; z-index: 9999; box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: none; max-height: 240px; overflow-y: auto; }
+    .custom-select-dropdown.active { display: block; }
+    .custom-option { padding: 11px 16px; font-size: 14px; color: #B0B0C0; cursor: pointer; transition: all 0.15s; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .custom-option:last-child { border-bottom: none; }
+    .custom-option:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .custom-option.active { color: #E07A5F; background: rgba(224,122,95,0.08); }
+    .custom-option.priority-urgent { color: #ff4d4d; }
+    .custom-option.priority-important { color: #f0c040; }
+    .section-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0; }
+    .section-label { font-size: 14px; font-weight: 600; color: #B0B0C0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .section-actions { display: flex; gap: 8px; align-items: center; }
+    .section-actions .custom-select-wrapper { width: 180px; }
+    .tasks-scroll-area { flex: 1 1 0; overflow-y: auto; min-height: 0; padding-bottom: 24px; }
+    .tasks-scroll-area::-webkit-scrollbar { width: 4px; }
+    .tasks-scroll-area::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 4px; }
+    .task-card { display: flex; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.02); border-radius: 14px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.03); transition: all 0.2s; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .task-card.priority-urgent { border-left: 3px solid #ff4d4d; }
+    .task-card.priority-important { border-left: 3px solid #f0c040; }
+    .task-card.priority-none { border-left: 3px solid #3A3A45; }
+    .task-card.completed { opacity: 0.6; }
+    .task-card.completed .task-card-title { text-decoration: line-through; color: #6B6B7A; }
+    .task-card-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #3A3A45; cursor: pointer; transition: all 0.2s; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent; }
+    .task-card-checkbox:hover { border-color: #E07A5F; }
+    .task-card-checkbox.checked { background: #10b981; border-color: #10b981; color: white; }
+    .task-card-body { flex: 1; min-width: 0; }
+    .task-card-title { font-size: 15px; color: #fff; margin-bottom: 4px; font-weight: 500; }
+    .task-card-desc { font-size: 12px; color: #6B6B7A; margin-bottom: 6px; }
+    .task-card-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .task-card-time { font-size: 12px; color: #E07A5F; background: rgba(224,122,95,0.08); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+    .task-card-repeat-badge { font-size: 11px; color: #A0A0B0; background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.06); }
+    .task-card-repeat-badge i { font-size: 10px; color: #8B8B9A; }
+    .task-card-actions { position: relative; display: flex; gap: 4px; align-items: flex-start; }
+    .task-menu-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .task-menu-btn:hover { background: rgba(224,122,95,0.15); color: #E07A5F; }
+    .task-dropdown { position: absolute; top: 35px; right: 0; width: 180px; background: #1A1A20; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 25px rgba(0,0,0,0.6); display: none; z-index: 100; overflow: hidden; }
+    .task-dropdown.active { display: block; }
+    .task-dropdown-item { padding: 10px 14px; font-size: 13px; color: #E1E1E6; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: all 0.15s; }
+    .task-dropdown-item:last-child { border-bottom: none; }
+    .task-dropdown-item:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
+    .task-dropdown-item i { width: 16px; text-align: center; font-size: 13px; }
+    .task-dropdown-item.delete-item:hover { background: rgba(255,77,77,0.1); color: #ff4d4d; }
+    .collapsible-section { margin-top: 8px; }
+    .collapsible-header { display: flex; align-items: center; gap: 8px; padding: 12px 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #6B6B7A; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid rgba(255,255,255,0.03); flex-shrink: 0; }
+    .collapsible-count { margin-left: auto; color: #6B6B7A; font-size: 13px; }
+    .collapsible-body.collapsed { display: none; }
+    .empty-state { text-align: center; padding: 40px 16px; color: #6B6B7A; flex-shrink: 0; }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; color: #3A3A45; }
+    .empty-text { font-size: 14px; margin-bottom: 12px; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { width: 480px; max-width: 90%; max-height: 90vh; overflow-y: auto; background: #0C0C0F; border-radius: 28px; padding: 28px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 30px 60px rgba(0,0,0,0.5); position: relative; }
+    .modal-title { font-size: 20px; font-weight: 600; color: #E07A5F; margin-bottom: 20px; }
+    .modal-input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 12px 16px; color: white; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; }
+    .modal-close-btn { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); border: none; color: #B0B0C0; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 10; }
+    .modal-close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .modal-textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+    .modal-row { display: flex; gap: 12px; }
+    .modal-select-wrapper { margin-bottom: 12px; flex: 1; }
+    .time-toggle-row { margin-bottom: 12px; }
+    .time-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .time-toggle input { display: none; }
+    .time-toggle-slider { width: 40px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 11px; position: relative; transition: all 0.2s; flex-shrink: 0; }
+    .time-toggle-slider::after { content: ''; position: absolute; width: 18px; height: 18px; background: #6B6B7A; border-radius: 50%; top: 2px; left: 2px; transition: all 0.2s; }
+    .time-toggle input:checked + .time-toggle-slider { background: rgba(224,122,95,0.3); }
+    .time-toggle input:checked + .time-toggle-slider::after { background: #E07A5F; left: 20px; }
+    .time-toggle-label { font-size: 13px; color: #B0B0C0; }
+    .time-fields { align-items: center; }
+    .time-separator { color: #6B6B7A; font-size: 14px; flex-shrink: 0; }
+    .modal-actions { display: flex; gap: 12px; margin-top: 16px; }
+    .modal-btn { flex: 1; padding: 12px; border-radius: 30px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }
+    .modal-btn.primary { background: #E07A5F; color: white; }
+    .modal-btn.primary:hover { background: #c96b51; }
+    .modal-btn.secondary { background: rgba(255,255,255,0.05); color: #B0B0C0; }
+    .modal-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+    .habits-grid { display: flex; flex-direction: column; gap: 8px; }
+    .habit-card { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.2s; overflow: visible !important; }
+    .habit-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+    .habit-card.completed .habit-name { text-decoration: line-through; color: #8B8B9A; }
+    .habit-check-square { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #3A3A45; cursor: pointer; transition: all 0.2s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; }
+    .habit-check-square:hover { border-color: #E07A5F; }
+    .habit-check-square.checked { background: #10b981; border-color: #10b981; color: white; box-shadow: 0 0 12px rgba(16,185,129,0.25); }
+    .habit-info { flex: 1; min-width: 0; }
+    .habit-name { font-size: 15px; color: #fff; font-weight: 500; margin-bottom: 4px; letter-spacing: -0.2px; }
+    .habit-meta { display: flex; gap: 10px; align-items: center; }
+    .habit-streak { font-size: 11px; color: #E07A5F; font-weight: 500; }
+    .habit-right { flex-shrink: 0; }
+    .habit-progress-ring { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    .habit-progress-ring .progress-text { position: absolute; font-size: 10px; font-weight: 600; color: #B0B0C0; }
+    .avatar-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .avatar-option { width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.2s; user-select: none; }
+    .avatar-option:hover { background: rgba(224,122,95,0.1); border-color: rgba(224,122,95,0.3); transform: scale(1.05); }
+    .avatar-option.selected { background: rgba(224,122,95,0.15); border-color: #E07A5F; box-shadow: 0 0 12px rgba(224,122,95,0.2); }
+    .expandable-field { margin-bottom: 4px; }
+    .expandable-toggle { font-size: 13px; color: #6B6B7A; cursor: pointer; padding: 8px 12px; border-radius: 10px; transition: all 0.2s; user-select: none; }
+    .expandable-toggle:hover { color: #E07A5F; background: rgba(224,122,95,0.05); }
+    .expandable-body { margin-top: 8px; }
+    .calendar-weekdays {
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 4px !important;
+        width: 62.5% !important;
+        min-width: 380px !important;
+        max-width: 700px !important;
+        margin: 0 auto 4px auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .calendar-weekday {
+        text-align: center !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #6B6B7A !important;
+        text-transform: uppercase !important;
+        padding: 4px 0 !important;
+        display: block !important;
+    }
+    .calendar-grid {
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important;
+        gap: 4px !important;
+        width: 62.5% !important;          /* 5/8 = 62.5% */
+        min-width: 380px !important;
+        max-width: 700px !important;
+        margin: 0 auto 16px auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .calendar-day-cell {
+        aspect-ratio: 1 !important;
+        border-radius: 6px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: #B0B0C0 !important;
+        cursor: pointer !important;
+        transition: all 0.15s !important;
+        border: 1px solid transparent !important;
+        min-width: 0 !important;
+    }
+    .calendar-day-cell:hover { transform: scale(1.1); z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.15); }
+    .calendar-day-cell.other-month { opacity: 0.15; pointer-events: none; }
+    .calendar-day-cell.today { border-color: rgba(255,255,255,0.2); color: #fff; font-weight: 700; }
+    .calendar-legend {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        width: 62.5% !important;
+        min-width: 380px !important;
+        max-width: 700px !important;
+        margin: 0 auto 8px auto !important;
+        flex-shrink: 0 !important;
+    }
+
+    .calendar-legend .legend-label {
+        font-size: 9px !important;
+        color: #6B6B7A !important;
+    }
+    .calendar-legend .legend-cell {
+        width: 10px !important;
+        height: 10px !important;
+        border-radius: 2px !important;
+        flex-shrink: 0 !important;
+    }
+    .legend-cell.level-0 { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); }
+    .legend-cell.level-1 { background: rgba(224,122,95,0.20); }
+    .legend-cell.level-2 { background: rgba(224,122,95,0.35); }
+    .legend-cell.level-3 { background: rgba(224,122,95,0.55); }
+    .legend-cell.level-4 { background: rgba(224,122,95,0.85); }
+    .mini-chart-container {
+        width: 100% !important;
+        flex-shrink: 0 !important;
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: 14px !important;
+        padding: 14px 18px 14px 18px !important;
+        border: 1px solid rgba(255,255,255,0.04) !important;
+        margin-top: 8px !important;
+        box-sizing: border-box !important;
+    }
+
+.mini-chart {
+    width: 100% !important;
+    height: 220px !important;
+    overflow: hidden !important;  /* ← обрезает всё, что выходит */
+    position: relative !important;
+}
+
+    .mini-chart svg {
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
+    }
+    .mini-chart-title { font-size: 12px; color: #8B8B9A; margin-bottom: 10px; font-weight: 500; display: flex; align-items: center; }
+
+    /* Свободное место после графика */
+    .day-content::after { content: ''; display: block; height: 20px; flex-shrink: 0; }
+    .mini-chart-line { fill: none; stroke: #E07A5F; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(224,122,95,0.3)); }
+    .mini-chart-area { fill: url(#chartGradient); opacity: 0.3; }
+    .mini-chart-dot { fill: #E07A5F; stroke: #1A1A20; stroke-width: 2; cursor: pointer; transition: r 0.2s; }
+    .mini-chart-dot:hover { r: 5; }
+    .day-preview { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+    .day-preview-content { background: #141419; border-radius: 20px; padding: 24px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.6); width: 260px; text-align: center; }
+    .day-preview-date { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 14px; }
+    .day-preview-stats { display: flex; justify-content: center; gap: 24px; margin-bottom: 18px; }
+    .preview-stat { display: flex; flex-direction: column; align-items: center; }
+    .preview-stat-value { font-size: 20px; font-weight: 700; color: #E07A5F; }
+    .preview-stat-label { font-size: 10px; color: #6B6B7A; text-transform: uppercase; margin-top: 2px; }
+    .day-preview-actions { display: flex; gap: 8px; }
+    .preview-btn { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #E1E1E6; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .preview-btn:hover { background: rgba(224,122,95,0.1); border-color: #E07A5F; color: #E07A5F; }
+    .preview-btn i { font-size: 13px; }
+    .reschedule-options { display: flex; gap: 8px; margin-bottom: 20px; }
+    .reschedule-option { flex: 1; padding: 12px 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; transition: all 0.2s; color: #B0B0C0; font-size: 13px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .reschedule-option:hover { background: rgba(224,122,95,0.1); border-color: rgba(224,122,95,0.3); color: #E07A5F; }
+    .reschedule-option.active { background: rgba(224,122,95,0.15); border-color: #E07A5F; color: #E07A5F; }
+    .reschedule-option i { font-size: 18px; }
+    @media (max-width: 700px) { .topbar { flex-wrap: wrap; gap: 8px; padding: 10px 14px; } .topbar-user-info { display: none; } .topbar-nav { order: 3; width: 100%; justify-content: center; } .topbar-nav-link span { display: none; } .header-stats { display: none; } }
+</style>
+
+<div class="app-layout">
+    <header class="topbar">
+        <a href="{% url 'users:profile' %}" class="topbar-user-link">
+            <div class="topbar-user">
+                <div class="avatar-topbar">{{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}</div>
+                <div class="topbar-user-info">
+                    <span class="topbar-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                </div>
+            </div>
+        </a>
+        <nav class="topbar-nav">
+            <a href="{% url 'planner:day' %}" class="topbar-nav-link {% if page == 'day' %}active{% endif %}" hx-get="{% url 'planner:day' %}" hx-target="#mainContent" hx-push-url="true" hx-swap="innerHTML" onclick="setActive(this)"><i class="fas fa-calendar-day"></i> <span>Ежедневник</span></a>
+            <a href="{% url 'planner:habits' %}" class="topbar-nav-link {% if page == 'habits' %}active{% endif %}" hx-get="{% url 'planner:habits' %}" hx-target="#mainContent" hx-push-url="true" hx-swap="innerHTML" onclick="setActive(this)"><i class="fas fa-fire"></i> <span>Привычки</span></a>
+            <a href="{% url 'planner:calendar' %}" class="topbar-nav-link {% if page == 'calendar' %}active{% endif %}" hx-get="{% url 'planner:calendar' %}" hx-target="#mainContent" hx-push-url="true" hx-swap="innerHTML" onclick="setActive(this)"><i class="fas fa-calendar"></i> <span>Календарь</span></a>
+        </nav>
+        <div class="topbar-actions"></div>
+    </header>
+    <main class="main-area" id="mainContent">{% block planner_content %}{% endblock %}</main>
+</div>
+
+<script>
+// ============ ОБЩИЕ ФУНКЦИИ ============
+function setActive(el) { document.querySelectorAll('.topbar-nav-link').forEach(l => l.classList.remove('active')); el.classList.add('active'); }
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.topbar-nav-link').forEach(l => { if (l.getAttribute('href') === window.location.pathname) l.classList.add('active'); });
+});
+
+function getCSRF() { return document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''; }
+
+// ============ ЗАМЕТКИ ============
+window.toggleNote = function() { document.getElementById('noteBody').classList.toggle('collapsed'); document.querySelector('.note-header').classList.toggle('collapsed'); };
+window.toggleNoteDropdown = function(e) { e.stopPropagation(); document.getElementById('noteDropdown').classList.toggle('active'); };
+window.clearNote = function() { document.getElementById('dailyNote').value=''; document.getElementById('noteDropdown').classList.remove('active'); htmx.trigger('#dailyNote', 'keyup'); };
+document.addEventListener('click', e => { if (!e.target.closest('.note-menu')) document.getElementById('noteDropdown')?.classList.remove('active'); });
+
+// ============ ЗАДАЧИ: сворачивание ============
+window.toggleCompleted = function() {
+    const body = document.getElementById('completedBody');
+    const icon = document.getElementById('completedIcon');
+    if (!body) return;
+    body.classList.toggle('collapsed');
+    icon.className = body.classList.contains('collapsed') ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+};
+window.toggleAllTasks = function(event) {
+    if (event) event.stopPropagation();
+    const active = document.getElementById('activeTasksContainer');
+    const completed = document.getElementById('completedSection');
+    const empty = document.getElementById('emptyState');
+    const icon = document.getElementById('collapseAllIcon');
+    if (!active) return;
+    const hidden = active.style.display === 'none';
+    active.style.display = hidden ? 'block' : 'none';
+    if (completed) completed.style.display = hidden ? 'block' : 'none';
+    if (empty) empty.style.display = 'none';
+    icon.className = hidden ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+};
+
+// ============ КАСТОМНЫЕ СЕЛЕКТЫ ============
+let activeDropdown = null;
+function createDropdown() {
+    let el = document.getElementById('dynamicDropdown');
+    if (el) el.remove();
+    el = document.createElement('div'); el.id = 'dynamicDropdown'; el.className = 'custom-select-dropdown';
+    document.body.appendChild(el); return el;
+}
+window.toggleCustomSelect = function(event, wrapperId) {
+    event.stopPropagation();
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+    if (wrapper.classList.contains('open')) { closeAllDropdowns(); return; }
+    closeAllDropdowns(); wrapper.classList.add('open');
+    const trigger = wrapper.querySelector('.custom-select-trigger');
+    const dropdown = createDropdown();
+    let options = [], currentValue = '', onSelect = null;
+
+    if (wrapperId === 'sortFilterSelectWrapper') {
+        options = [{ value:'time', label:'По времени' }, { value:'priority', label:'По важности' }];
+        currentValue = document.getElementById('sortFilterLabel').textContent === 'По времени' ? 'time' : 'priority';
+        onSelect = (v,l) => { document.getElementById('sortFilterLabel').textContent = l; sortTasks(v); };
+    } else if (wrapperId === 'prioritySelectWrapper') {
+        options = [{ value:'none', label:'Без уровня', cssClass:'priority-none' }, { value:'urgent', label:'Срочный', cssClass:'priority-urgent' }, { value:'important', label:'Важный', cssClass:'priority-important' }];
+        onSelect = (v,l) => { document.getElementById('priorityLabel').textContent=l; document.getElementById('priorityValue').value=v; document.getElementById('priorityLabel').style.color=v==='urgent'?'#ff4d4d':(v==='important'?'#f0c040':''); };
+    } else if (wrapperId === 'repeatSelectWrapper') {
+        options = [{ value:'none', label:'Не повторять' }, { value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        onSelect = (v,l) => { document.getElementById('repeatLabel').textContent=l; document.getElementById('repeatValue').value=v; };
+    } else if (wrapperId === 'habitRepeatSelectWrapper') {
+        options = [{ value:'daily', label:'Ежедневно' }, { value:'weekly', label:'Еженедельно' }, { value:'weekdays', label:'По будням' }];
+        onSelect = (v,l) => { document.getElementById('habitRepeatLabel').textContent = l; document.getElementById('habitRepeatValue').value = v; };
+    }
+
+    dropdown.innerHTML = options.map(o => `<div class="custom-option${o.value===currentValue?' active':''}${o.cssClass?' '+o.cssClass:''}" data-value="${o.value}">${o.label}</div>`).join('');
+    dropdown.querySelectorAll('.custom-option').forEach(opt => { opt.addEventListener('click', function(e) { e.stopPropagation(); if (onSelect) onSelect(this.dataset.value, this.textContent); closeAllDropdowns(); }); });
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;width:${rect.width}px;max-height:240px;`;
+    dropdown.classList.add('active'); activeDropdown = { wrapper, dropdown };
+};
+function closeAllDropdowns() { if (activeDropdown) { activeDropdown.wrapper.classList.remove('open'); activeDropdown.dropdown.remove(); activeDropdown=null; } }
+document.addEventListener('click', e => { if (!e.target.closest('.custom-select-wrapper')) closeAllDropdowns(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeAllDropdowns(); });
+
+function sortTasks(sort) {
+    const container = document.getElementById('activeTasksContainer');
+    if (!container) return;
+    const cards = Array.from(container.querySelectorAll('.task-card'));
+    if (!cards.length) return;
+    cards.sort((a, b) => {
+        if (sort === 'priority') {
+            const getP = el => el.classList.contains('priority-urgent')?0:el.classList.contains('priority-important')?1:2;
+            return getP(a)-getP(b);
+        }
+        const getTime = el => { const t = el.querySelector('.task-card-time'); return t ? t.textContent.replace(/[🕛]/g,'').trim() : '99:99'; };
+        return getTime(a).localeCompare(getTime(b));
+    });
+    cards.forEach(c => container.appendChild(c));
+}
+
+// ============ МОДАЛЬНЫЕ ОКНА (базовые) ============
+window.openModal = function(id) { const el = document.getElementById(id); if (el) el.classList.add('active'); };
+window.closeModal = function(id) { const el = document.getElementById(id); if (!el) return; el.classList.remove('active'); closeAllDropdowns(); };
+window.toggleTimeFields = function() { const h = document.getElementById('hasTime').checked; document.getElementById('timeFields').style.display=h?'flex':'none'; if(!h){document.getElementById('taskTimeStart').value='';document.getElementById('taskTimeEnd').value='';} };
+window.toggleNotificationFields = function() { const h = document.getElementById('hasNotification').checked; document.getElementById('notificationFields').style.display=h?'flex':'none'; if(!h)document.getElementById('taskNotificationTime').value=''; };
+window.toggleRescheduleTimeFields = function() { const h = document.getElementById('rescheduleHasTime').checked; document.getElementById('rescheduleTimeFields').style.display=h?'flex':'none'; };
+
+// ============ CRUD ЗАДАЧ ============
+window.openAddTaskModal = function() {
+    document.getElementById('modalTaskTitle').textContent='Новая задача';
+    document.getElementById('taskTitle').value=''; document.getElementById('taskDescription').value='';
+    document.getElementById('taskDate').value = document.querySelector('#noteForm input[name="date"]')?.value || '';
+    document.getElementById('editingTaskId').value='';
+    document.getElementById('hasTime').checked=false; document.getElementById('timeFields').style.display='none';
+    document.getElementById('hasNotification').checked=false; document.getElementById('notificationFields').style.display='none';
+    document.getElementById('taskTimeStart').value=''; document.getElementById('taskTimeEnd').value=''; document.getElementById('taskNotificationTime').value='';
+    document.getElementById('priorityLabel').textContent='Без уровня'; document.getElementById('priorityLabel').style.color='';
+    document.getElementById('repeatLabel').textContent='Не повторять';
+    document.getElementById('priorityValue').value='none'; document.getElementById('repeatValue').value='none';
+    openModal('modalTask'); setTimeout(()=>document.getElementById('taskTitle').focus(),100);
+};
+
+window.openEditTaskModal = function(taskId) {
+    const card = document.getElementById(`task-${taskId}`); 
+    if (!card) return;
+    
+    document.getElementById('modalTaskTitle').textContent = 'Редактировать задачу';
+    document.getElementById('taskTitle').value = card.querySelector('.task-card-title').textContent;
+    document.getElementById('taskDescription').value = card.querySelector('.task-card-desc')?.textContent || '';
+    document.getElementById('editingTaskId').value = taskId;
+    document.getElementById('taskDate').value = document.querySelector('#noteForm input[name="date"]')?.value || '';
+    
+    const timeEl = card.querySelector('.task-card-time:not([style*="64a0dc"])');
+    if (timeEl) {
+        document.getElementById('hasTime').checked = true;
+        document.getElementById('timeFields').style.display = 'flex';
+        const timeText = timeEl.textContent.replace('🕛 ', '').trim();
+        const parts = timeText.split(' — ');
+        document.getElementById('taskTimeStart').value = parts[0] || '';
+        document.getElementById('taskTimeEnd').value = parts[1] || '';
+    } else {
+        document.getElementById('hasTime').checked = false;
+        document.getElementById('timeFields').style.display = 'none';
+        document.getElementById('taskTimeStart').value = '';
+        document.getElementById('taskTimeEnd').value = '';
+    }
+    
+    const notifEl = card.querySelector('.task-card-time[style*="64a0dc"]');
+    if (notifEl) {
+        document.getElementById('hasNotification').checked = true;
+        document.getElementById('notificationFields').style.display = 'flex';
+        document.getElementById('taskNotificationTime').value = notifEl.textContent.replace(/[🔔\s]/g, '').trim();
+    } else {
+        document.getElementById('hasNotification').checked = false;
+        document.getElementById('notificationFields').style.display = 'none';
+        document.getElementById('taskNotificationTime').value = '';
+    }
+    
+    if (card.classList.contains('priority-urgent')) {
+        document.getElementById('priorityLabel').textContent = 'Срочный';
+        document.getElementById('priorityLabel').style.color = '#ff4d4d';
+        document.getElementById('priorityValue').value = 'urgent';
+    } else if (card.classList.contains('priority-important')) {
+        document.getElementById('priorityLabel').textContent = 'Важный';
+        document.getElementById('priorityLabel').style.color = '#f0c040';
+        document.getElementById('priorityValue').value = 'important';
+    } else {
+        document.getElementById('priorityLabel').textContent = 'Без уровня';
+        document.getElementById('priorityLabel').style.color = '';
+        document.getElementById('priorityValue').value = 'none';
+    }
+    
+    const repeatEl = card.querySelector('.task-card-repeat-badge');
+    if (repeatEl) {
+        const repeatText = repeatEl.textContent.trim();
+        if (repeatText.includes('Ежедневно')) {
+            document.getElementById('repeatLabel').textContent = 'Ежедневно';
+            document.getElementById('repeatValue').value = 'daily';
+        } else if (repeatText.includes('Еженедельно')) {
+            document.getElementById('repeatLabel').textContent = 'Еженедельно';
+            document.getElementById('repeatValue').value = 'weekly';
+        } else if (repeatText.includes('По будням')) {
+            document.getElementById('repeatLabel').textContent = 'По будням';
+            document.getElementById('repeatValue').value = 'weekdays';
+        }
+    } else {
+        document.getElementById('repeatLabel').textContent = 'Не повторять';
+        document.getElementById('repeatValue').value = 'none';
+    }
+    
+    openModal('modalTask');
+    setTimeout(() => document.getElementById('taskTitle').focus(), 100);
+};
+
+window.openDeleteTaskModal = function(taskId) {
+    const card = document.getElementById(`task-${taskId}`); 
+    if (!card) return;
+    document.getElementById('deleteTaskTitle').textContent = card.querySelector('.task-card-title').textContent;
+    document.getElementById('deleteTaskId').value = taskId; 
+    document.getElementById('deleteMode').value = 'single';
+    const hasRepeat = card.querySelector('.task-card-repeat-badge');
+    document.getElementById('deleteSingleAction').style.display = hasRepeat ? 'none' : 'flex';
+    document.getElementById('deleteRepeatingActions').style.display = hasRepeat ? 'flex' : 'none';
+    document.getElementById('deleteTaskRepeat').textContent = hasRepeat ? 'Повторяется' : 'Обычная задача';
+    openModal('modalDeleteTask');
+};
+
+window.openRescheduleModal = function(taskId) {
+    document.getElementById('rescheduleTaskId').value = taskId;
+    document.getElementById('rescheduleHasTime').checked = false; 
+    document.getElementById('rescheduleTimeFields').style.display = 'none';
+    document.querySelectorAll('.reschedule-option').forEach(o => o.classList.remove('active'));
+    openModal('modalReschedule');
+};
+
+window.setQuickReschedule = function(option) {
+    const d = new Date(); 
+    d.setDate(d.getDate() + (option === 'tomorrow' ? 1 : option === 'nextWeek' ? 7 : 30));
+    document.getElementById('rescheduleDate').value = d.toISOString().split('T')[0];
+    document.querySelectorAll('.reschedule-option').forEach(o => o.classList.remove('active'));
+    window.event?.target?.closest('.reschedule-option')?.classList.add('active');
+};
+
+window.openViewTaskModal = function(taskId) {
+    const card = document.getElementById(`task-${taskId}`); 
+    if (!card) return;
+    document.getElementById('viewTaskId').value = taskId;
+    document.getElementById('viewTaskTitle').textContent = card.querySelector('.task-card-title').textContent;
+    document.getElementById('viewTaskDescription').textContent = card.querySelector('.task-card-desc')?.textContent || 'Нет описания';
+    const pEl = document.getElementById('viewTaskPriority');
+    if (card.classList.contains('priority-urgent')) { 
+        pEl.textContent = 'Срочный'; 
+        pEl.style.background = 'rgba(255,77,77,0.15)'; 
+        pEl.style.color = '#ff4d4d'; 
+    } else if (card.classList.contains('priority-important')) { 
+        pEl.textContent = 'Важный'; 
+        pEl.style.background = 'rgba(240,192,64,0.15)'; 
+        pEl.style.color = '#f0c040'; 
+    } else { 
+        pEl.textContent = 'Без уровня'; 
+        pEl.style.background = 'rgba(255,255,255,0.05)'; 
+        pEl.style.color = '#B0B0C0'; 
+    }
+    openModal('modalViewTask');
+};
+
+window.toggleTask = function(taskId) {
+    const card = document.getElementById(`task-${taskId}`);
+    if (!card) return;
+    fetch(`/planner/day/task/${taskId}/toggle/`, { method:'POST', headers:{'X-CSRFToken':getCSRF()} })
+    .then(r=>r.json()).then(data=>{
+        if (data.completed) {
+            card.querySelector('.task-card-checkbox').classList.add('checked');
+            card.querySelector('.task-card-checkbox').textContent='✓';
+            card.classList.add('completed');
+            document.getElementById('completedTasksContainer').prepend(card);
+        } else {
+            card.querySelector('.task-card-checkbox').classList.remove('checked');
+            card.querySelector('.task-card-checkbox').textContent='';
+            card.classList.remove('completed');
+            document.getElementById('activeTasksContainer').appendChild(card);
+        }
+        updateStats(); updateEmptyState();
+    });
+};
+
+let activeTaskDropdown = null;
+window.toggleTaskMenu = function(event, taskId) {
+    event.stopPropagation();
+    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); if (activeTaskDropdown.dataset.taskId==taskId) { activeTaskDropdown=null; return; } }
+    const dropdown = document.getElementById(`task-dropdown-${taskId}`);
+    if (dropdown) { dropdown.classList.add('active'); activeTaskDropdown = dropdown; }
+};
+document.addEventListener('click', function(e) { if (activeTaskDropdown && !e.target.closest('.task-card-actions')) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown=null; } });
+
+// ============ СТАТИСТИКА ЗАДАЧ ============
+function updateStats() {
+    const cc = document.getElementById('completedCount'); if (!cc) return;
+    const done = document.querySelectorAll('#completedTasksContainer .task-card').length;
+    const total = document.querySelectorAll('#activeTasksContainer .task-card, #completedTasksContainer .task-card').length;
+    cc.textContent = done+'/'+total;
+    document.getElementById('productivityPercent').textContent = total ? Math.round(done/total*100)+'%' : '0%';
+    document.getElementById('urgentCount').textContent = document.querySelectorAll('.task-card.priority-urgent').length;
+    document.getElementById('importantCount').textContent = document.querySelectorAll('.task-card.priority-important').length;
+    document.getElementById('noneCount').textContent = document.querySelectorAll('.task-card.priority-none').length;
+    document.getElementById('completedTasksCount').textContent = done;
+    const cs = document.getElementById('completedSection');
+    if (cs) cs.style.display = done > 0 ? 'block' : 'none';
+}
+function updateEmptyState() {
+    const empty = document.getElementById('emptyState'); if (!empty) return;
+    const total = document.querySelectorAll('#activeTasksContainer .task-card, #completedTasksContainer .task-card').length;
+    empty.style.display = total === 0 ? 'block' : 'none';
+}
+function distributeTasks() {
+    const container = document.getElementById('tasksScrollArea');
+    if (!container) return;
+    const cards = container.querySelectorAll('.task-card');
+    const active = document.getElementById('activeTasksContainer');
+    const completed = document.getElementById('completedTasksContainer');
+    if (!active || !completed) return;
+    active.innerHTML = ''; completed.innerHTML = '';
+    cards.forEach(card => {
+        if (card.classList.contains('completed')) completed.appendChild(card);
+        else active.appendChild(card);
+    });
+    updateStats(); updateEmptyState();
+}
+
+// ============ ПРИВЫЧКИ ============
+window.selectAvatar = function(el) {
+    el.parentElement.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('habitAvatarValue').value = el.textContent;
+};
+window.toggleHabitNotificationFields = function() { document.getElementById('habitNotificationFields').style.display = document.getElementById('habitHasNotification').checked?'block':'none'; };
+window.toggleEditHabitNotification = function() { document.getElementById('editHabitNotificationFields').style.display = document.getElementById('editHabitHasNotification').checked?'block':'none'; };
+window.toggleExpandable = function(id) { const el = document.getElementById(id); const t = el.previousElementSibling.querySelector('span'); if (el.style.display==='none') { el.style.display='block'; t.textContent=t.textContent.replace('+','−'); } else { el.style.display='none'; t.textContent=t.textContent.replace('−','+'); } };
+
+let activeHabitDropdown = null;
+window.toggleHabitMenu = function(event, habitId) {
+    event.stopPropagation();
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); if (activeHabitDropdown._habitId===habitId) { activeHabitDropdown=null; return; } activeHabitDropdown=null; }
+    const btn = event.currentTarget; const rect = btn.getBoundingClientRect();
+    const dropdown = document.createElement('div'); dropdown._habitId = habitId;
+    dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;width:180px;background:#1A1A20;border-radius:12px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 10px 25px rgba(0,0,0,0.6);z-index:9999;overflow:hidden;`;
+    dropdown.innerHTML = `
+        <div class="task-dropdown-item" onclick="openViewHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-eye" style="width:16px;font-size:13px;"></i> Просмотр</div>
+        <div class="task-dropdown-item" onclick="openEditHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-pen" style="width:16px;font-size:13px;"></i> Редактировать</div>
+        <div class="task-dropdown-item delete-item" onclick="openDeleteHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;"><i class="fas fa-trash-alt" style="width:16px;font-size:13px;"></i> Удалить</div>`;
+    const items = dropdown.querySelectorAll('.task-dropdown-item');
+    items[0].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';}); items[0].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    items[1].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';}); items[1].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    items[2].addEventListener('mouseenter', function(){this.style.background='rgba(255,77,77,0.1)';this.style.color='#ff4d4d';}); items[2].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
+    document.body.appendChild(dropdown); activeHabitDropdown = dropdown;
+};
+
+window.toggleHabit = function(habitId) {
+    const dateEl = document.getElementById('habitsDate');
+    const date = dateEl ? dateEl.dataset.iso : '';
+    fetch(`/planner/habits/habit/${habitId}/toggle/?date=${date}`, { method:'POST', headers:{'X-CSRFToken':getCSRF()} })
+    .then(r => r.json()).then(data => {
+        if (data.status === 'ok') {
+            const card = document.getElementById(`habit-${habitId}`);
+            if (card) {
+                card.classList.toggle('completed', data.completed);
+                const checkbox = card.querySelector('.habit-check-square');
+                if (checkbox) { checkbox.classList.toggle('checked', data.completed); checkbox.textContent = data.completed ? '✓' : ''; }
+            }
+            updateHabitsStats();
+        }
+    });
+};
+
+window.updateHabitsStats = function() {
+    const completed = document.querySelectorAll('.habit-card.completed').length;
+    const total = document.querySelectorAll('.habit-card').length;
+    const streaks = Array.from(document.querySelectorAll('.habit-card')).map(card => parseInt(card.dataset.bestStreak) || 0);
+    const maxStreak = streaks.length > 0 ? Math.max(...streaks) : 0;
+    const cEl = document.getElementById('habitsCompleted');
+    const tEl = document.getElementById('habitsTotal');
+    const sEl = document.getElementById('habitsMaxStreak');
+    if (cEl) cEl.textContent = completed;
+    if (tEl) tEl.textContent = total;
+    if (sEl) sEl.textContent = '🔥 ' + maxStreak + ' дней';
+};
+
+// ============ МОДАЛКИ ПРИВЫЧЕК ============
+window.openViewHabitModal = function(habitId) {
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
+    const card = document.getElementById(`habit-${habitId}`);
+    if (!card) return;
+    
+    document.getElementById('viewHabitId').value = habitId;
+    document.getElementById('viewHabitTitle').textContent = card.querySelector('.habit-name').textContent;
+    document.getElementById('viewHabitDescription').textContent = card.dataset.description || 'Нет описания';
+    document.getElementById('viewHabitMotivation').textContent = card.dataset.motivation || '';
+    document.getElementById('viewHabitRepeat').textContent = card.dataset.repeat || '';
+    document.getElementById('viewHabitTime').textContent = card.dataset.time || '';
+    document.getElementById('viewHabitStreak').textContent = card.dataset.streak || '0';
+    document.getElementById('viewHabitBestStreak').textContent = card.dataset.bestStreak || '0';
+    document.getElementById('viewHabitRate').textContent = (card.dataset.rate || '0') + '%';
+    
+    if (!card.dataset.motivation) {
+        document.getElementById('viewHabitMotivation').style.display = 'none';
+    } else {
+        document.getElementById('viewHabitMotivation').style.display = '';
+    }
+    
+    openModal('modalViewHabit');
+};
+
+window.openEditHabitModal = function(habitId) {
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
+    const card = document.getElementById(`habit-${habitId}`);
+    if (!card) return;
+    
+    document.getElementById('modalHabitTitle').textContent = 'Редактировать привычку';
+    document.getElementById('habitId').value = habitId;
+    const fullName = card.querySelector('.habit-name').textContent;
+    const avatar = card.dataset.avatar || '';
+    document.getElementById('habitTitle').value = fullName.replace(avatar, '').trim();
+    document.getElementById('habitDescription').value = card.dataset.description || '';
+    document.getElementById('habitTime').value = card.dataset.time || '';
+    document.getElementById('habitMotivation').value = card.dataset.motivation || '';
+    document.getElementById('habitNotificationTime').value = card.dataset.notificationTime || '';
+    
+    const hasNotification = card.dataset.notification === 'true';
+    document.getElementById('habitHasNotification').checked = hasNotification;
+    document.getElementById('habitNotificationFields').style.display = hasNotification ? 'block' : 'none';
+    
+    document.getElementById('habitRepeatLabel').textContent = card.dataset.repeatLabel || 'Ежедневно';
+    document.getElementById('habitRepeatValue').value = card.dataset.repeat || 'daily';
+    
+    document.getElementById('habitAvatarValue').value = card.dataset.avatar || '🏃';
+    document.querySelectorAll('#habitAvatarPicker .avatar-option').forEach(a => {
+        a.classList.toggle('selected', a.textContent === (card.dataset.avatar || '🏃'));
+    });
+    
+    document.getElementById('habitSubmitBtn').textContent = 'Сохранить';
+    openModal('modalHabit');
+    setTimeout(() => document.getElementById('habitTitle').focus(), 100);
+};
+
+window.openDeleteHabitModal = function(habitId) {
+    if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
+    const card = document.getElementById(`habit-${habitId}`);
+    document.getElementById('deleteHabitName').textContent = card ? card.querySelector('.habit-name').textContent : 'Привычка';
+    document.getElementById('deleteHabitId').value = habitId;
+    openModal('modalDeleteHabit');
+};
+
+window.openAddHabitModal = function() {
+    document.getElementById('modalHabitTitle').textContent = 'Новая привычка';
+    document.getElementById('habitId').value = '';
+    document.getElementById('habitTitle').value = '';
+    document.getElementById('habitDescription').value = '';
+    document.getElementById('habitTime').value = '';
+    document.getElementById('habitMotivation').value = '';
+    document.getElementById('habitNotificationTime').value = '';
+    document.getElementById('habitHasNotification').checked = false;
+    document.getElementById('habitNotificationFields').style.display = 'none';
+    document.getElementById('habitRepeatLabel').textContent = 'Ежедневно';
+    document.getElementById('habitRepeatValue').value = 'daily';
+    document.getElementById('habitAvatarValue').value = '🏃';
+    document.getElementById('habitSubmitBtn').textContent = 'Добавить';
+    document.querySelectorAll('#habitAvatarPicker .avatar-option').forEach((a, i) => {
+        a.classList.toggle('selected', i === 0);
+    });
+    openModal('modalHabit');
+    setTimeout(() => document.getElementById('habitTitle').focus(), 100);
+};
+
+document.addEventListener('click', function(e) { if (activeHabitDropdown && !e.target.closest('.task-card-actions')) { activeHabitDropdown.remove(); activeHabitDropdown=null; } });
+
+// ============ ДАТА ПИКЕР ============
+window.openDatePicker = function() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    
+    const picker = document.createElement('div');
+    picker.style.cssText = 'background:#1A1A20;border-radius:20px;padding:24px;border:1px solid rgba(255,255,255,0.08);width:340px;';
+    picker.onclick = function(e) { e.stopPropagation(); };
+    
+    const now = new Date();
+    let selectedYear = now.getFullYear();
+    let selectedMonth = now.getMonth();
+    let selectedDay = now.getDate();
+    
+    const isHabitsPage = window.location.pathname.includes('/habits');
+    const dateElement = document.getElementById('currentDate') || document.getElementById('habitsDate');
+    
+    if (dateElement) {
+        const dataIso = dateElement.getAttribute('data-iso');
+        if (dataIso) {
+            const parts = dataIso.split('-');
+            selectedYear = parseInt(parts[0]);
+            selectedMonth = parseInt(parts[1]) - 1;
+            selectedDay = parseInt(parts[2]);
+        }
+    }
+    
+    const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    
+    picker.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <button id="prevMonthBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;">←</button>
+            <span style="font-size:16px;font-weight:600;color:#fff;">
+                <span id="pickerMonth">${months[selectedMonth]}</span>
+                <span id="pickerYear" style="color:#E07A5F;">${selectedYear}</span>
+            </span>
+            <button id="nextMonthBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;">→</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;text-align:center;">
+            ${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d => `<span style="font-size:11px;color:#6B6B7A;">${d}</span>`).join('')}
+        </div>
+        <div id="daysGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+        <button id="todayBtn" style="width:100%;margin-top:16px;padding:10px;background:rgba(224,122,95,0.1);border:1px solid rgba(224,122,95,0.3);border-radius:10px;color:#E07A5F;font-size:14px;cursor:pointer;">Сегодня</button>
+    `;
+    
+    overlay.appendChild(picker);
+    document.body.appendChild(overlay);
+    
+    function goToDate(year, month, day) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const url = isHabitsPage ? `/planner/habits/?date=${dateStr}` : `/planner/day/?date=${dateStr}`;
+        htmx.ajax('GET', url, { target: '#mainContent', swap: 'innerHTML' });
+        window.history.pushState({}, '', url);
+        overlay.remove();
+    }
+    
+    function renderDays() {
+        const grid = document.getElementById('daysGrid');
+        const firstDay = new Date(selectedYear, selectedMonth, 1).getDay();
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        const daysInPrevMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+        
+        let startDay = firstDay === 0 ? 6 : firstDay - 1;
+        let html = '';
+        
+        for (let i = startDay - 1; i >= 0; i--) {
+            html += `<div style="padding:8px;text-align:center;color:#3A3A45;font-size:13px;">${daysInPrevMonth - i}</div>`;
+        }
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            const date = new Date(selectedYear, selectedMonth, d);
+            const isToday = date.toDateString() === now.toDateString();
+            const isSelected = d === selectedDay && selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+            
+            let bg = 'transparent', color = '#B0B0C0', border = '1px solid transparent';
+            if (isSelected) { bg = 'rgba(224,122,95,0.15)'; border = '1px solid #E07A5F'; color = '#E07A5F'; }
+            if (isToday) { color = '#E07A5F'; border = '1px solid rgba(224,122,95,0.5)'; if (!isSelected) bg = 'rgba(224,122,95,0.05)'; }
+            
+            html += `<div class="day-cell" data-day="${d}" style="padding:8px;text-align:center;font-size:13px;border-radius:8px;background:${bg};color:${color};border:${border};cursor:pointer;transition:all 0.15s;">${d}</div>`;
+        }
+        
+        grid.innerHTML = html;
+        
+        grid.querySelectorAll('.day-cell').forEach(cell => {
+            cell.addEventListener('click', function() { goToDate(selectedYear, selectedMonth, parseInt(this.dataset.day)); });
+            cell.addEventListener('mouseenter', function() { if (this.dataset.day != selectedDay) this.style.background = 'rgba(255,255,255,0.08)'; });
+            cell.addEventListener('mouseleave', function() {
+                if (this.dataset.day == selectedDay && selectedMonth === now.getMonth() && selectedYear === now.getFullYear()) this.style.background = 'rgba(224,122,95,0.15)';
+                else this.style.background = 'transparent';
+            });
+        });
+    }
+    
+    document.getElementById('prevMonthBtn').addEventListener('click', function() {
+        selectedMonth--; if (selectedMonth < 0) { selectedMonth = 11; selectedYear--; }
+        document.getElementById('pickerMonth').textContent = months[selectedMonth];
+        document.getElementById('pickerYear').textContent = selectedYear;
+        renderDays();
+    });
+    
+    document.getElementById('nextMonthBtn').addEventListener('click', function() {
+        selectedMonth++; if (selectedMonth > 11) { selectedMonth = 0; selectedYear++; }
+        document.getElementById('pickerMonth').textContent = months[selectedMonth];
+        document.getElementById('pickerYear').textContent = selectedYear;
+        renderDays();
+    });
+    
+    document.getElementById('todayBtn').addEventListener('click', function() {
+        const today = new Date();
+        goToDate(today.getFullYear(), today.getMonth(), today.getDate());
+    });
+    
+    renderDays();
+};
+
+// ============ АВТООБНОВЛЕНИЕ СТАТИСТИКИ ПОСЛЕ HTMX ============
+document.addEventListener('htmx:afterSwap', function() {
+    setTimeout(() => {
+        if (document.getElementById('completedCount')) { updateStats(); updateEmptyState(); }
+        if (document.getElementById('habitsCompleted')) { updateHabitsStats(); }
+    }, 100);
+});
+
+// ============ ИНИЦИАЛИЗАЦИЯ ============
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('tasksScrollArea')) { distributeTasks(); }
+});
+</script>
+{% endblock %}

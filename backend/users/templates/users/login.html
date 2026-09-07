@@ -1,0 +1,228 @@
+{% extends "users/base.html" %}
+
+{% block content %}
+<div id="main-content">
+    <div class="register-card">
+        <h1 class="register-title">
+            <i class="fas fa-brain"></i> 
+            InstaVault
+        </h1>
+        <div class="register-subtitle">Войдите в свой аккаунт</div>
+
+        <form method="post" action="{% url 'users:login' %}" id="login-form">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="error-message" style="color: #ff4d4d; margin-bottom: 15px; padding: 10px; border-radius: 8px;">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="input-group">
+                <label class="input-label">{{ form.identifier.label }}</label>
+                {{ form.identifier }}
+                <div class="input-error" id="identifier-error">{{ form.identifier.errors }}</div>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">{{ form.password.label }}</label>
+                <div style="position: relative;">
+                    {{ form.password }}
+                    <span class="password-toggle" onclick="togglePassword('password', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <div class="input-error" id="password-error">{{ form.password.errors }}</div>
+            </div>
+            
+            <button type="submit" class="btn-primary" id="submit-btn">Войти</button>
+        </form>
+
+        <div class="footer-links">
+            <a href="{% url 'users:register' %}"
+                hx-get="{% url 'users:register' %}"
+                hx-target="#main-content"
+                hx-push-url="true">
+                Нет аккаунта?
+            </a>
+            <a href="{% url 'users:change_password' %}"
+                hx-get="{% url 'users:change_password' %}"
+                hx-target="#main-content"
+                hx-push-url="true">
+                Забыл пароль?
+            </a>
+        </div>
+    </div>
+
+    <style>
+        .input-error {
+            color: #ff4d4d;
+            font-size: 12px;
+            margin-top: 4px;
+            min-height: 18px;
+        }
+        .input-error ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #B0B0C0;
+            font-size: 18px;
+            transition: color 0.2s;
+            z-index: 2;
+        }
+        .password-toggle:hover {
+            color: #E07A5F;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 40px;
+            background: #E07A5F;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+            margin-top: 8px;
+            letter-spacing: 0.3px;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #c96b51;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(224, 122, 95, 0.4);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 8px rgba(224, 122, 95, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    </style>
+
+    <script>
+        window.togglePassword = function(inputId, iconElement) {
+            const input = document.getElementById(inputId);
+            const icon = iconElement.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        };
+    </script>
+
+    <script>
+        (function() {
+            const identifierInput = document.getElementById('id_identifier');
+            const passwordInput = document.getElementById('password');
+            const identifierError = document.getElementById('identifier-error');
+            const passwordError = document.getElementById('password-error');
+            const submitBtn = document.getElementById('submit-btn');
+
+            function getIdentifierType(value) {
+                return value.includes('@') ? 'email' : 'username';
+            }
+
+            function isValidEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+
+            function validatePassword(password) {
+                if (password.length < 8) return false;
+                if (!/^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) return false;
+                if (!/[A-Z]/.test(password)) return false;
+                if (!/[a-z]/.test(password)) return false;
+                if (!/[0-9]/.test(password)) return false;
+                if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) return false;
+                return true;
+            }
+
+            function validateForm() {
+                const identifier = identifierInput.value.trim();
+                const password = passwordInput.value;
+                let identifierValid = false;
+                let passwordValid = false;
+
+                if (identifier !== '') {
+                    const type = getIdentifierType(identifier);
+                    if (type === 'email') {
+                        if (!isValidEmail(identifier)) {
+                            identifierError.innerText = 'Введите корректный email';
+                        } else {
+                            identifierError.innerText = '';
+                            identifierValid = true;
+                        }
+                    } else {
+                        if (!/^[a-zA-Z0-9_]+$/.test(identifier)) {
+                            identifierError.innerText = 'Имя пользователя содержит недопустимые символы';
+                        } else {
+                            identifierError.innerText = '';
+                            identifierValid = true;
+                        }
+                    }
+                }
+
+                if (password !== '') {
+                    if (validatePassword(password)) {
+                        passwordError.innerText = '';
+                        passwordValid = true;
+                    } else {
+                        if (password.length < 8) {
+                            passwordError.innerText = 'Минимум 8 символов';
+                        } else if (!/^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) {
+                            passwordError.innerText = 'Только латинские буквы, цифры и спецсимволы';
+                        } else if (!/[A-Z]/.test(password)) {
+                            passwordError.innerText = 'Нужна заглавная буква';
+                        } else if (!/[a-z]/.test(password)) {
+                            passwordError.innerText = 'Нужна строчная буква';
+                        } else if (!/[0-9]/.test(password)) {
+                            passwordError.innerText = 'Нужна цифра';
+                        } else if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+                            passwordError.innerText = 'Нужен спецсимвол';
+                        }
+                        passwordValid = false;
+                    }
+                }
+
+                submitBtn.disabled = !(identifierValid && passwordValid && identifier !== '' && password !== '');
+            }
+
+            identifierInput.addEventListener('input', validateForm);
+            passwordInput.addEventListener('input', validateForm);
+
+            identifierInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    passwordInput.focus();
+                }
+            });
+
+            passwordInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !submitBtn.disabled) {
+                    e.preventDefault();
+                    document.getElementById('login-form').submit();
+                }
+            });
+
+            identifierInput.focus();
+        })();
+    </script>
+</div>
+{% endblock %}

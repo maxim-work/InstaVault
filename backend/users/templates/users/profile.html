@@ -1,0 +1,723 @@
+{% extends "users/base.html" %}
+
+{% block content %}
+<div id="main-content">
+    <div class="app">
+        <div class="profile-card">
+            <div class="profile-nav">
+               <a href="{% url 'planner:day' %}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Вернуться в ежедневник
+                </a>
+                <form action="{% url 'users:logout' %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Выйти
+                    </button>
+                </form>
+            </div>
+
+            <div class="profile-header">
+                <div class="avatar-container">
+                    {% if request.user.avatar %}
+                        <img src="{{ request.user.avatar.url }}" class="profile-avatar" id="avatarDisplay" onclick="document.getElementById('avatarUpload').click()">
+                    {% else %}
+                        <div class="profile-avatar" id="avatarDisplay" onclick="document.getElementById('avatarUpload').click()">
+                            {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+                        </div>
+                    {% endif %}
+                    <div class="avatar-overlay" onclick="document.getElementById('avatarUpload').click()">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;" onchange="uploadAvatar(this)">
+                </div>
+                <div class="profile-info">
+                    <h1>{{ request.user.get_full_name|default:request.user.username }}</h1>
+                    <div class="username">@{{ request.user.username }}</div>
+                </div>
+            </div>
+
+            <div class="profile-grid">
+                <div class="section">
+                    <div class="section-title"><i class="fas fa-id-card"></i> Основное</div>
+                    <div class="field-row">
+                        <span class="field-label">Имя</span>
+                        <span class="field-value">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <span class="field-action" onclick="openEditModal('name')"><i class="fas fa-pen"></i> Изменить</span>
+                    </div>
+                    <div class="field-row">
+                        <span class="field-label">Имя пользователя</span>
+                        <span class="field-value">@{{ request.user.username }}</span>
+                        <span class="field-action" onclick="openEditModal('username')"><i class="fas fa-pen"></i> Изменить</span>
+                    </div>
+                    <div class="field-row">
+                        <span class="field-label">Email</span>
+                        <span class="field-value">{{ request.user.email }}</span>
+                        <span class="field-action" onclick="openEditModal('email')"><i class="fas fa-pen"></i> Изменить</span>
+                    </div>
+                    <div class="field-row" style="border-bottom: none;">
+                        <span class="field-label">Пароль</span>
+                        <span class="field-value">••••••••</span>
+                        <a href="{% url 'users:change_password' %}" class="password-link"><i class="fas fa-lock"></i> Сменить</a>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><i class="fab fa-telegram"></i> Telegram</div>
+                    <div class="telegram-row">
+                        <span class="telegram-badge" id="telegramStatus">
+                            {% if request.user.telegram_id %}Подключён{% else %}Не подключён{% endif %}
+                        </span>
+                        <div class="telegram-actions">
+                            <button class="telegram-btn" id="connectTelegramBtn" onclick="openTelegramModal()" {% if request.user.telegram_id %}style="display:none"{% endif %}>Подключить</button>
+                            <button class="telegram-btn danger" id="disconnectTelegramBtn" onclick="disconnectTelegram()" {% if not request.user.telegram_id %}style="display:none"{% endif %}>Отключить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn" onclick="exportData()"><i class="fas fa-download"></i> Экспорт данных</button>
+                <button class="action-btn danger" onclick="openDeleteModal()"><i class="fas fa-trash-alt"></i> Удалить аккаунт</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+
+    <!-- Редактирование имени -->
+    <div id="modalName" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Изменить имя</div>
+            <input type="text" class="modal-input" id="editFirstName" placeholder="Имя" autofocus>
+            <input type="text" class="modal-input" id="editLastName" placeholder="Фамилия">
+            <div class="modal-error" id="nameError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="saveName()">Сохранить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalName')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена имени пользователя -->
+    <div id="modalUsername" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Изменить имя пользователя</div>
+            <input type="text" class="modal-input" id="editUsername" placeholder="Введите новое имя" autofocus oninput="checkUsernameAvailability()">
+            <div class="modal-error" id="usernameError"></div>
+            <div class="modal-success" id="usernameSuccess"></div>
+            <div class="hint">От 5 символов, начинается с латинской буквы.</div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="saveUsernameBtn" onclick="saveUsername()" disabled>Сохранить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalUsername')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена email: шаг 1 -->
+    <div id="modalEmailStep1" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Подтверждение доступа</div>
+            <p class="hint" id="oldCodeHint">
+                {% if request.user.telegram_id %}
+                    Код отправлен в Telegram. Введите его для продолжения.
+                {% else %}
+                    Код отправлен на {{ request.user.email }}. Введите его для продолжения.
+                {% endif %}
+            </p>
+            <div class="input-with-button">
+                <input type="text" class="modal-input" id="oldEmailCode" placeholder="6-значный код" maxlength="6" oninput="validateOldCode()" autofocus>
+                <button class="inline-btn" id="sendOldCodeBtn" onclick="sendOldEmailCode()">Отправить код</button>
+            </div>
+            <div class="modal-error" id="oldCodeError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="verifyOldCodeBtn" onclick="verifyOldEmailCode()" disabled>Подтвердить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalEmailStep1')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Смена email: шаг 2 -->
+    <div id="modalEmailStep2" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Новый email</div>
+            <div class="input-with-button">
+                <input type="email" class="modal-input" id="newEmail" placeholder="Введите новый email" oninput="validateNewEmail()" autofocus>
+                <button class="inline-btn" id="sendNewCodeBtn" onclick="sendNewEmailCode()" disabled>Получить код</button>
+            </div>
+            <div class="modal-error" id="newEmailError"></div>
+            <div class="modal-success" id="newEmailSuccess"></div>
+            <input type="text" class="modal-input" id="newEmailCode" placeholder="6-значный код" maxlength="6" oninput="validateNewCode()" style="margin-top: 12px;">
+            <div class="modal-error" id="newCodeError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn primary" id="verifyNewCodeBtn" onclick="verifyNewEmailCode()" disabled>Подтвердить</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalEmailStep2')">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение Telegram -->
+    <div id="modalTelegram" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Подключение Telegram</div>
+            <p class="hint">Отправьте этот код боту для привязки аккаунта:</p>
+            <div class="code-display" id="telegramCode">{{ telegram_code }}</div>
+            <p class="hint">После отправки кода нажмите кнопку ниже.</p>
+            <div class="modal-actions">
+                <button class="modal-btn primary" onclick="checkTelegramConnection()">Я подключил</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalTelegram')">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Удаление аккаунта -->
+    <div id="modalDelete" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title" style="color: #ff4d4d;">Удаление аккаунта</div>
+            <p class="hint">Это действие необратимо. Все данные будут удалены.</p>
+            <input type="text" class="modal-input" id="deleteConfirm" placeholder="Введите DELETE" autofocus>
+            <div class="modal-error" id="deleteError"></div>
+            <div class="modal-actions">
+                <button class="modal-btn danger" onclick="deleteAccount()">Удалить навсегда</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalDelete')">Отмена</button>
+            </div>
+        </div>
+    </div>
+    
+    <div style="display: none;">{% csrf_token %}</div>
+</div>
+
+<style>
+    /* Существующие стили профиля */
+    .app { width: 100%; max-width: 1100px; margin: 0 auto; }
+    .profile-card {
+        background: rgba(12, 12, 15, 0.85); backdrop-filter: blur(15px);
+        border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(224, 122, 95, 0.1) inset;
+        padding: 32px;
+    }
+    .profile-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .back-btn { display: flex; align-items: center; gap: 8px; color: #B0B0C0; cursor: pointer; font-size: 14px; }
+    .back-btn:hover { color: #E07A5F; }
+    .logout-btn { background: rgba(224, 122, 95, 0.1); border: 1px solid rgba(224, 122, 95, 0.25); border-radius: 30px; padding: 8px 20px; color: #E07A5F; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .logout-btn:hover { background: rgba(224,122,95,0.2); transform: translateY(-2px); }
+    .profile-header { display: flex; align-items: center; gap: 24px; margin-bottom: 40px; flex-wrap: wrap; }
+    .avatar-container { position: relative; }
+    .profile-avatar { width: 100px; height: 100px; border-radius: 30px; background: #E07A5F; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 600; color: white; cursor: pointer; border: 2px solid transparent; box-shadow: 0 8px 20px rgba(224,122,95,0.3); object-fit: cover; }
+    .profile-avatar:hover { filter: brightness(1.1); border-color: #fff; }
+    .avatar-overlay { position: absolute; bottom: 0; right: 0; background: #0C0C0F; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; border: 2px solid #E07A5F; color: #E07A5F; font-size: 14px; cursor: pointer; }
+    .profile-info h1 { font-size: 28px; font-weight: 600; color: #fff; }
+    .profile-info .username { font-size: 16px; color: #B0B0C0; margin-top: 4px; }
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .section { background: rgba(0, 0, 0, 0.2); border-radius: 20px; padding: 24px; border: 1px solid rgba(255, 255, 255, 0.03); }
+    .section-title { font-size: 18px; font-weight: 500; color: #E07A5F; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .field-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap; gap: 8px; }
+    .field-row:last-child { border-bottom: none; }
+    .field-label { color: #B0B0C0; font-size: 14px; width: 140px; }
+    .field-value { flex: 1; color: #fff; font-weight: 500; min-width: 150px; }
+    .field-action { color: #E07A5F; cursor: pointer; font-size: 14px; padding: 6px 12px; border-radius: 8px; background: rgba(224,122,95,0.05); white-space: nowrap; }
+    .field-action:hover { background: rgba(224,122,95,0.15); }
+    .telegram-badge { background: rgba(224,122,95,0.1); border-radius: 20px; padding: 6px 16px; font-size: 14px; color: #E07A5F; font-weight: 500; }
+    .telegram-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
+    .telegram-actions { display: flex; gap: 12px; }
+    .telegram-btn { background: rgba(224,122,95,0.1); border: 1px solid rgba(224,122,95,0.3); border-radius: 30px; padding: 8px 20px; color: #E07A5F; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .telegram-btn:hover { background: rgba(224,122,95,0.2); transform: translateY(-2px); }
+    .telegram-btn.danger { border-color: #ff4d4d; color: #ff4d4d; }
+    .telegram-btn.danger:hover { background: rgba(255,77,77,0.1); }
+    .action-buttons { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 32px; }
+    .action-btn { flex: 1; min-width: 140px; padding: 12px 24px; border-radius: 40px; background: rgba(224,122,95,0.1); border: 1px solid rgba(224,122,95,0.3); color: #E07A5F; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .action-btn:hover { background: rgba(224,122,95,0.2); transform: translateY(-2px); }
+    .action-btn.danger { border-color: #ff4d4d; color: #ff4d4d; }
+    .action-btn.danger:hover { background: rgba(255,77,77,0.1); }
+    .password-link { color: #E07A5F; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+    .password-link:hover { color: #c96b51; text-decoration: underline; }
+    
+    /* ===== МОДАЛЬНЫЕ ОКНА ===== */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal-content {
+        width: 450px;
+        max-width: 90%;
+        background: #0C0C0F;
+        border-radius: 28px;
+        padding: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+    }
+    .modal-title {
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #E07A5F;
+    }
+    .modal-input {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 14px;
+        padding: 14px 18px;
+        color: white;
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+    .modal-input:focus {
+        outline: none;
+        border-color: #E07A5F;
+    }
+    .modal-error {
+        color: #ff4d4d;
+        font-size: 12px;
+        margin-bottom: 12px;
+        min-height: 18px;
+    }
+    .modal-success {
+        color: #10b981;
+        font-size: 12px;
+        margin-bottom: 12px;
+    }
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .modal-btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        text-align: center;
+        border: none;
+    }
+    .modal-btn.primary {
+        background: #E07A5F;
+        color: white;
+    }
+    .modal-btn.primary:hover {
+        background: #c96b51;
+    }
+    .modal-btn.primary:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .modal-btn.secondary {
+        background: rgba(255, 255, 255, 0.03);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .modal-btn.secondary:hover {
+        background: rgba(255,255,255,0.08);
+    }
+    .modal-btn.danger {
+        background: rgba(255, 77, 77, 0.1);
+        color: #ff4d4d;
+        border: 1px solid rgba(255,77,77,0.3);
+    }
+    .modal-btn.danger:hover {
+        background: rgba(255,77,77,0.2);
+    }
+    .input-with-button {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        align-items: stretch;
+    }
+    .input-with-button .modal-input {
+        flex: 1;
+        margin-bottom: 0;
+    }
+    .inline-btn {
+        background: rgba(224,122,95,0.1);
+        border: 1px solid rgba(224,122,95,0.3);
+        border-radius: 14px;
+        padding: 0 18px;
+        color: #E07A5F;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 120px;
+    }
+    .inline-btn:hover {
+        background: rgba(224,122,95,0.2);
+    }
+    .inline-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .code-display {
+        background: #1A1A20;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        font-size: 24px;
+        letter-spacing: 4px;
+        color: #E07A5F;
+        margin: 16px 0;
+    }
+    .hint {
+        font-size: 12px;
+        color: #B0B0C0;
+        margin-bottom: 8px;
+    }
+    
+    @media (max-width: 800px) {
+        .profile-grid { grid-template-columns: 1fr; }
+        .action-btn { min-width: 100%; }
+        .field-row { flex-direction: column; align-items: flex-start; }
+        .field-label { width: 100%; }
+        .profile-card { padding: 20px; }
+        .profile-header { flex-direction: column; align-items: center; text-align: center; }
+    }
+</style>
+
+<script>
+    function openEditModal(field) {
+        if (field === 'name') openModal('modalName');
+        else if (field === 'username') openModal('modalUsername');
+        else if (field === 'email') openModal('modalEmailStep1');
+    }
+    function getCsrfToken() {
+        const token = document.querySelector('[name=csrfmiddlewaretoken]');
+        return token ? token.value : '';
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // ---------- АВАТАР ----------
+    function uploadAvatar(input) {
+        const formData = new FormData();
+        formData.append('avatar', input.files[0]);
+        fetch('{% url "users:upload_avatar" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData
+        }).then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+            else alert(data.error);
+        });
+    }
+
+    // ---------- ИМЯ ----------
+    function saveName() {
+        const firstName = document.getElementById('editFirstName').value.trim();
+        const lastName = document.getElementById('editLastName').value.trim();
+        fetch('{% url "users:update_name" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'first_name=' + encodeURIComponent(firstName) + '&last_name=' + encodeURIComponent(lastName)
+        }).then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+            else document.getElementById('nameError').innerText = data.error;
+        });
+    }
+
+    // ---------- USERNAME ----------
+    let usernameCheckTimer;
+    function checkUsernameAvailability() {
+        clearTimeout(usernameCheckTimer);
+        const username = document.getElementById('editUsername').value.trim();
+        const errorEl = document.getElementById('usernameError');
+        const successEl = document.getElementById('usernameSuccess');
+        const saveBtn = document.getElementById('saveUsernameBtn');
+
+        if (username.length === 0) {
+            errorEl.innerHTML = '';
+            successEl.innerHTML = '';
+            saveBtn.disabled = true;
+            return;
+        }
+
+        if (username.length < 5) {
+            errorEl.innerHTML = '<span style="color: #ffb3b3;">Минимум 5 символов</span>';
+            successEl.innerHTML = '';
+            saveBtn.disabled = true;
+            return;
+        }
+
+        if (!/^[a-zA-Z]/.test(username)) {
+            errorEl.innerHTML = '<span style="color: #ffb3b3;">Должно начинаться с латинской буквы</span>';
+            successEl.innerHTML = '';
+            saveBtn.disabled = true;
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            errorEl.innerHTML = '<span style="color: #ffb3b3;">Только латинские буквы, цифры и подчёркивание</span>';
+            successEl.innerHTML = '';
+            saveBtn.disabled = true;
+            return;
+        }
+
+        usernameCheckTimer = setTimeout(() => {
+            fetch('{% url "users:check_username" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: 'username=' + encodeURIComponent(username)
+            }).then(r => r.text()).then(html => {
+                if (html) {
+                    errorEl.innerHTML = html;
+                    successEl.innerHTML = '';
+                    saveBtn.disabled = true;
+                } else {
+                    errorEl.innerHTML = '';
+                    successEl.innerHTML = '✅ Имя свободно';
+                    saveBtn.disabled = false;
+                }
+            });
+        }, 500);
+    }
+
+    function saveUsername() {
+        const username = document.getElementById('editUsername').value.trim();
+        fetch('{% url "users:update_username" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'username=' + encodeURIComponent(username)
+        }).then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+            else document.getElementById('usernameError').innerText = data.error;
+        });
+    }
+
+    // ---------- EMAIL ----------
+    function sendOldEmailCode() {
+        const sendBtn = document.getElementById('sendOldCodeBtn');
+        const hint = document.getElementById('oldCodeHint');
+        
+        fetch('{% url "users:send_old_email_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'email=' + encodeURIComponent('{{ request.user.email }}')
+        }).then(r => r.text()).then(html => {
+            if (!html) {
+                {% if request.user.telegram_id %}
+                    hint.innerHTML = 'Код отправлен в Telegram. Введите его для продолжения.';
+                {% else %}
+                    hint.innerHTML = 'Код отправлен на {{ request.user.email }}. Введите его для продолжения.';
+                {% endif %}
+                startEmailTimer('sendOldCodeBtn', 180);
+            } else {
+                document.getElementById('oldCodeError').innerHTML = html;
+            }
+        });
+    }
+
+    function validateOldCode() {
+        const code = document.getElementById('oldEmailCode').value.trim();
+        const verifyBtn = document.getElementById('verifyOldCodeBtn');
+        
+        if (code.length === 6 && /^\d+$/.test(code)) {
+            verifyBtn.disabled = false;
+        } else {
+            verifyBtn.disabled = true;
+        }
+    }
+
+    function verifyOldEmailCode() {
+        const code = document.getElementById('oldEmailCode').value.trim();
+        fetch('{% url "users:verify_old_email_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'email=' + encodeURIComponent('{{ request.user.email }}') + '&code=' + encodeURIComponent(code)
+        }).then(r => r.text()).then(html => {
+            if (html.includes('подтверждён')) {
+                closeModal('modalEmailStep1');
+                openModal('modalEmailStep2');
+            } else {
+                document.getElementById('oldCodeError').innerHTML = html;
+            }
+        });
+    }
+
+    function validateNewEmail() {
+        const email = document.getElementById('newEmail').value.trim();
+        const btn = document.getElementById('sendNewCodeBtn');
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!re.test(email)) {
+            document.getElementById('newEmailError').innerText = 'Некорректный email';
+            btn.disabled = true;
+            return;
+        }
+        fetch('{% url "users:check_email" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'email=' + encodeURIComponent(email)
+        }).then(r => r.text()).then(html => {
+            document.getElementById('newEmailError').innerHTML = html;
+            document.getElementById('newEmailSuccess').innerHTML = html ? '' : 'Email свободен';
+            btn.disabled = !!html;
+        });
+    }
+
+    function sendNewEmailCode() {
+        const email = document.getElementById('newEmail').value.trim();
+        fetch('{% url "users:send_new_email_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'email=' + encodeURIComponent(email)
+        }).then(r => r.text()).then(html => {
+            if (!html) startEmailTimer('sendNewCodeBtn', 180);
+            else document.getElementById('newCodeError').innerHTML = html;
+        });
+    }
+
+    function verifyNewEmailCode() {
+        const email = document.getElementById('newEmail').value.trim();
+        const code = document.getElementById('newEmailCode').value.trim();
+        fetch('{% url "users:verify_new_email_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: 'email=' + encodeURIComponent(email) + '&code=' + encodeURIComponent(code)
+        }).then(r => r.text()).then(html => {
+            if (html.includes('подтверждён')) {
+                fetch('{% url "users:update_email" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: 'email=' + encodeURIComponent(email)
+                }).then(r => r.json()).then(data => {
+                    if (data.success) location.reload();
+                    else alert(data.error);
+                });
+            } else {
+                document.getElementById('newCodeError').innerHTML = html;
+            }
+        });
+    }
+
+    function validateOldCode() {
+        const code = document.getElementById('oldEmailCode').value.trim();
+        const verifyBtn = document.getElementById('verifyOldCodeBtn');
+        verifyBtn.disabled = !(code.length === 6 && /^\d+$/.test(code));
+    }
+
+    function validateNewCode() {
+        const code = document.getElementById('newEmailCode').value.trim();
+        const verifyBtn = document.getElementById('verifyNewCodeBtn');
+        verifyBtn.disabled = !(code.length === 6 && /^\d+$/.test(code));
+    }
+
+    // ---------- TELEGRAM ----------
+    function openTelegramModal() {
+        fetch('{% url "users:get_telegram_code" %}')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('telegramCode').innerText = data.code;
+                openModal('modalTelegram');
+            })
+            .catch(err => {
+                console.error('Ошибка:', err);
+                alert('Не удалось получить код');
+            });
+    }
+
+    function checkTelegramConnection() {
+        fetch('{% url "users:check_telegram" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        }).then(r => r.json()).then(data => {
+            if (data.connected) location.reload();
+            else alert('Telegram ещё не подключён');
+        });
+    }
+
+    function disconnectTelegram() {
+        if (!confirm('Отключить Telegram?')) return;
+        fetch('{% url "users:disconnect_telegram" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        }).then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+        });
+    }
+
+    // ---------- ЭКСПОРТ / УДАЛЕНИЕ ----------
+    function exportData() {
+        window.location.href = '{% url "users:export_data" %}';
+    }
+    function openDeleteModal() {
+        document.getElementById('deleteConfirm').value = '';
+        document.getElementById('deleteError').innerText = '';
+        openModal('modalDelete');
+    }
+
+    function deleteAccount() {
+        const confirm = document.getElementById('deleteConfirm').value;
+        if (confirm !== 'DELETE') {
+            document.getElementById('deleteError').innerText = 'Введите DELETE';
+            return;
+        }
+        fetch('{% url "users:delete_account" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        }).then(r => r.json()).then(data => {
+            if (data.success) window.location.href = '{% url "users:login" %}';
+            else alert(data.error);
+        });
+    }
+
+    // Таймер
+    function startEmailTimer(btnId, seconds) {
+        const btn = document.getElementById(btnId);
+        let remaining = seconds;
+        btn.disabled = true;
+        const interval = setInterval(() => {
+            remaining--;
+            const m = Math.floor(remaining / 60);
+            const s = remaining % 60;
+            btn.textContent = `Повтор (${m}:${s.toString().padStart(2, '0')})`;
+            if (remaining <= 0) {
+                clearInterval(interval);
+                btn.disabled = false;
+                btn.textContent = 'Отправить';
+            }
+        }, 1000);
+    }
+</script>
+{% endblock %}
