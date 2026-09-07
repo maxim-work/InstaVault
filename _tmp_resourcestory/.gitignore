@@ -1,0 +1,9 @@
+exports/
+imports/
+__pycache__/
+.env
+*.db
+TODO*
+logs/
+pyrightconfig.json
+ruff.toml
