@@ -1,0 +1,72 @@
+line-length = 100
+target-version = "py314"
+
+[lint]
+select = ["ALL"]
+ignore = [
+  "COM812",   # missing trailing comma
+  "ISC001",   # single-line implicit string concatenation
+
+  "D203",     # 1 blank line required before class docstring
+  "D213",     # multi-line docstring summary should start at the second line
+
+  "E501",     # line too long
+
+  "ANN401",   # dynamically typed expressions (Any)
+  "T201",     # print found
+  "ERA001",   # found commented-out code
+  "FIX002",   # line contains TODO
+  "TD",       # flake8-todos (all)
+  "PLR0913",  # too many arguments in function definition
+  "PLR2004",  # magic value used in comparison
+  "FBT001",   # boolean positional arg
+  "FBT002",   # boolean default positional arg
+  "PLR0912",  # too many branches
+  "PLR0915",  # too many statements
+
+  "D100",     # missing docstring in public module
+  "D101",     # missing docstring in public class
+  "D102",     # missing docstring in public method
+  "D103",     # missing docstring in public function
+  "D104",     # missing docstring in public package
+  "D105",     # missing docstring in magic method
+  "D106",
+  "D107",     # missing docstring in __init__
+
+  "TRY003",   # long messages outside the exception class
+  "TRY300",   # consider moving this statement to an else block
+  "TRY301",   # abstract raise to an inner function
+
+  "EM",       # flake8-errmsg
+
+  "TC001",    # typing-only first-party import
+  "TC002",    # typing-only third-party import
+  "TC003",    # typing-only standard-library import
+
+  "RUF001",   # ambiguous unicode character in strings
+  "RUF002",   # ambiguous unicode character in docstrings
+  "RUF003",   # ambiguous unicode character in comments
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S101", "ANN", "D", "PLR2004"]
+"__init__.py" = ["F401", "E402"]
+"**/migrations/**" = ["ALL"]
+"scripts/**" = ["T201"]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.isort]
+known-first-party = ["instavault"]
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[lint.mccabe]
+max-complexity = 10
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

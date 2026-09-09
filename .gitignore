@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment
+.env
+docker.env
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Django
+static/
+media/
+*.db
+
+# Project data
+logs/
+exports/
+imports/
+TODO*
+
+# Tooling
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+poetry.toml

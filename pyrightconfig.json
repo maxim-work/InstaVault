@@ -1,0 +1,50 @@
+{
+  "typeCheckingMode": "strict",
+  "pythonVersion": "3.14",
+
+  "venvPath": ".",
+  "venv": ".venv",
+
+  "include": ["src"],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "**/migrations"
+  ],
+
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": false,
+  "reportPrivateImportUsage": "error",
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportUnusedClass": "warning",
+  "reportUnusedFunction": "warning",
+
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": true,
+
+  "reportImplicitOverride": false,
+  "reportImportCycles": false,
+
+  "reportUnnecessaryTypeIgnoreComment": "warning",
+  "reportMatchNotExhaustive": "error",
+  "reportUnnecessaryComparison": "warning",
+  "reportUnnecessaryIsInstance": "warning",
+  "reportUnusedCoroutine": "error",
+  "reportDeprecated": "warning",
+  "reportSelfClsParameterName": "warning",
+  "reportAssertAlwaysTrue": "warning",
+  "reportInvalidStringEscapeSequence": "error",
+  "reportRedeclaration": "warning",
+
+  "strictListInference": true,
+  "strictDictionaryInference": true,
+  "strictSetInference": true
+}

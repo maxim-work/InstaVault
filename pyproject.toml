@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "instavault"
+version = "0.1.0"
+description = "Quick notes system with AI-based knowledge organization based on Django and Telegram bot"
+authors = ["Maxim"]
+readme = "README.md"
+packages = [{ include = "instavault", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.13,<3.15"
+
+# Django
+django = ">=6.0.2,<7.0.0"
+django-ninja = ">=1.4.0,<2.0.0"
+django-environ = ">=0.13.0,<0.14.0"
+django-encrypted-model-fields = "^0.6.5"
+psycopg2-binary = ">=2.9.11,<3.0.0"
+pillow = "^12.1.1"
+
+# Telegram bot
+aiogram = ">=3.30.0,<4.0.0"
+aiohttp-socks = ">=0.11.0,<0.12.0"
+
+# Parsing / HTTP
+requests = { version = ">=2.31.0", extras = ["socks"] }
+beautifulsoup4 = ">=4.12.0"
+
+# Data / validation
+pydantic = ">=2.13.4,<3.0.0"
+python-dotenv = ">=1.2.2,<2.0.0"
+
+# Background tasks
+celery = ">=5.6.2,<6.0.0"
+redis = ">=7.2.1,<8.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = ">=0.8.0"
+mypy = ">=1.11.0"
+pytest = ">=8.0.0"
+pytest-django = ">=4.9.0"
+pytest-asyncio = ">=0.24.0"
+django-stubs = ">=5.0.0"
+pyright = "^1.1.414"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
