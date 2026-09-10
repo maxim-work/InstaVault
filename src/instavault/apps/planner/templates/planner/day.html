@@ -35,13 +35,7 @@
             <form id="noteForm">{% csrf_token %}<input type="hidden" name="date" value="{{ today_iso }}"><textarea placeholder="Напишите заметку на день..." id="dailyNote" name="description" hx-post="{% url 'planner:note_save' %}" hx-trigger="keyup changed delay:1s">{{ note_content }}</textarea></form>
         </div>
     </div>
-    <div class="section-top-bar">
-        <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleAllTasks(event)"><i class="fas fa-chevron-down" id="collapseAllIcon" style="font-size:12px;color:#B0B0C0;"></i><span class="section-label">Задачи</span></div>
-        <div class="section-actions">
-            <div class="custom-select-wrapper" id="sortFilterSelectWrapper"><div class="custom-select-trigger" onclick="toggleCustomSelect(event,'sortFilterSelectWrapper')"><span id="sortFilterLabel">По времени</span><i class="fas fa-chevron-down"></i></div></div>
-        </div>
-    </div>
-    <div class="tasks-scroll-area" id="tasksScrollArea">
+    <div id="tasksSection">
         {% include 'planner/htmx/task_list.html' %}
     </div>
 </div>
@@ -50,7 +44,7 @@
     <div class="modal-content modal-task-content">
         <button type="button" class="modal-close-btn" onclick="closeModal('modalTask')"><i class="fas fa-times"></i></button>
         <div class="modal-title" id="modalTaskTitle">Новая задача</div>
-        <form method="POST" hx-post="{% url 'planner:task_create' %}" hx-target="#tasksScrollArea" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalTask');">
+        <form method="POST" hx-post="{% url 'planner:task_create' %}" hx-target="#tasksSection" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalTask');">
             {% csrf_token %}
             <input type="text" class="modal-input" id="taskTitle" name="title" placeholder="Название задачи" autofocus>
             <textarea class="modal-input modal-textarea" id="taskDescription" name="description" placeholder="Описание" rows="3"></textarea>
@@ -72,7 +66,7 @@
 <div id="modalDeleteTask" class="modal-overlay" onclick="if(event.target===this)closeModal('modalDeleteTask')">
     <div class="modal-content" style="text-align:center;">
         <button type="button" class="modal-close-btn" onclick="closeModal('modalDeleteTask')"><i class="fas fa-times"></i></button>
-        <form method="POST" hx-post="{% url 'planner:task_delete' %}" hx-target="#tasksScrollArea" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalDeleteTask');">
+        <form method="POST" hx-post="{% url 'planner:task_delete' %}" hx-target="#tasksSection" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalDeleteTask');">
             {% csrf_token %}
             <div class="modal-title" style="color:#ff4d4d;">Удалить задачу</div>
             <p style="font-size:16px;color:#fff;margin-bottom:4px;font-weight:500;" id="deleteTaskTitle">Название задачи</p>
@@ -91,7 +85,7 @@
     <div class="modal-content">
         <button type="button" class="modal-close-btn" onclick="closeModal('modalReschedule')"><i class="fas fa-times"></i></button>
         <div class="modal-title"><i class="fas fa-calendar-alt" style="margin-right:8px;"></i> Перенести задачу</div>
-        <form method="POST" hx-post="{% url 'planner:task_reschedule' %}" hx-target="#tasksScrollArea" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalReschedule');">
+        <form method="POST" hx-post="{% url 'planner:task_reschedule' %}" hx-target="#tasksSection" hx-swap="innerHTML" hx-on::after-request="distributeTasks(); closeModal('modalReschedule');">
             {% csrf_token %}
             <div class="reschedule-options">
                 <div class="reschedule-option" onclick="setQuickReschedule('tomorrow')"><i class="fas fa-sun"></i><span>Завтра</span></div>

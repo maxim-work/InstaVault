@@ -1,4 +1,20 @@
 {% if tasks %}
+<div class="section-top-bar">
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleAllTasks(event)">
+        <i class="fas fa-chevron-down" id="collapseAllIcon" style="font-size:12px;color:#B0B0C0;"></i>
+        <span class="section-label">Задачи</span>
+    </div>
+    <div class="section-actions">
+        <div class="custom-select-wrapper" id="sortFilterSelectWrapper">
+            <div class="custom-select-trigger" onclick="toggleCustomSelect(event,'sortFilterSelectWrapper')">
+                <span id="sortFilterLabel">По времени</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="tasks-scroll-area" id="tasksScrollArea">
     <div id="activeTasksContainer">
         {% for task in tasks %}{% if not task.completed %}
         <div class="task-card priority-{{ task.priority }}" id="task-{{ task.id }}">
@@ -14,12 +30,6 @@
             </div>
             <div class="task-card-actions">
                 <button class="task-menu-btn" onclick="toggleTaskMenu(event, {{ task.id }})"><i class="fas fa-ellipsis-v"></i></button>
-                <div class="task-dropdown" id="task-dropdown-{{ task.id }}">
-                    <div class="task-dropdown-item" onclick="openViewTaskModal({{ task.id }})"><i class="fas fa-eye"></i> Просмотр</div>
-                    <div class="task-dropdown-item" onclick="openEditTaskModal({{ task.id }})"><i class="fas fa-pen"></i> Редактировать</div>
-                    <div class="task-dropdown-item" onclick="openRescheduleModal({{ task.id }})"><i class="fas fa-calendar-alt"></i> Перенести</div>
-                    <div class="task-dropdown-item delete-item" onclick="openDeleteTaskModal({{ task.id }})"><i class="fas fa-trash-alt"></i> Удалить</div>
-                </div>
             </div>
         </div>
         {% endif %}{% endfor %}
@@ -47,21 +57,19 @@
                     </div>
                     <div class="task-card-actions">
                         <button class="task-menu-btn" onclick="toggleTaskMenu(event, {{ task.id }})"><i class="fas fa-ellipsis-v"></i></button>
-                        <div class="task-dropdown" id="task-dropdown-{{ task.id }}">
-                            <div class="task-dropdown-item" onclick="openViewTaskModal({{ task.id }})"><i class="fas fa-eye"></i> Просмотр</div>
-                            <div class="task-dropdown-item" onclick="openEditTaskModal({{ task.id }})"><i class="fas fa-pen"></i> Редактировать</div>
-                            <div class="task-dropdown-item" onclick="openRescheduleModal({{ task.id }})"><i class="fas fa-calendar-alt"></i> Перенести</div>
-                            <div class="task-dropdown-item delete-item" onclick="openDeleteTaskModal({{ task.id }})"><i class="fas fa-trash-alt"></i> Удалить</div>
-                        </div>
                     </div>
                 </div>
                 {% endif %}{% endfor %}
             </div>
         </div>
     </div>
+</div>
+
 {% else %}
+<div class="tasks-scroll-area" id="tasksScrollArea">
     <div class="empty-state" id="emptyState">
         <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
         <p class="empty-text">Нет задач на сегодня</p>
     </div>
+</div>
 {% endif %}

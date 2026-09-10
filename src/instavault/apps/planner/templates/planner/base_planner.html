@@ -67,7 +67,7 @@
     .section-label { font-size: 14px; font-weight: 600; color: #B0B0C0; text-transform: uppercase; letter-spacing: 0.5px; }
     .section-actions { display: flex; gap: 8px; align-items: center; }
     .section-actions .custom-select-wrapper { width: 180px; }
-    .tasks-scroll-area { flex: 1 1 0; overflow-y: auto; min-height: 0; padding-bottom: 24px; }
+    .tasks-scroll-area { flex: 1 1 0; overflow-y: auto; overflow-x: visible; min-height: 0; padding-bottom: 24px; }
     .tasks-scroll-area::-webkit-scrollbar { width: 4px; }
     .tasks-scroll-area::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 4px; }
     .task-card { display: flex; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,0.02); border-radius: 14px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.03); transition: all 0.2s; animation: fadeIn 0.3s ease; }
@@ -87,7 +87,15 @@
     .task-card-time { font-size: 12px; color: #E07A5F; background: rgba(224,122,95,0.08); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
     .task-card-repeat-badge { font-size: 11px; color: #A0A0B0; background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.06); }
     .task-card-repeat-badge i { font-size: 10px; color: #8B8B9A; }
-    .task-card-actions { position: relative; display: flex; gap: 4px; align-items: flex-start; }
+    .task-card-actions {
+        position: relative;
+    }
+    #tasksSection {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
     .task-menu-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
     .task-menu-btn:hover { background: rgba(224,122,95,0.15); color: #E07A5F; }
     .task-dropdown { position: absolute; top: 35px; right: 0; width: 180px; background: #1A1A20; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 25px rgba(0,0,0,0.6); display: none; z-index: 100; overflow: hidden; }
@@ -324,14 +332,34 @@ window.toggleAllTasks = function(event) {
     if (event) event.stopPropagation();
     const active = document.getElementById('activeTasksContainer');
     const completed = document.getElementById('completedSection');
+    const completedBody = document.getElementById('completedBody');
     const empty = document.getElementById('emptyState');
     const icon = document.getElementById('collapseAllIcon');
     if (!active) return;
-    const hidden = active.style.display === 'none';
-    active.style.display = hidden ? 'block' : 'none';
-    if (completed) completed.style.display = hidden ? 'block' : 'none';
-    if (empty) empty.style.display = 'none';
-    icon.className = hidden ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+
+    // есть ли вообще завершённые карточки?
+    const completedCount = document.querySelectorAll('#completedTasksContainer .task-card').length;
+
+    const isHidden = active.style.display === 'none';
+
+    if (isHidden) {
+        // раскрываем
+        active.style.display = '';
+        if (completed && completedCount > 0) {
+            completed.style.display = 'block';
+            if (completedBody) completedBody.classList.remove('collapsed');
+        } else if (completed) {
+            completed.style.display = 'none';
+        }
+        if (empty) empty.style.display = 'none';
+        if (icon) icon.className = 'fas fa-chevron-down';
+    } else {
+        // сворачиваем
+        active.style.display = 'none';
+        if (completed) completed.style.display = 'none';
+        if (empty) empty.style.display = 'none';
+        if (icon) icon.className = 'fas fa-chevron-right';
+    }
 };
 
 // ============ КАСТОМНЫЕ СЕЛЕКТЫ ============
@@ -578,7 +606,8 @@ function updateStats() {
     document.getElementById('urgentCount').textContent = document.querySelectorAll('.task-card.priority-urgent').length;
     document.getElementById('importantCount').textContent = document.querySelectorAll('.task-card.priority-important').length;
     document.getElementById('noneCount').textContent = document.querySelectorAll('.task-card.priority-none').length;
-    document.getElementById('completedTasksCount').textContent = done;
+    const cnt = document.getElementById('completedTasksCount');
+    if (cnt) cnt.textContent = done;
     const cs = document.getElementById('completedSection');
     if (cs) cs.style.display = done > 0 ? 'block' : 'none';
 }
