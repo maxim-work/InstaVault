@@ -98,9 +98,27 @@
     }
     .task-menu-btn { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.03); border: none; color: #B0B0C0; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
     .task-menu-btn:hover { background: rgba(224,122,95,0.15); color: #E07A5F; }
-    .task-dropdown { position: absolute; top: 35px; right: 0; width: 180px; background: #1A1A20; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 25px rgba(0,0,0,0.6); display: none; z-index: 100; overflow: hidden; }
-    .task-dropdown.active { display: block; }
-    .task-dropdown-item { padding: 10px 14px; font-size: 13px; color: #E1E1E6; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: all 0.15s; }
+    .task-dropdown {
+        position: fixed;
+        width: 180px;
+        background: #1A1A20;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        z-index: 99999;
+        overflow: hidden;
+    }
+    .task-dropdown-item {
+        padding: 10px 14px;
+        font-size: 13px;
+        color: #E1E1E6;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+        transition: all 0.15s;
+    }
     .task-dropdown-item:last-child { border-bottom: none; }
     .task-dropdown-item:hover { background: rgba(224,122,95,0.1); color: #E07A5F; }
     .task-dropdown-item i { width: 16px; text-align: center; font-size: 13px; }
@@ -588,13 +606,89 @@ window.toggleTask = function(taskId) {
 };
 
 let activeTaskDropdown = null;
+
 window.toggleTaskMenu = function(event, taskId) {
     event.stopPropagation();
-    if (activeTaskDropdown) { activeTaskDropdown.classList.remove('active'); if (activeTaskDropdown.dataset.taskId==taskId) { activeTaskDropdown=null; return; } }
-    const dropdown = document.getElementById(`task-dropdown-${taskId}`);
-    if (dropdown) { dropdown.classList.add('active'); activeTaskDropdown = dropdown; }
+
+    // если уже открыто — закрываем
+    if (activeTaskDropdown) {
+        const sameTask = activeTaskDropdown.dataset.taskId == taskId;
+        activeTaskDropdown.remove();
+        activeTaskDropdown = null;
+        if (sameTask) return;
+    }
+
+    const btn = event.currentTarget;
+    const rect = btn.getBoundingClientRect();
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'task-dropdown';
+    dropdown.dataset.taskId = taskId;
+
+    dropdown.innerHTML = `
+        <div class="task-dropdown-item" data-action="view"><i class="fas fa-eye"></i> Просмотр</div>
+        <div class="task-dropdown-item" data-action="edit"><i class="fas fa-pen"></i> Редактировать</div>
+        <div class="task-dropdown-item" data-action="reschedule"><i class="fas fa-calendar-alt"></i> Перенести</div>
+        <div class="task-dropdown-item delete-item" data-action="delete"><i class="fas fa-trash-alt"></i> Удалить</div>
+    `;
+
+    // позиционируем: под кнопкой, выравнивание по правому краю
+    const menuWidth = 180;
+    let left = rect.right - menuWidth;
+    if (left < 8) left = 8; // не вылезаем за левый край
+    let top = rect.bottom + 4;
+    // если снизу не хватает места — открываем вверх
+    if (top + 200 > window.innerHeight) {
+        top = rect.top - 200 - 4;
+        if (top < 8) top = 8;
+    }
+    dropdown.style.top = top + 'px';
+    dropdown.style.left = left + 'px';
+
+    document.body.appendChild(dropdown);
+    activeTaskDropdown = dropdown;
+
+    // обработчики пунктов
+    dropdown.querySelectorAll('.task-dropdown-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const action = this.dataset.action;
+            dropdown.remove();
+            activeTaskDropdown = null;
+            if (action === 'view') openViewTaskModal(taskId);
+            else if (action === 'edit') openEditTaskModal(taskId);
+            else if (action === 'reschedule') openRescheduleModal(taskId);
+            else if (action === 'delete') openDeleteTaskModal(taskId);
+        });
+    });
+
+    // чтобы клик по самому меню не закрывал его
+    dropdown.addEventListener('click', e => e.stopPropagation());
 };
-document.addEventListener('click', function(e) { if (activeTaskDropdown && !e.target.closest('.task-card-actions')) { activeTaskDropdown.classList.remove('active'); activeTaskDropdown=null; } });
+
+// закрытие по клику вне
+document.addEventListener('click', function(e) {
+    if (activeTaskDropdown && !e.target.closest('.task-dropdown') && !e.target.closest('.task-menu-btn')) {
+        activeTaskDropdown.remove();
+        activeTaskDropdown = null;
+    }
+});
+
+// закрытие по скроллу (чтобы меню не «висело» в воздухе)
+document.addEventListener('scroll', function() {
+    if (activeTaskDropdown) {
+        activeTaskDropdown.remove();
+        activeTaskDropdown = null;
+    }
+}, true);
+
+// закрытие по Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && activeTaskDropdown) {
+        activeTaskDropdown.remove();
+        activeTaskDropdown = null;
+    }
+});
 
 // ============ СТАТИСТИКА ЗАДАЧ ============
 function updateStats() {
@@ -642,22 +736,92 @@ window.toggleEditHabitNotification = function() { document.getElementById('editH
 window.toggleExpandable = function(id) { const el = document.getElementById(id); const t = el.previousElementSibling.querySelector('span'); if (el.style.display==='none') { el.style.display='block'; t.textContent=t.textContent.replace('+','−'); } else { el.style.display='none'; t.textContent=t.textContent.replace('−','+'); } };
 
 let activeHabitDropdown = null;
+
 window.toggleHabitMenu = function(event, habitId) {
     event.stopPropagation();
-    if (activeHabitDropdown) { activeHabitDropdown.remove(); if (activeHabitDropdown._habitId===habitId) { activeHabitDropdown=null; return; } activeHabitDropdown=null; }
-    const btn = event.currentTarget; const rect = btn.getBoundingClientRect();
-    const dropdown = document.createElement('div'); dropdown._habitId = habitId;
-    dropdown.style.cssText = `position:fixed;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;width:180px;background:#1A1A20;border-radius:12px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 10px 25px rgba(0,0,0,0.6);z-index:9999;overflow:hidden;`;
+
+    // если уже открыто — закрываем; если по той же кнопке — выходим
+    if (activeHabitDropdown) {
+        const sameHabit = activeHabitDropdown.dataset.habitId == habitId;
+        activeHabitDropdown.remove();
+        activeHabitDropdown = null;
+        if (sameHabit) return;
+    }
+
+    const btn = event.currentTarget;
+    const rect = btn.getBoundingClientRect();
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'task-dropdown';         // переиспользуем стили
+    dropdown.dataset.habitId = habitId;
+
     dropdown.innerHTML = `
-        <div class="task-dropdown-item" onclick="openViewHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-eye" style="width:16px;font-size:13px;"></i> Просмотр</div>
-        <div class="task-dropdown-item" onclick="openEditHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.03);"><i class="fas fa-pen" style="width:16px;font-size:13px;"></i> Редактировать</div>
-        <div class="task-dropdown-item delete-item" onclick="openDeleteHabitModal(${habitId})" style="padding:10px 14px;font-size:13px;color:#E1E1E6;cursor:pointer;display:flex;align-items:center;gap:10px;"><i class="fas fa-trash-alt" style="width:16px;font-size:13px;"></i> Удалить</div>`;
-    const items = dropdown.querySelectorAll('.task-dropdown-item');
-    items[0].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';}); items[0].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
-    items[1].addEventListener('mouseenter', function(){this.style.background='rgba(224,122,95,0.1)';this.style.color='#E07A5F';}); items[1].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
-    items[2].addEventListener('mouseenter', function(){this.style.background='rgba(255,77,77,0.1)';this.style.color='#ff4d4d';}); items[2].addEventListener('mouseleave', function(){this.style.background='';this.style.color='#E1E1E6';});
-    document.body.appendChild(dropdown); activeHabitDropdown = dropdown;
+        <div class="task-dropdown-item" data-action="view"><i class="fas fa-eye"></i> Просмотр</div>
+        <div class="task-dropdown-item" data-action="edit"><i class="fas fa-pen"></i> Редактировать</div>
+        <div class="task-dropdown-item delete-item" data-action="delete"><i class="fas fa-trash-alt"></i> Удалить</div>
+    `;
+
+    // позиция: справа от кнопки, но не вылезая за экран
+    const menuWidth = 180;
+    const menuHeight = 130; // примерная высота
+    let left = rect.right - menuWidth;
+    if (left < 8) left = 8;
+    if (left + menuWidth > window.innerWidth - 8) {
+        left = window.innerWidth - menuWidth - 8;
+    }
+    let top = rect.bottom + 4;
+    if (top + menuHeight > window.innerHeight - 8) {
+        top = rect.top - menuHeight - 4;
+        if (top < 8) top = 8;
+    }
+    dropdown.style.top = top + 'px';
+    dropdown.style.left = left + 'px';
+    dropdown.style.zIndex = '99999';
+
+    document.body.appendChild(dropdown);
+    activeHabitDropdown = dropdown;
+
+    // обработчики пунктов
+    dropdown.querySelectorAll('.task-dropdown-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const action = this.dataset.action;
+            dropdown.remove();
+            activeHabitDropdown = null;
+            if (action === 'view') openViewHabitModal(habitId);
+            else if (action === 'edit') openEditHabitModal(habitId);
+            else if (action === 'delete') openDeleteHabitModal(habitId);
+        });
+    });
+
+    dropdown.addEventListener('click', e => e.stopPropagation());
 };
+
+// закрытие по клику вне
+document.addEventListener('click', function(e) {
+    if (activeHabitDropdown &&
+        !e.target.closest('.task-dropdown') &&
+        !e.target.closest('.task-menu-btn')) {
+        activeHabitDropdown.remove();
+        activeHabitDropdown = null;
+    }
+});
+
+// закрытие по скроллу
+document.addEventListener('scroll', function() {
+    if (activeHabitDropdown) {
+        activeHabitDropdown.remove();
+        activeHabitDropdown = null;
+    }
+}, true);
+
+// закрытие по Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && activeHabitDropdown) {
+        activeHabitDropdown.remove();
+        activeHabitDropdown = null;
+    }
+});
 
 window.toggleHabit = function(habitId) {
     const dateEl = document.getElementById('habitsDate');
