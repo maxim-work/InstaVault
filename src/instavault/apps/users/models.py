@@ -10,8 +10,12 @@ from django.utils import timezone
 from encrypted_model_fields.fields import EncryptedCharField
 
 
+def avatar_upload_to(instance: CustomUser, filename: str) -> str:
+    user_id = instance.pk or "unknown"
+    return f"avatars/{user_id}_{filename}"
+
 class CustomUser(AbstractUser):
-    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    avatar = models.ImageField(upload_to=avatar_upload_to, blank=True, null=True)
     telegram_id = EncryptedCharField(
         max_length=255,
         unique=True,

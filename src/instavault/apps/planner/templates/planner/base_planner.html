@@ -307,9 +307,13 @@
     <header class="topbar">
         <a href="{% url 'users:profile' %}" class="topbar-user-link">
             <div class="topbar-user">
-                <div class="avatar-topbar">{{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}</div>
+                {% if request.user.avatar %}
+                    <img src="{{ request.user.avatar.url }}" class="avatar-topbar">
+                {% else %}
+                    <div class="avatar-topbar">{{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}</div>
+                {% endif %}
                 <div class="topbar-user-info">
-                    <span class="topbar-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                    <span class="topbar-user-name">{{ request.user.username|default: "noname" }}</span>
                 </div>
             </div>
         </a>

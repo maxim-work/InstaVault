@@ -78,7 +78,7 @@ def day_get_context(request: HttpRequest, target_date: date_type) -> dict[str, A
         "urgent": tasks.filter(priority="urgent").count(),
         "important": tasks.filter(priority="important").count(),
         "none": tasks.filter(priority="none").count(),
-        "name": user.username,
+        "name": user.first_name,
     }
 
 
