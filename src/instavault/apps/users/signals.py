@@ -17,6 +17,4 @@ def create_user_settings(
     **_kwargs: Any,
 ) -> None:
     if created:
-        transaction.on_commit(
-            lambda: UserSettings.objects.create(user=instance)
-        )
+        transaction.on_commit(lambda: UserSettings.objects.get_or_create(user=instance))

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
@@ -14,7 +14,10 @@ def avatar_upload_to(instance: CustomUser, filename: str) -> str:
     user_id = instance.pk or "unknown"
     return f"avatars/{user_id}_{filename}"
 
+
 class CustomUser(AbstractUser):
+    if TYPE_CHECKING:
+        settings: UserSettings
     avatar = models.ImageField(upload_to=avatar_upload_to, blank=True, null=True)
     telegram_id = EncryptedCharField(
         max_length=255,
@@ -27,16 +30,10 @@ class CustomUser(AbstractUser):
         default=False,
         verbose_name="Главный суперадмин",
     )
-    started_ban = models.DateTimeField(
-        blank=True, null=True, verbose_name="Начало блокировки"
-    )
-    ended_ban = models.DateTimeField(
-        blank=True, null=True, verbose_name="Конец блокировки"
-    )
+    started_ban = models.DateTimeField(blank=True, null=True, verbose_name="Начало блокировки")
+    ended_ban = models.DateTimeField(blank=True, null=True, verbose_name="Конец блокировки")
     # Permanent ban: ended_ban is None, started_ban is set
-    reason_ban = models.CharField(
-        max_length=500, blank=True, verbose_name="Причина блокировки"
-    )
+    reason_ban = models.CharField(max_length=500, blank=True, verbose_name="Причина блокировки")
 
     class Meta:  # type: ignore[assignment]
         verbose_name = "Пользователь"
@@ -53,34 +50,17 @@ class CustomUser(AbstractUser):
         super().clean()
 
         if self.is_owner:
-            existing_owner = (
-                CustomUser.objects.filter(is_owner=True)
-                .exclude(pk=self.pk)
-                .first()
-            )
+            existing_owner = CustomUser.objects.filter(is_owner=True).exclude(pk=self.pk).first()
             if existing_owner:
-                raise ValidationError(
-                    {"is_owner": "The main superadmin already exists!"}
-                )
+                raise ValidationError({"is_owner": "The main superadmin already exists!"})
 
             if not self.is_superuser:
                 raise ValidationError(
-                    {
-                        "is_owner": (
-                            "The main superadmin must have the status "
-                            "of superadmin"
-                        )
-                    }
+                    {"is_owner": ("The main superadmin must have the status of superadmin")}
                 )
 
             if not self.is_staff:
-                raise ValidationError(
-                    {
-                        "is_owner": (
-                            "The chief superadmin must have staff status"
-                        )
-                    }
-                )
+                raise ValidationError({"is_owner": ("The chief superadmin must have staff status")})
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if self.is_owner:
@@ -140,10 +120,8 @@ class CustomUser(AbstractUser):
         elif self.is_active:
             self.started_ban = now
             self.ended_ban = now + timedelta(days=days, hours=hours)
-        elif self.ended_ban is not None: # Extension of an existing ban
-                self.ended_ban = self.ended_ban + timedelta(
-                    days=days, hours=hours
-                )
+        elif self.ended_ban is not None:  # Extension of an existing ban
+            self.ended_ban = self.ended_ban + timedelta(days=days, hours=hours)
 
         self.is_active = False
         self.reason_ban = reason
@@ -157,6 +135,12 @@ class CustomUser(AbstractUser):
         self.reason_ban = ""
         self.save()
         return was_banned
+
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        try:
+            return self.settings.get(key, default)
+        except UserSettings.DoesNotExist:
+            return default
 
 
 def default_settings() -> dict[str, Any]:

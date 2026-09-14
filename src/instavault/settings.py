@@ -51,6 +51,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "instavault.apps.users.middleware.BanCheckMiddleware",
+    "instavault.apps.users.middleware.UserTimeZone",
 ]
 
 ROOT_URLCONF = "instavault.urls"

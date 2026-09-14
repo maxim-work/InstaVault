@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import zoneinfo
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -15,7 +16,7 @@ from django.views.decorators.http import require_POST
 
 from instavault.apps.audit.utils import log_action
 from instavault.apps.users.forms import LoginForm, RegisterForm
-from instavault.apps.users.models import Appeal, CustomUser
+from instavault.apps.users.models import Appeal, CustomUser, UserSettings
 from instavault.shared.utils import get_user
 
 
@@ -35,9 +36,12 @@ def register_view(request: HttpRequest) -> HttpResponse:
     email = form.cleaned_data["email"]
     password = form.cleaned_data["password"]
 
-    user = CustomUser.objects.create_user(
-        username=username, email=email, password=password
-    )
+    tz = request.POST.get("timezone", "").strip()
+
+    user = CustomUser.objects.create_user(username=username, email=email, password=password)
+    if tz:
+        settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+        settings_obj.set("timezone", tz)
     login(request, user)
     log_action(
         user=user,
@@ -61,9 +65,7 @@ def check_username(request: HttpRequest) -> HttpResponse:
 def check_email(request: HttpRequest) -> HttpResponse:
     email = request.POST.get("email", "")
     if CustomUser.objects.filter(email=email).exists():
-        return HttpResponse(
-            '<span style="color: #ff4d4d;">Почта уже зарегистрирована</span>'
-        )
+        return HttpResponse('<span style="color: #ff4d4d;">Почта уже зарегистрирована</span>')
     return HttpResponse("")
 
 
@@ -94,9 +96,7 @@ def verify_code(request: HttpRequest) -> HttpResponse:
     stored_hash = cache.get(f"verification_code_{email}")
 
     if not stored_hash:
-        return HttpResponse(
-            '<span style="color: #ffb3b3;">Код истёк, запросите новый</span>'
-        )
+        return HttpResponse('<span style="color: #ffb3b3;">Код истёк, запросите новый</span>')
 
     code_hash = hashlib.sha256(code.encode()).hexdigest()
 
@@ -136,10 +136,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
                 if field in ("__all__", None):
                     errors_html += f'<div class="error-message">{error}</div>'
                 else:
-                    errors_html += (
-                        f'<div class="error-message" '
-                        f'id="{field}-error">{error}</div>'
-                    )
+                    errors_html += f'<div class="error-message" id="{field}-error">{error}</div>'
         return render(
             request,
             "users/partials/login_errors.html",
@@ -161,9 +158,7 @@ def send_reset_code(request: HttpRequest) -> HttpResponse:
         return HttpResponse('<span style="color: #ffb3b3;">Email обязателен</span>')
 
     if not CustomUser.objects.filter(email=email).exists():
-        return HttpResponse(
-            '<span style="color: #ffb3b3;">Вы не зарегистрированы</span>'
-        )
+        return HttpResponse('<span style="color: #ffb3b3;">Вы не зарегистрированы</span>')
 
     code = str(secrets.randbelow(900000) + 100000)
     code_hash = hashlib.sha256(code.encode()).hexdigest()
@@ -183,16 +178,12 @@ def verify_reset_code(request: HttpRequest) -> HttpResponse:
         return HttpResponse('<span style="color: #ffb3b3;">Неверный код</span>')
 
     if not CustomUser.objects.filter(email=email).exists():
-        return HttpResponse(
-            '<span style="color: #ffb3b3;">Вы не зарегистрированы</span>'
-        )
+        return HttpResponse('<span style="color: #ffb3b3;">Вы не зарегистрированы</span>')
 
     stored_hash = cache.get(f"reset_code_{email}")
 
     if not stored_hash:
-        return HttpResponse(
-            '<span style="color: #ffb3b3;">Код истёк, запросите новый</span>'
-        )
+        return HttpResponse('<span style="color: #ffb3b3;">Код истёк, запросите новый</span>')
 
     code_hash = hashlib.sha256(code.encode()).hexdigest()
 
@@ -217,9 +208,7 @@ def reset_password(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"error": "Пароли не совпадают"})
 
     if not cache.get(f"reset_code_verified_{email}"):
-        return JsonResponse(
-            {"error": "Сначала подтвердите код из письма"}
-        )
+        return JsonResponse({"error": "Сначала подтвердите код из письма"})
 
     try:
         user = CustomUser.objects.get(email=email)
@@ -244,9 +233,16 @@ def reset_password(request: HttpRequest) -> JsonResponse:
 
 
 def profile_view(request: HttpRequest) -> HttpResponse:
-    if request.user.is_authenticated:
-        return render(request, "users/profile.html")
-    return redirect("users:login")
+    if not request.user.is_authenticated:
+        return redirect("users:login")
+
+    user = get_user(request)
+    tzname = ""
+    settings_obj = getattr(user, "settings", None)
+    if settings_obj is not None:
+        tzname = settings_obj.get("timezone", "")
+
+    return render(request, "users/profile.html", {"current_timezone": tzname})
 
 
 @login_required
@@ -438,9 +434,7 @@ def get_telegram_code(request: HttpRequest) -> JsonResponse:
     user = get_user(request)
     code = str(secrets.randbelow(900000) + 100000)
     cache.set(f"telegram_link_{code}", user.pk, timeout=600)
-    return JsonResponse(
-        {"code": code, "bot_link": f"https://t.me/your_bot?start={code}"}
-    )
+    return JsonResponse({"code": code, "bot_link": f"https://t.me/your_bot?start={code}"})
 
 
 @login_required
@@ -528,3 +522,29 @@ def submit_appeal(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"success": True})
 
     return JsonResponse({"success": False, "error": "Данные введены не корректно!"})
+
+
+@login_required
+@require_POST
+def change_timezone(request: HttpRequest) -> JsonResponse:
+    tzname = (request.POST.get("timezone") or "").strip()
+
+    if not tzname:
+        return JsonResponse(
+            {"success": False, "error": "Часовой пояс не указан"},
+            status=400,
+        )
+
+    try:
+        zoneinfo.ZoneInfo(tzname)
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        return JsonResponse(
+            {"success": False, "error": "Неизвестный часовой пояс"},
+            status=400,
+        )
+
+    user = get_user(request)
+    settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+    settings_obj.set("timezone", tzname)
+
+    return JsonResponse({"success": True, "timezone": tzname})

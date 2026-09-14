@@ -95,4 +95,5 @@ urlpatterns = [
         name="check_appeal_username",
     ),
     path("ban/submit-appeal/", views.submit_appeal, name="submit_appeal"),
+    path("profile/change_timezone/", views.change_timezone, name="change_timezone"),
 ]

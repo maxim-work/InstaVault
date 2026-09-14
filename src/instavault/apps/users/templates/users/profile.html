@@ -62,15 +62,29 @@
                 </div>
 
                 <div class="section">
-                    <div class="section-title"><i class="fab fa-telegram"></i> Telegram</div>
-                    <div class="telegram-row">
-                        <span class="telegram-badge" id="telegramStatus">
+                    <div class="section-title"><i class="fas fa-sliders-h"></i> Персонализация</div>
+
+                    <div class="field-row">
+                        <span class="field-label">Telegram</span>
+                        <span class="field-value" id="telegramStatus">
                             {% if request.user.telegram_id %}Подключён{% else %}Не подключён{% endif %}
                         </span>
-                        <div class="telegram-actions">
-                            <button class="telegram-btn" id="connectTelegramBtn" onclick="openTelegramModal()" {% if request.user.telegram_id %}style="display:none"{% endif %}>Подключить</button>
-                            <button class="telegram-btn danger" id="disconnectTelegramBtn" onclick="disconnectTelegram()" {% if not request.user.telegram_id %}style="display:none"{% endif %}>Отключить</button>
-                        </div>
+                        <span class="field-action" id="connectTelegramBtn" onclick="openTelegramModal()" {% if request.user.telegram_id %}style="display:none"{% endif %}>
+                            <i class="fas fa-link"></i> Подключить
+                        </span>
+                        <span class="field-action" id="disconnectTelegramBtn" onclick="disconnectTelegram()" style="color:#ff4d4d;background:rgba(255,77,77,0.05);{% if not request.user.telegram_id %}display:none{% endif %}">
+                            <i class="fas fa-unlink"></i> Отключить
+                        </span>
+                    </div>
+
+                    <div class="field-row" style="border-bottom: none;">
+                        <span class="field-label">Часовой пояс</span>
+                        <span class="field-value" id="currentTimezone">
+                            {{ current_timezone|default:"не указан" }}
+                        </span>
+                        <span class="field-action" onclick="openTimezoneModal()">
+                            <i class="fas fa-pen"></i> Изменить
+                        </span>
                     </div>
                 </div>
             </div>
@@ -169,6 +183,31 @@
         </div>
     </div>
 
+    <!-- Смена timezone -->
+    <div id="modalTimezone" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">Часовой пояс</div>
+            <p class="hint">Определяется автоматически, но можно поменять вручную.</p>
+
+            <input type="text"
+                   class="modal-input"
+                   id="timezoneInput"
+                   placeholder="Europe/Amsterdam"
+                   list="timezoneList"
+                   autofocus>
+            <datalist id="timezoneList"></datalist>
+
+            <div class="modal-error" id="timezoneError"></div>
+
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="detectTimezone()">
+                    <i class="fas fa-location-crosshairs"></i> Определить
+                </button>
+                <button class="modal-btn primary" onclick="saveTimezone()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Удаление аккаунта -->
     <div id="modalDelete" class="modal-overlay">
         <div class="modal-content">
@@ -182,7 +221,7 @@
             </div>
         </div>
     </div>
-    
+
     <div style="display: none;">{% csrf_token %}</div>
 </div>
 
@@ -230,7 +269,7 @@
     .action-btn.danger:hover { background: rgba(255,77,77,0.1); }
     .password-link { color: #E07A5F; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
     .password-link:hover { color: #c96b51; text-decoration: underline; }
-    
+
     /* ===== МОДАЛЬНЫЕ ОКНА ===== */
     .modal-overlay {
         position: fixed;
@@ -378,7 +417,7 @@
         color: #B0B0C0;
         margin-bottom: 8px;
     }
-    
+
     @media (max-width: 800px) {
         .profile-grid { grid-template-columns: 1fr; }
         .action-btn { min-width: 100%; }
@@ -512,7 +551,7 @@
     function sendOldEmailCode() {
         const sendBtn = document.getElementById('sendOldCodeBtn');
         const hint = document.getElementById('oldCodeHint');
-        
+
         fetch('{% url "users:send_old_email_code" %}', {
             method: 'POST',
             headers: {
@@ -537,7 +576,7 @@
     function validateOldCode() {
         const code = document.getElementById('oldEmailCode').value.trim();
         const verifyBtn = document.getElementById('verifyOldCodeBtn');
-        
+
         if (code.length === 6 && /^\d+$/.test(code)) {
             verifyBtn.disabled = false;
         } else {
@@ -674,6 +713,75 @@
             headers: { 'X-CSRFToken': getCsrfToken() }
         }).then(r => r.json()).then(data => {
             if (data.success) location.reload();
+        });
+    }
+
+    // ---------- ЧАСОВОЙ ПОЯС ----------
+    const COMMON_TIMEZONES = [
+        "Europe/Amsterdam", "Europe/Berlin", "Europe/London", "Europe/Madrid",
+        "Europe/Paris", "Europe/Moscow", "Europe/Kyiv", "Europe/Warsaw",
+        "Asia/Tokyo", "Asia/Shanghai", "Asia/Dubai", "Asia/Almaty",
+        "America/New_York", "America/Los_Angeles", "America/Chicago",
+        "Australia/Sydney", "UTC",
+    ];
+
+    function openTimezoneModal() {
+        const input = document.getElementById('timezoneInput');
+        const list = document.getElementById('timezoneList');
+        const saved = document.getElementById('currentTimezone').textContent.trim();
+
+        list.innerHTML = COMMON_TIMEZONES
+            .map(tz => `<option value="${tz}"></option>`)
+            .join('');
+
+        input.value = saved && saved !== 'не указан' ? saved : getBrowserTimezone();
+        document.getElementById('timezoneError').innerText = '';
+        openModal('modalTimezone');
+    }
+
+    function getBrowserTimezone() {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        } catch (_) {
+            return 'UTC';
+        }
+    }
+
+    function detectTimezone() {
+        document.getElementById('timezoneInput').value = getBrowserTimezone();
+        document.getElementById('timezoneError').innerText = '';
+    }
+
+    function saveTimezone() {
+        const tz = document.getElementById('timezoneInput').value.trim();
+        const errorEl = document.getElementById('timezoneError');
+
+        if (!tz) {
+            errorEl.innerText = 'Укажите часовой пояс';
+            return;
+        }
+
+        fetch('{% url "users:change_timezone" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: 'timezone=' + encodeURIComponent(tz),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('currentTimezone').textContent = data.timezone;
+                closeModal('modalTimezone');
+                // опционально: перезагрузить страницу, чтобы применить новую зону
+                location.reload();
+            } else {
+                errorEl.innerText = data.error || 'Ошибка сохранения';
+            }
+        })
+        .catch(() => {
+            errorEl.innerText = 'Ошибка соединения';
         });
     }
 

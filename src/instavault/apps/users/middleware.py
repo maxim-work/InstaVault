@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import zoneinfo
 from collections.abc import Callable
 
 from django.contrib.auth import logout
@@ -63,3 +64,30 @@ class BanCheckMiddleware:
             "now": timezone.now(),
         }
         return render(request, "users/banned.html", context, status=403)
+
+
+class UserTimeZone:
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        tzname = None
+        if request.user.is_authenticated:
+            try:
+                user = get_user(request)
+                tzname = user.get_setting("timezone")
+            except Exception:  # noqa: BLE001
+                tzname = None
+
+        if tzname:
+            try:
+                timezone.activate(zoneinfo.ZoneInfo(tzname))
+            except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+                timezone.deactivate()
+        else:
+            timezone.deactivate()
+
+        try:
+            return self.get_response(request)
+        finally:
+            timezone.deactivate()

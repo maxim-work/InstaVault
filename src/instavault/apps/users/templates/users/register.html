@@ -4,14 +4,15 @@
 <div id="main-content">
     <div class="register-card">
         <h1 class="register-title">
-            <i class="fas fa-brain"></i> 
+            <i class="fas fa-brain"></i>
             InstaVault
         </h1>
         <div class="register-subtitle">Создайте аккаунт, чтобы управлять задачами, целями и привычками</div>
 
         <form method="post" action="{% url 'users:register' %}" id="register-form">
             {% csrf_token %}
-            
+            <input type="hidden" name="timezone" id="tz-input">
+
             {% if form.non_field_errors %}
             <div style="color: #ffb3b3; margin-bottom: 15px; padding: 12px; background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.3); border-radius: 8px; font-size: 14px;">
                 {% for error in form.non_field_errors %}
@@ -19,7 +20,7 @@
                 {% endfor %}
             </div>
             {% endif %}
-            
+
             <!-- Имя пользователя -->
             <div class="input-group">
                 <label class="input-label">{{ form.username.label }}</label>
@@ -315,7 +316,7 @@
                 if (checkUsernameController) checkUsernameController.abort();
 
                 const username = usernameInput.value.trim();
-                
+
                 if (username.length < 5) {
                     if (username.length === 0) {
                         usernameError.innerHTML = '';
@@ -324,7 +325,7 @@
                     }
                     return;
                 }
-                
+
                 if (!isValidUsername(username)) {
                     usernameError.innerHTML = '<span style="color: #ffb3b3;">Только латинские буквы, цифры и подчёркивание</span>';
                     return;
@@ -395,16 +396,16 @@
                 let usernameValid = false, emailValid = false, codeValid = false, passwordValid = false, passwordConfirmValid = false;
 
                 // Username: минимум 5 символов, правильный формат, не занят
-                if (username.length >= 5 && isValidUsername(username) && 
-                    !usernameError.innerText.includes('занято') && 
+                if (username.length >= 5 && isValidUsername(username) &&
+                    !usernameError.innerText.includes('занято') &&
                     !usernameError.innerText.includes('недопустимые') &&
                     !usernameError.innerText.includes('Минимум')) {
                     usernameValid = true;
                 }
 
                 // Email: правильный формат, не занят, нет ошибок
-                if (email !== '' && isValidEmail(email) && 
-                    !emailError.innerText.includes('занят') && 
+                if (email !== '' && isValidEmail(email) &&
+                    !emailError.innerText.includes('занят') &&
                     !emailError.innerText.includes('корректный')) {
                     emailValid = true;
                 }
@@ -501,6 +502,12 @@
 
             // Prevent submit if disabled
             form.addEventListener('submit', function(e) {
+                try {
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+                    const offset = -new Date().getTimezoneOffset();
+                    document.getElementById('tz-input').value = tz;
+                } catch (_) {}
+
                 if (submitBtn.disabled) {
                     e.preventDefault();
                     if (!usernameInput.value.trim()) usernameError.innerText = 'Введите имя пользователя';
