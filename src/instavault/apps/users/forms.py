@@ -41,9 +41,7 @@ class LoginForm(forms.Form):
         if identifier and password:
             user = self._find_user(identifier)
             if user is None or not user.check_password(password):
-                raise forms.ValidationError(
-                    "Неверный email/имя пользователя или пароль"
-                )
+                raise forms.ValidationError("Неверный email/имя пользователя или пароль")
             cleaned_data["user"] = user
 
         return cleaned_data

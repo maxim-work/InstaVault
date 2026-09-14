@@ -128,9 +128,7 @@ class CustomUserAdmin(UserAdmin):  # type: ignore[type-arg]
         request.session["pending_ownership_transfer"] = {
             "new_owner_id": new_owner.pk,
             "new_owner_username": new_owner.username,
-            "current_owner_username": (
-                current_owner.username if current_owner else None
-            ),
+            "current_owner_username": (current_owner.username if current_owner else None),
         }
 
         return redirect(reverse("users:confirm_ownership_transfer"))
@@ -142,9 +140,7 @@ class CustomUserAdmin(UserAdmin):  # type: ignore[type-arg]
         request: HttpRequest,
         queryset: QuerySet[CustomUser],
     ) -> HttpResponse | None:
-        users_with_telegram = queryset.exclude(
-            telegram_id__isnull=True
-        ).exclude(telegram_id="")
+        users_with_telegram = queryset.exclude(telegram_id__isnull=True).exclude(telegram_id="")
 
         if not users_with_telegram.exists():
             self.message_user(
@@ -156,9 +152,7 @@ class CustomUserAdmin(UserAdmin):  # type: ignore[type-arg]
 
         request.session["telegram_message_users"] = {
             "user_ids": list(users_with_telegram.values_list("id", flat=True)),
-            "usernames": list(
-                users_with_telegram.values_list("username", flat=True)
-            ),
+            "usernames": list(users_with_telegram.values_list("username", flat=True)),
             "count": users_with_telegram.count(),
         }
 
@@ -183,9 +177,7 @@ class CustomUserAdmin(UserAdmin):  # type: ignore[type-arg]
 
         request.session["email_message_users"] = {
             "user_ids": list(users_with_email.values_list("id", flat=True)),
-            "usernames": list(
-                users_with_email.values_list("username", flat=True)
-            ),
+            "usernames": list(users_with_email.values_list("username", flat=True)),
             "count": users_with_email.count(),
         }
 
@@ -437,9 +429,7 @@ class CustomUserAdmin(UserAdmin):  # type: ignore[type-arg]
             return qs.filter(is_owner=False, is_superuser=False)
 
         if user.is_staff and not user.is_superuser:
-            return qs.filter(
-                is_staff=False, is_superuser=False, is_owner=False
-            )
+            return qs.filter(is_staff=False, is_superuser=False, is_owner=False)
 
         return qs.none()
 
@@ -462,9 +452,7 @@ class CustomUserAdmin(UserAdmin):  # type: ignore[type-arg]
         obj: CustomUser | None = None,
     ) -> list[Any]:
         user = get_user(request)
-        if obj is not None and (
-            user.is_owner or user.is_superuser
-        ):
+        if obj is not None and (user.is_owner or user.is_superuser):
             return [UserSettingsInline]
         return []
 
@@ -570,9 +558,7 @@ def confirm_ownership_transfer(request: HttpRequest) -> HttpResponse:
             current_owner = CustomUser.objects.filter(is_owner=True).first()
 
             if current_owner:
-                CustomUser.objects.filter(pk=current_owner.pk).update(
-                    is_owner=False
-                )
+                CustomUser.objects.filter(pk=current_owner.pk).update(is_owner=False)
 
             CustomUser.objects.filter(pk=new_owner.pk).update(is_owner=True)
 
@@ -581,10 +567,7 @@ def confirm_ownership_transfer(request: HttpRequest) -> HttpResponse:
                 performed_by=user,
                 action="ownership_transfer",
                 category="admin",
-                details=(
-                    f"Ownership transferred from {current_owner} "
-                    f"to {new_owner.username}"
-                ),
+                details=(f"Ownership transferred from {current_owner} to {new_owner.username}"),
                 request=request,
             )
 
@@ -592,8 +575,7 @@ def confirm_ownership_transfer(request: HttpRequest) -> HttpResponse:
 
             messages.success(
                 request,
-                f"Права владельца успешно переданы пользователю "
-                f"{new_owner.username}",
+                f"Права владельца успешно переданы пользователю {new_owner.username}",
             )
             return redirect("admin:users_customuser_changelist")
 
@@ -603,9 +585,7 @@ def confirm_ownership_transfer(request: HttpRequest) -> HttpResponse:
 
     context = {
         "new_owner": transfer_data["new_owner_username"],
-        "current_owner": transfer_data.get(
-            "current_owner_username", "нет (будет создан)"
-        ),
+        "current_owner": transfer_data.get("current_owner_username", "нет (будет создан)"),
         "title": "Подтверждение передачи прав владельца",
     }
     return render(request, "admin/confirm_ownership_transfer.html", context)
@@ -673,8 +653,7 @@ def send_telegram_message_view(request: HttpRequest) -> HttpResponse:
             if success_count > 0:
                 messages.success(
                     request,
-                    f"Сообщение отправлено {success_count} из {count} "
-                    f"пользователям",
+                    f"Сообщение отправлено {success_count} из {count} пользователям",
                 )
 
             if failed_users:
@@ -769,8 +748,7 @@ def send_email_message_view(request: HttpRequest) -> HttpResponse:
             if success_count > 0:
                 messages.success(
                     request,
-                    f"Сообщение отправлено {success_count} из {count} "
-                    f"пользователям",
+                    f"Сообщение отправлено {success_count} из {count} пользователям",
                 )
 
             if failed_users:
@@ -919,9 +897,7 @@ def ban_operation_view(request: HttpRequest) -> HttpResponse:
                             performed_by=user,
                             action="unban",
                             category="admin",
-                            details=(
-                                f"Unbanned via admin panel, reason: {reason}"
-                            ),
+                            details=(f"Unbanned via admin panel, reason: {reason}"),
                             request=request,
                         )
                     success_count += 1
@@ -987,9 +963,7 @@ class AppealAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
     actions = ("approve_appeal", "reject_appeal")
 
     def message_preview(self, obj: Appeal) -> str:
-        return (
-            obj.message[:100] + "..." if len(obj.message) > 100 else obj.message
-        )
+        return obj.message[:100] + "..." if len(obj.message) > 100 else obj.message
 
     message_preview.short_description = "Сообщение"  # type: ignore[attr-defined]
 
@@ -1017,24 +991,18 @@ class AppealAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
         queryset: QuerySet[Appeal],
     ) -> HttpResponse | None:
         if queryset.count() != 1:
-            self.message_user(
-                request, "Выберите одну апелляцию", level=messages.ERROR
-            )
+            self.message_user(request, "Выберите одну апелляцию", level=messages.ERROR)
             return None
 
         appeal = queryset.first()
         if appeal is None:
-            self.message_user(
-                request, "Апелляция не найдена", level=messages.ERROR
-            )
+            self.message_user(request, "Апелляция не найдена", level=messages.ERROR)
             return None
 
         user = CustomUser.objects.filter(username=appeal.username).first()
 
         if not user:
-            self.message_user(
-                request, "Пользователь не найден", level=messages.ERROR
-            )
+            self.message_user(request, "Пользователь не найден", level=messages.ERROR)
             return None
 
         request.session["ban_operation"] = {
@@ -1069,9 +1037,7 @@ class AppealAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 performed_by=performed_by,
                 action="appeal_rejected",
                 category="admin",
-                details=(
-                    f"Appeal #{appeal.pk} rejected from {appeal.username}"
-                ),
+                details=(f"Appeal #{appeal.pk} rejected from {appeal.username}"),
                 request=request,
             )
         updated = queryset.update(status="rejected")
@@ -1114,22 +1080,15 @@ class AppealAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
                 performed_by=get_user(request),
                 action="appeal_approved",
                 category="admin",
-                details=(
-                    f"Appeal #{appeal.pk} approved for {user.username} "
-                    f"(from detail view)"
-                ),
+                details=(f"Appeal #{appeal.pk} approved for {user.username} (from detail view)"),
                 request=request,
             )
             return redirect(reverse("users:ban_operation"))
 
-        self.message_user(
-            request, "Пользователь не найден", level=messages.ERROR
-        )
+        self.message_user(request, "Пользователь не найден", level=messages.ERROR)
         return redirect("admin:users_appeal_changelist")
 
-    def reject_view(
-        self, request: HttpRequest, appeal_id: int
-    ) -> HttpResponse:
+    def reject_view(self, request: HttpRequest, appeal_id: int) -> HttpResponse:
         appeal = get_object_or_404(Appeal, id=appeal_id)
         appeal.status = "rejected"
         appeal.save()
@@ -1139,10 +1098,7 @@ class AppealAdmin(admin.ModelAdmin):  # type: ignore[type-arg]
             performed_by=get_user(request),
             action="appeal_rejected",
             category="admin",
-            details=(
-                f"Appeal #{appeal.pk} rejected from {appeal.username} "
-                f"(from detail view)"
-            ),
+            details=(f"Appeal #{appeal.pk} rejected from {appeal.username} (from detail view)"),
             request=request,
         )
 

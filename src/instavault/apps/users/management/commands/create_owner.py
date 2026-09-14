@@ -47,17 +47,13 @@ class Command(BaseCommand):
 
         if not username or not password:
             self.stdout.write(
-                self.style.ERROR(
-                    "Username and password are required in non-interactive mode"
-                )
+                self.style.ERROR("Username and password are required in non-interactive mode")
             )
             return
 
         try:
             self._create_owner(username, email, password)
-            self.stdout.write(
-                self.style.SUCCESS(f"Owner created successfully: {username}")
-            )
+            self.stdout.write(self.style.SUCCESS(f"Owner created successfully: {username}"))
         except (IntegrityError, ValidationError, ValueError) as e:
             self.stdout.write(self.style.ERROR(f"Error: {e}"))
 
@@ -72,9 +68,7 @@ class Command(BaseCommand):
             self._create_owner(username, email, password)
 
             self.stdout.write(self.style.SUCCESS(f"\nOwner created: {username}"))
-            self.stdout.write(
-                self.style.WARNING("\nSave your password in a safe place!")
-            )
+            self.stdout.write(self.style.WARNING("\nSave your password in a safe place!"))
 
         except KeyboardInterrupt:
             self.stdout.write("\n\nCreation cancelled")
@@ -88,9 +82,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR("Username is required!"))
                 continue
             if CustomUser.objects.filter(username=username).exists():
-                self.stdout.write(
-                    self.style.ERROR(f"User '{username}' already exists!")
-                )
+                self.stdout.write(self.style.ERROR(f"User '{username}' already exists!"))
                 continue
             return username
 
@@ -101,9 +93,7 @@ class Command(BaseCommand):
         try:
             validate_email(email)
         except ValidationError:
-            self.stdout.write(
-                self.style.WARNING("Invalid email format. Skipping...")
-            )
+            self.stdout.write(self.style.WARNING("Invalid email format. Skipping..."))
             return ""
         return email
 
@@ -119,9 +109,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR("Passwords don't match!"))
                 continue
             if len(password) < 4:
-                self.stdout.write(
-                    self.style.ERROR("Password must be at least 4 characters!")
-                )
+                self.stdout.write(self.style.ERROR("Password must be at least 4 characters!"))
                 continue
             return password
 

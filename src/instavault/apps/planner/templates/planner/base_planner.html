@@ -313,7 +313,7 @@
                     <div class="avatar-topbar">{{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}</div>
                 {% endif %}
                 <div class="topbar-user-info">
-                    <span class="topbar-user-name">{{ request.user.username|default: "noname" }}</span>
+                    <span class="topbar-user-name">{{ request.user.username|default:"noname" }}</span>
                 </div>
             </div>
         </a>
@@ -466,15 +466,15 @@ window.openAddTaskModal = function() {
 };
 
 window.openEditTaskModal = function(taskId) {
-    const card = document.getElementById(`task-${taskId}`); 
+    const card = document.getElementById(`task-${taskId}`);
     if (!card) return;
-    
+
     document.getElementById('modalTaskTitle').textContent = 'Редактировать задачу';
     document.getElementById('taskTitle').value = card.querySelector('.task-card-title').textContent;
     document.getElementById('taskDescription').value = card.querySelector('.task-card-desc')?.textContent || '';
     document.getElementById('editingTaskId').value = taskId;
     document.getElementById('taskDate').value = document.querySelector('#noteForm input[name="date"]')?.value || '';
-    
+
     const timeEl = card.querySelector('.task-card-time:not([style*="64a0dc"])');
     if (timeEl) {
         document.getElementById('hasTime').checked = true;
@@ -489,7 +489,7 @@ window.openEditTaskModal = function(taskId) {
         document.getElementById('taskTimeStart').value = '';
         document.getElementById('taskTimeEnd').value = '';
     }
-    
+
     const notifEl = card.querySelector('.task-card-time[style*="64a0dc"]');
     if (notifEl) {
         document.getElementById('hasNotification').checked = true;
@@ -500,7 +500,7 @@ window.openEditTaskModal = function(taskId) {
         document.getElementById('notificationFields').style.display = 'none';
         document.getElementById('taskNotificationTime').value = '';
     }
-    
+
     if (card.classList.contains('priority-urgent')) {
         document.getElementById('priorityLabel').textContent = 'Срочный';
         document.getElementById('priorityLabel').style.color = '#ff4d4d';
@@ -514,7 +514,7 @@ window.openEditTaskModal = function(taskId) {
         document.getElementById('priorityLabel').style.color = '';
         document.getElementById('priorityValue').value = 'none';
     }
-    
+
     const repeatEl = card.querySelector('.task-card-repeat-badge');
     if (repeatEl) {
         const repeatText = repeatEl.textContent.trim();
@@ -532,16 +532,16 @@ window.openEditTaskModal = function(taskId) {
         document.getElementById('repeatLabel').textContent = 'Не повторять';
         document.getElementById('repeatValue').value = 'none';
     }
-    
+
     openModal('modalTask');
     setTimeout(() => document.getElementById('taskTitle').focus(), 100);
 };
 
 window.openDeleteTaskModal = function(taskId) {
-    const card = document.getElementById(`task-${taskId}`); 
+    const card = document.getElementById(`task-${taskId}`);
     if (!card) return;
     document.getElementById('deleteTaskTitle').textContent = card.querySelector('.task-card-title').textContent;
-    document.getElementById('deleteTaskId').value = taskId; 
+    document.getElementById('deleteTaskId').value = taskId;
     document.getElementById('deleteMode').value = 'single';
     const hasRepeat = card.querySelector('.task-card-repeat-badge');
     document.getElementById('deleteSingleAction').style.display = hasRepeat ? 'none' : 'flex';
@@ -552,14 +552,14 @@ window.openDeleteTaskModal = function(taskId) {
 
 window.openRescheduleModal = function(taskId) {
     document.getElementById('rescheduleTaskId').value = taskId;
-    document.getElementById('rescheduleHasTime').checked = false; 
+    document.getElementById('rescheduleHasTime').checked = false;
     document.getElementById('rescheduleTimeFields').style.display = 'none';
     document.querySelectorAll('.reschedule-option').forEach(o => o.classList.remove('active'));
     openModal('modalReschedule');
 };
 
 window.setQuickReschedule = function(option) {
-    const d = new Date(); 
+    const d = new Date();
     d.setDate(d.getDate() + (option === 'tomorrow' ? 1 : option === 'nextWeek' ? 7 : 30));
     document.getElementById('rescheduleDate').value = d.toISOString().split('T')[0];
     document.querySelectorAll('.reschedule-option').forEach(o => o.classList.remove('active'));
@@ -567,24 +567,24 @@ window.setQuickReschedule = function(option) {
 };
 
 window.openViewTaskModal = function(taskId) {
-    const card = document.getElementById(`task-${taskId}`); 
+    const card = document.getElementById(`task-${taskId}`);
     if (!card) return;
     document.getElementById('viewTaskId').value = taskId;
     document.getElementById('viewTaskTitle').textContent = card.querySelector('.task-card-title').textContent;
     document.getElementById('viewTaskDescription').textContent = card.querySelector('.task-card-desc')?.textContent || 'Нет описания';
     const pEl = document.getElementById('viewTaskPriority');
-    if (card.classList.contains('priority-urgent')) { 
-        pEl.textContent = 'Срочный'; 
-        pEl.style.background = 'rgba(255,77,77,0.15)'; 
-        pEl.style.color = '#ff4d4d'; 
-    } else if (card.classList.contains('priority-important')) { 
-        pEl.textContent = 'Важный'; 
-        pEl.style.background = 'rgba(240,192,64,0.15)'; 
-        pEl.style.color = '#f0c040'; 
-    } else { 
-        pEl.textContent = 'Без уровня'; 
-        pEl.style.background = 'rgba(255,255,255,0.05)'; 
-        pEl.style.color = '#B0B0C0'; 
+    if (card.classList.contains('priority-urgent')) {
+        pEl.textContent = 'Срочный';
+        pEl.style.background = 'rgba(255,77,77,0.15)';
+        pEl.style.color = '#ff4d4d';
+    } else if (card.classList.contains('priority-important')) {
+        pEl.textContent = 'Важный';
+        pEl.style.background = 'rgba(240,192,64,0.15)';
+        pEl.style.color = '#f0c040';
+    } else {
+        pEl.textContent = 'Без уровня';
+        pEl.style.background = 'rgba(255,255,255,0.05)';
+        pEl.style.color = '#B0B0C0';
     }
     openModal('modalViewTask');
 };
@@ -862,7 +862,7 @@ window.openViewHabitModal = function(habitId) {
     if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
     const card = document.getElementById(`habit-${habitId}`);
     if (!card) return;
-    
+
     document.getElementById('viewHabitId').value = habitId;
     document.getElementById('viewHabitTitle').textContent = card.querySelector('.habit-name').textContent;
     document.getElementById('viewHabitDescription').textContent = card.dataset.description || 'Нет описания';
@@ -872,13 +872,13 @@ window.openViewHabitModal = function(habitId) {
     document.getElementById('viewHabitStreak').textContent = card.dataset.streak || '0';
     document.getElementById('viewHabitBestStreak').textContent = card.dataset.bestStreak || '0';
     document.getElementById('viewHabitRate').textContent = (card.dataset.rate || '0') + '%';
-    
+
     if (!card.dataset.motivation) {
         document.getElementById('viewHabitMotivation').style.display = 'none';
     } else {
         document.getElementById('viewHabitMotivation').style.display = '';
     }
-    
+
     openModal('modalViewHabit');
 };
 
@@ -886,7 +886,7 @@ window.openEditHabitModal = function(habitId) {
     if (activeHabitDropdown) { activeHabitDropdown.remove(); activeHabitDropdown = null; }
     const card = document.getElementById(`habit-${habitId}`);
     if (!card) return;
-    
+
     document.getElementById('modalHabitTitle').textContent = 'Редактировать привычку';
     document.getElementById('habitId').value = habitId;
     const fullName = card.querySelector('.habit-name').textContent;
@@ -896,19 +896,19 @@ window.openEditHabitModal = function(habitId) {
     document.getElementById('habitTime').value = card.dataset.time || '';
     document.getElementById('habitMotivation').value = card.dataset.motivation || '';
     document.getElementById('habitNotificationTime').value = card.dataset.notificationTime || '';
-    
+
     const hasNotification = card.dataset.notification === 'true';
     document.getElementById('habitHasNotification').checked = hasNotification;
     document.getElementById('habitNotificationFields').style.display = hasNotification ? 'block' : 'none';
-    
+
     document.getElementById('habitRepeatLabel').textContent = card.dataset.repeatLabel || 'Ежедневно';
     document.getElementById('habitRepeatValue').value = card.dataset.repeat || 'daily';
-    
+
     document.getElementById('habitAvatarValue').value = card.dataset.avatar || '🏃';
     document.querySelectorAll('#habitAvatarPicker .avatar-option').forEach(a => {
         a.classList.toggle('selected', a.textContent === (card.dataset.avatar || '🏃'));
     });
-    
+
     document.getElementById('habitSubmitBtn').textContent = 'Сохранить';
     openModal('modalHabit');
     setTimeout(() => document.getElementById('habitTitle').focus(), 100);
@@ -950,19 +950,19 @@ window.openDatePicker = function() {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
     overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
-    
+
     const picker = document.createElement('div');
     picker.style.cssText = 'background:#1A1A20;border-radius:20px;padding:24px;border:1px solid rgba(255,255,255,0.08);width:340px;';
     picker.onclick = function(e) { e.stopPropagation(); };
-    
+
     const now = new Date();
     let selectedYear = now.getFullYear();
     let selectedMonth = now.getMonth();
     let selectedDay = now.getDate();
-    
+
     const isHabitsPage = window.location.pathname.includes('/habits');
     const dateElement = document.getElementById('currentDate') || document.getElementById('habitsDate');
-    
+
     if (dateElement) {
         const dataIso = dateElement.getAttribute('data-iso');
         if (dataIso) {
@@ -972,9 +972,9 @@ window.openDatePicker = function() {
             selectedDay = parseInt(parts[2]);
         }
     }
-    
+
     const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-    
+
     picker.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
             <button id="prevMonthBtn" style="background:rgba(255,255,255,0.05);border:none;color:#B0B0C0;width:32px;height:32px;border-radius:8px;cursor:pointer;">←</button>
@@ -990,10 +990,10 @@ window.openDatePicker = function() {
         <div id="daysGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
         <button id="todayBtn" style="width:100%;margin-top:16px;padding:10px;background:rgba(224,122,95,0.1);border:1px solid rgba(224,122,95,0.3);border-radius:10px;color:#E07A5F;font-size:14px;cursor:pointer;">Сегодня</button>
     `;
-    
+
     overlay.appendChild(picker);
     document.body.appendChild(overlay);
-    
+
     function goToDate(year, month, day) {
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const url = isHabitsPage ? `/planner/habits/?date=${dateStr}` : `/planner/day/?date=${dateStr}`;
@@ -1001,34 +1001,34 @@ window.openDatePicker = function() {
         window.history.pushState({}, '', url);
         overlay.remove();
     }
-    
+
     function renderDays() {
         const grid = document.getElementById('daysGrid');
         const firstDay = new Date(selectedYear, selectedMonth, 1).getDay();
         const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
         const daysInPrevMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-        
+
         let startDay = firstDay === 0 ? 6 : firstDay - 1;
         let html = '';
-        
+
         for (let i = startDay - 1; i >= 0; i--) {
             html += `<div style="padding:8px;text-align:center;color:#3A3A45;font-size:13px;">${daysInPrevMonth - i}</div>`;
         }
-        
+
         for (let d = 1; d <= daysInMonth; d++) {
             const date = new Date(selectedYear, selectedMonth, d);
             const isToday = date.toDateString() === now.toDateString();
             const isSelected = d === selectedDay && selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
-            
+
             let bg = 'transparent', color = '#B0B0C0', border = '1px solid transparent';
             if (isSelected) { bg = 'rgba(224,122,95,0.15)'; border = '1px solid #E07A5F'; color = '#E07A5F'; }
             if (isToday) { color = '#E07A5F'; border = '1px solid rgba(224,122,95,0.5)'; if (!isSelected) bg = 'rgba(224,122,95,0.05)'; }
-            
+
             html += `<div class="day-cell" data-day="${d}" style="padding:8px;text-align:center;font-size:13px;border-radius:8px;background:${bg};color:${color};border:${border};cursor:pointer;transition:all 0.15s;">${d}</div>`;
         }
-        
+
         grid.innerHTML = html;
-        
+
         grid.querySelectorAll('.day-cell').forEach(cell => {
             cell.addEventListener('click', function() { goToDate(selectedYear, selectedMonth, parseInt(this.dataset.day)); });
             cell.addEventListener('mouseenter', function() { if (this.dataset.day != selectedDay) this.style.background = 'rgba(255,255,255,0.08)'; });
@@ -1038,26 +1038,26 @@ window.openDatePicker = function() {
             });
         });
     }
-    
+
     document.getElementById('prevMonthBtn').addEventListener('click', function() {
         selectedMonth--; if (selectedMonth < 0) { selectedMonth = 11; selectedYear--; }
         document.getElementById('pickerMonth').textContent = months[selectedMonth];
         document.getElementById('pickerYear').textContent = selectedYear;
         renderDays();
     });
-    
+
     document.getElementById('nextMonthBtn').addEventListener('click', function() {
         selectedMonth++; if (selectedMonth > 11) { selectedMonth = 0; selectedYear++; }
         document.getElementById('pickerMonth').textContent = months[selectedMonth];
         document.getElementById('pickerYear').textContent = selectedYear;
         renderDays();
     });
-    
+
     document.getElementById('todayBtn').addEventListener('click', function() {
         const today = new Date();
         goToDate(today.getFullYear(), today.getMonth(), today.getDate());
     });
-    
+
     renderDays();
 };
 

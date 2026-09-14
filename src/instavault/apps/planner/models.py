@@ -10,7 +10,9 @@ from django.utils import timezone
 
 
 class Note(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notes"
+    )
     date = models.DateField(db_index=True)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -73,7 +75,9 @@ class TaskTemplate(models.Model):
         WEEKLY = "weekly", "Еженедельно"
         WEEKDAYS = "weekdays", "По будням"
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="task_templates")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="task_templates"
+    )
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
     time_start = models.TimeField(blank=True, null=True)
@@ -89,8 +93,8 @@ class TaskTemplate(models.Model):
 
     class Meta:
         indexes = (
-                models.Index(fields=["user", "is_active"], name="task_template_user_active_idx"),
-            )
+            models.Index(fields=["user", "is_active"], name="task_template_user_active_idx"),
+        )
 
     def __str__(self) -> str:
         return f"Шаблон: {self.title}"
@@ -103,9 +107,6 @@ class TaskTemplate(models.Model):
         if self.repeat == self.Repeat.WEEKDAYS:
             return target_date.weekday() < 5
         return False
-
-
-
 
 
 class Habit(models.Model):
@@ -131,14 +132,13 @@ class Habit(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     if TYPE_CHECKING:
-        from typing import Any # noqa: I001, PLC0415
+        from typing import Any  # noqa: PLC0415
+
         completions: Any
 
     class Meta:
         ordering = ("created_at",)
-        indexes = (
-            models.Index(fields=["user", "is_active"], name="habit_user_active_idx"),
-        )
+        indexes = (models.Index(fields=["user", "is_active"], name="habit_user_active_idx"),)
 
     def __str__(self) -> str:
         return f"{self.avatar} {self.title}"

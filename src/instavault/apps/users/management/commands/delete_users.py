@@ -14,21 +14,15 @@ class Command(BaseCommand):
     help = "Delete users"
 
     def add_arguments(self, parser: ArgumentParser) -> None:
-        parser.add_argument(
-            "--username", type=str, help="Delete specific user"
-        )
+        parser.add_argument("--username", type=str, help="Delete specific user")
         parser.add_argument(
             "--filter",
             choices=["all", "admins", "superusers", "users"],
             default="all",
             help="Filter users to delete (default: all)",
         )
-        parser.add_argument(
-            "--no-input", action="store_true", help="Skip confirmation"
-        )
-        parser.add_argument(
-            "--dry-run", action="store_true", help="Show what would be deleted"
-        )
+        parser.add_argument("--no-input", action="store_true", help="Skip confirmation")
+        parser.add_argument("--dry-run", action="store_true", help="Show what would be deleted")
 
     def handle(self, *_args: Any, **options: Any) -> None:
         if options["username"]:
@@ -67,9 +61,7 @@ class Command(BaseCommand):
 
         with connection.cursor() as cursor:
             if self._table_exists("django_admin_log"):
-                cursor.execute(
-                    "DELETE FROM django_admin_log WHERE user_id = %s", [user_id]
-                )
+                cursor.execute("DELETE FROM django_admin_log WHERE user_id = %s", [user_id])
             if self._table_exists("users_customuser_groups"):
                 cursor.execute(
                     "DELETE FROM users_customuser_groups WHERE customuser_id = %s",
@@ -77,25 +69,18 @@ class Command(BaseCommand):
                 )
             if self._table_exists("users_customuser_user_permissions"):
                 cursor.execute(
-                    "DELETE FROM users_customuser_user_permissions "
-                    "WHERE customuser_id = %s",
+                    "DELETE FROM users_customuser_user_permissions WHERE customuser_id = %s",
                     [user_id],
                 )
             if self._table_exists("users_usersettings"):
-                cursor.execute(
-                    "DELETE FROM users_usersettings WHERE user_id = %s", [user_id]
-                )
-            cursor.execute(
-                "DELETE FROM users_customuser WHERE id = %s", [user_id]
-            )
+                cursor.execute("DELETE FROM users_usersettings WHERE user_id = %s", [user_id])
+            cursor.execute("DELETE FROM users_customuser WHERE id = %s", [user_id])
 
     def _delete_by_username(self, username: str, dry_run: bool) -> None:
         try:
             user = CustomUser.objects.get(username=username)
         except CustomUser.DoesNotExist:
-            self.stderr.write(
-                self.style.ERROR(f"User '{username}' not found")
-            )
+            self.stderr.write(self.style.ERROR(f"User '{username}' not found"))
             return
 
         if dry_run:
@@ -126,9 +111,7 @@ class Command(BaseCommand):
             return
 
         if not options["no_input"]:
-            confirm = input(
-                f"Delete {count} {filter_name} users? [y/N]: "
-            )
+            confirm = input(f"Delete {count} {filter_name} users? [y/N]: ")
             if confirm.lower() != "y":
                 self.stdout.write("Cancelled")
                 return

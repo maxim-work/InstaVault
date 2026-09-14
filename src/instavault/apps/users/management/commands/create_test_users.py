@@ -31,9 +31,7 @@ class Command(BaseCommand):
         count = options["count"]
         admins_count = options["admins"]
 
-        group, group_created = Group.objects.get_or_create(
-            name="Менеджеры пользователей"
-        )
+        group, group_created = Group.objects.get_or_create(name="Менеджеры пользователей")
 
         if group_created:
             content_type = ContentType.objects.get_for_model(CustomUser)
@@ -48,9 +46,7 @@ class Command(BaseCommand):
             )
             group.permissions.set(permissions)
             self.stdout.write(
-                self.style.SUCCESS(
-                    'Создана группа "Менеджеры пользователей" с правами'
-                )
+                self.style.SUCCESS('Создана группа "Менеджеры пользователей" с правами')
             )
 
         if not CustomUser.objects.filter(is_owner=True).exists():
@@ -61,9 +57,7 @@ class Command(BaseCommand):
             )
             owner.is_owner = True
             owner.save()
-            self.stdout.write(
-                self.style.SUCCESS("Создан владелец: owner / owner123")
-            )
+            self.stdout.write(self.style.SUCCESS("Создан владелец: owner / owner123"))
 
         for i in range(admins_count):
             username = f"admin{i + 1}"
@@ -77,9 +71,7 @@ class Command(BaseCommand):
                 admin.save()
                 admin.groups.add(group)
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Создан администратор: {username} / admin123"
-                    )
+                    self.style.SUCCESS(f"Создан администратор: {username} / admin123")
                 )
 
         for i in range(count):
@@ -91,18 +83,12 @@ class Command(BaseCommand):
                     email=f"{username}@example.com",
                     telegram_id=f"12345678{i + 1}",
                 )
-                self.stdout.write(
-                    self.style.SUCCESS(f"Создан пользователь: {username} / user123")
-                )
+                self.stdout.write(self.style.SUCCESS(f"Создан пользователь: {username} / user123"))
 
         stats = {
             "owners": CustomUser.objects.filter(is_owner=True).count(),
-            "admins": CustomUser.objects.filter(
-                is_staff=True, is_superuser=False
-            ).count(),
-            "users": CustomUser.objects.filter(
-                is_staff=False, is_superuser=False
-            ).count(),
+            "admins": CustomUser.objects.filter(is_staff=True, is_superuser=False).count(),
+            "users": CustomUser.objects.filter(is_staff=False, is_superuser=False).count(),
         }
 
         self.stdout.write(self.style.SUCCESS("\nСтатистика:"))
