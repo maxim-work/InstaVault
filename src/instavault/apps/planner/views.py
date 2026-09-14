@@ -13,6 +13,8 @@ from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from instavault.apps.announcements.models import AnnouncementText
+from instavault.apps.announcements.services import pick_announcements, render_text
 from instavault.shared.utils import get_user
 
 from .forms import HabitForm, RescheduleTaskForm, TaskForm
@@ -23,16 +25,41 @@ if TYPE_CHECKING:
 
 
 MONTHS_RU = (
-    "января", "февраля", "марта", "апреля", "мая", "июня",
-    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
 )
 WEEKDAYS_RU = (
-    "понедельник", "вторник", "среда", "четверг",
-    "пятница", "суббота", "воскресенье",
+    "понедельник",
+    "вторник",
+    "среда",
+    "четверг",
+    "пятница",
+    "суббота",
+    "воскресенье",
 )
 MONTHS_RU_TITLE = (
-    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+    "Январь",
+    "Февраль",
+    "Март",
+    "Апрель",
+    "Май",
+    "Июнь",
+    "Июль",
+    "Август",
+    "Сентябрь",
+    "Октябрь",
+    "Ноябрь",
+    "Декабрь",
 )
 
 
@@ -56,16 +83,19 @@ def _parse_date(date_str: str | None) -> date_type:
 def day_get_context(request: HttpRequest, target_date: date_type) -> dict[str, Any]:
     user = get_user(request)
     note = Note.objects.filter(user=user, date=target_date).first()
-    tasks = Task.objects.filter(user=user, date=target_date).order_by(
-        "time_start", "created_at"
-    )
+    tasks = Task.objects.filter(user=user, date=target_date).order_by("time_start", "created_at")
 
     total = tasks.count()
     completed_count = tasks.filter(completed=True).count()
     productivity = round(completed_count / total * 100) if total > 0 else 0
 
+    greetings = pick_announcements(user, window=AnnouncementText.Window.STRING, limit=1)
+    popups = pick_announcements(user, window=AnnouncementText.Window.POPUP, limit=3)
+
     return {
         "page": "day",
+        "greeting": render_text(greetings[0], user) if greetings else None,
+        "popups": [{"text": render_text(p, user), "code": p.code} for p in popups],
         "note_content": note.description if note else "",
         "tasks": tasks,
         "current_date": _format_date_ru(target_date),
@@ -442,9 +472,7 @@ def get_day_stats(
     total_habits = len(applicable_habits)
     completed_habits = sum(1 for h in applicable_habits if h.pk in completed_habit_ids)
 
-    applicable_templates = [
-        t for t in task_templates if t.is_applicable_on_date(target_date)
-    ]
+    applicable_templates = [t for t in task_templates if t.is_applicable_on_date(target_date)]
     day_tasks = tasks_by_day.get(day, [])
     custom_tasks = len([t for t in day_tasks if t.template is None])
 
@@ -498,9 +526,7 @@ def calendar_get_context(
     habits = list(Habit.objects.filter(user=user, is_active=True))
     task_templates = list(TaskTemplate.objects.filter(user=user, is_active=True))
 
-    tasks_by_day, completions_by_day = load_month_data(
-        user, target_date.year, target_date.month
-    )
+    tasks_by_day, completions_by_day = load_month_data(user, target_date.year, target_date.month)
 
     chart_data: list[dict[str, int]] = []
     calendar_data: list[dict[str, int]] = []
@@ -517,9 +543,7 @@ def calendar_get_context(
         completed_items = completed_habits + completed_tasks
 
         is_future = (
-            target_date.year == today.year
-            and target_date.month == today.month
-            and day > today.day
+            target_date.year == today.year and target_date.month == today.month and day > today.day
         )
 
         if total_items > 0 and not is_future:
@@ -539,9 +563,7 @@ def calendar_get_context(
                 }
             )
 
-        calendar_data.append(
-            {"day": day, "tasks": total_tasks, "habits": total_habits}
-        )
+        calendar_data.append({"day": day, "tasks": total_tasks, "habits": total_habits})
 
     best_month: dict[str, Any] | None = None
     best_month_productivity = -1
@@ -560,9 +582,7 @@ def calendar_get_context(
         month_completed = 0
 
         for day in range(1, max_day + 1):
-            current_date = target_date.replace(
-                year=target_date.year, month=month, day=day
-            )
+            current_date = target_date.replace(year=target_date.year, month=month, day=day)
             h_total, h_done, t_total, t_done = get_day_stats(
                 habits, task_templates, current_date, month_tasks, month_completions
             )
@@ -594,9 +614,7 @@ def calendar_view(request: HttpRequest) -> HttpResponse:
 
     if year and month:
         try:
-            target_date = timezone.now().date().replace(
-                year=int(year), month=int(month), day=1
-            )
+            target_date = timezone.now().date().replace(year=int(year), month=int(month), day=1)
         except (ValueError, TypeError):
             target_date = timezone.now().date()
     else:

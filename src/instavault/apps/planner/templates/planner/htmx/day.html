@@ -19,7 +19,13 @@
 </div>
 
 <div class="day-content">
-    <div class="daily-greeting">Доброе утро, {{ name }}</div>
+    {% if greeting %}
+        <div class="daily-greeting">{{ greeting }}</div>
+    {% endif %}
+
+    {% for popup in popups %}
+        <div class="announcement-popup">{{ popup.text }}</div>
+    {% endfor %}
     <div class="day-note">
         <div class="note-header">
             <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleNote()"><i class="fas fa-chevron-down" id="noteIcon"></i><span>Заметка дня</span></div>

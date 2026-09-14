@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "instavault.apps.audit",
     "instavault.apps.planner",
     # "instavault.apps.resources.apps.ResourcesConfig",
+    "instavault.apps.announcements.apps.AnnouncementsConfig",
 ]
 
 MIDDLEWARE = [
