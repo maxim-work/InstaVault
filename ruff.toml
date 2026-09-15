@@ -46,6 +46,8 @@ ignore = [
   "RUF001",   # ambiguous unicode character in strings
   "RUF002",   # ambiguous unicode character in docstrings
   "RUF003",   # ambiguous unicode character in comments
+
+  "CPY001",
 ]
 
 [lint.per-file-ignores]
